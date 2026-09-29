@@ -1,7 +1,3 @@
-// ══════════════════════════════════════════════════════════════════
-//  NKP Kinerja 2026 — Master Frontend Engine (Backend API Ready)
-// ══════════════════════════════════════════════════════════════════
-
 const S = { 
   user: null, 
   page: 'dashboard', 
@@ -16,6 +12,61 @@ let chartBar = null, chartDonut = null;
 // Palette warna avatar PIC
 const PIC_COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#be185d', '#65a30d'];
 function picColor(i) { return PIC_COLORS[i % PIC_COLORS.length]; }
+
+// ── PIC BANYAK: disimpan sebagai teks dipisah koma, mis. "Biro A, Biro B" ──
+const PIC_SEP = ', ';
+// Pilihan tambahan di luar daftar /api/pic
+const PIC_EXTRA = [
+  { username: 'Staf Ahli Bidang Konektivitas', nama: 'Staf Ahli Bidang Konektivitas' },
+  { username: 'Semua Deputi',                  nama: 'Semua Deputi' },
+];
+
+function splitPics(s) {
+  return String(s == null ? '' : s).split(/\s*[,;\n]\s*/).map(x => x.trim()).filter(Boolean);
+}
+
+function allPicOptions() {
+  const have = new Set((S.picList || []).map(p => _picNormKey(p.username)));
+  return (S.picList || []).concat(PIC_EXTRA.filter(e => !have.has(_picNormKey(e.username))));
+}
+
+// Cocokkan teks PIC (username ATAU nama) ke key username yang dinormalisasi
+function picKeyOf(token) {
+  const t = _picNormKey(token);
+  const p = allPicOptions().find(x => _picNormKey(x.username) === t || _picNormKey(x.nama) === t);
+  return p ? _picNormKey(p.username) : t;
+}
+
+function picNama(token) {
+  const k = picKeyOf(token);
+  const p = allPicOptions().find(x => _picNormKey(x.username) === k);
+  return p ? p.nama : token;
+}
+
+function isDeputiKey(k) {
+  const p = (S.picList || []).find(x => _picNormKey(x.username) === k);
+  return !!p && (_picNormKey(p.username).startsWith('deputi') || _picNormKey(p.nama).startsWith('deputi'));
+}
+
+// Apakah daftar PIC (array teks) memuat PIC dengan username `key`? ("Semua Deputi" mencakup semua Deputi)
+function hasPic(tokens, key) {
+  const k = picKeyOf(key);
+  return tokens.some(t => {
+    const tk = picKeyOf(t);
+    return tk === k || (tk === 'semua deputi' && isDeputiKey(k));
+  });
+}
+
+// Semua PIC unik dari sekelompok baris (untuk tampilan & export)
+function groupPicTokens(items) {
+  const seen = {}, out = [];
+  items.forEach(i => splitPics(i.PIC).forEach(t => {
+    const k = picKeyOf(t);
+    if (!seen[k]) { seen[k] = 1; out.push(t); }
+  }));
+  return out;
+}
+function groupPicNames(items) { return groupPicTokens(items).map(picNama); }
 
 // ── Chart.js Center-Text Donut Plugin ─────────────────────────────
 const centerTextPlugin = {
@@ -68,7 +119,7 @@ window.addEventListener('DOMContentLoaded', () => {
 async function apiFetch(url, method = 'GET', data = null) {
   const opts = {
     method,
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': S.csrf },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': S.csrf },
     credentials: 'same-origin',
   };
   if (data) opts.body = JSON.stringify(data);
@@ -77,7 +128,13 @@ async function apiFetch(url, method = 'GET', data = null) {
   if (!ct || !ct.includes('application/json')) {
     throw new Error('Server error ' + res.status + '. Periksa log Laravel.');
   }
-  return res.json();
+  const json = await res.json();
+  if (res.status >= 500) {
+    // Tampilkan pesan asli dari Laravel (mis. "Data too long for column ...") supaya mudah dilacak
+    const msg = (json && json.message) ? String(json.message).slice(0, 220) : ('Server error ' + res.status);
+    throw new Error(msg);
+  }
+  return json;
 }
 
 // ── JAM & TANGGAL REALTIME ────────────────────────────────────────
@@ -196,10 +253,17 @@ function enterApp() {
   document.getElementById('sb-urole').textContent   = S.user.role === 'admin' ? 'ADMINISTRATOR' : 'PIC UNIT';
   document.getElementById('hdr-avatar').textContent = initial;
 
-  apiFetch('/api/pic').then(list => {
-    S.picList = list || [];
-    navigate('dashboard');
-  });
+  apiFetch('/api/pic')
+    .then(list => {
+      S.picList = list || [];
+      navigate('dashboard');
+    })
+    .catch(e => {
+      // Jangan biarkan halaman menggantung kalau /api/pic gagal
+      S.picList = [];
+      showToast('Gagal memuat daftar PIC: ' + e.message, 'err');
+      navigate('dashboard');
+    });
 }
 
 function loadLoginUsers() {
@@ -207,7 +271,7 @@ function loadLoginUsers() {
   if (!dl) return;
   apiFetch('/api/users/list').then(list => {
     if (!list || !list.length) return;
-    dl.innerHTML = list.map(u => `<option value="${u.username}">${u.nama || u.username}${u.role === 'admin' ? ' (Admin)' : ''}</option>`).join('');
+    dl.innerHTML = list.map(u => `<option value="${esc(u.username)}">${esc(u.nama || u.username)}${u.role === 'admin' ? ' (Admin)' : ''}</option>`).join('');
   }).catch(() => {});
 }
 
@@ -239,17 +303,27 @@ function navigate(page, arg) {
 }
 
 // ══════════════════ HELPER STATUS TEMUAN ════════════════════════
+// Tag status ([Selesai] / [Proses] / [Belum]) disimpan di dalam kolom Output.
+// Regex ini dipakai untuk membuang tag saat ditampilkan / diedit / diekspor.
+const STATUS_TAG_RE = /\s*\[(selesai|proses|belum)\]/gi;
+
+function cleanOutput(s) {
+  return String(s == null ? '' : s).replace(STATUS_TAG_RE, '').trim();
+}
+
 function statusOf(r) {
   const out = String(r.Output || '').trim().toLowerCase();
   const rec = String(r.RencanaAksi || '').trim();
   const jad = String(r.JadwalPelaksanaan || '').trim();
 
-  if (out.includes('[selesai]') || (out !== '' && !out.includes('[proses]') && !out.includes('[belum]'))) {
-    return { cls: 'pill-ok', lbl: 'Selesai', icon: 'check-circle' };
-  }
-  if (out.includes('[proses]') || rec !== '' || jad !== '') {
-    return { cls: 'pill-prog', lbl: 'Proses', icon: 'clock' };
-  }
+  // 1) Tag eksplisit dari dropdown status selalu menang
+  if (out.includes('[selesai]')) return { cls: 'pill-ok',    lbl: 'Selesai', icon: 'check-circle' };
+  if (out.includes('[proses]'))  return { cls: 'pill-prog',  lbl: 'Proses',  icon: 'clock' };
+  if (out.includes('[belum]'))   return { cls: 'pill-empty', lbl: 'Belum',   icon: 'minus-circle' };
+
+  // 2) Data lama / hasil import tanpa tag: tebak dari isi kolom
+  if (out !== '')                return { cls: 'pill-ok',    lbl: 'Selesai', icon: 'check-circle' };
+  if (rec !== '' || jad !== '')  return { cls: 'pill-prog',  lbl: 'Proses',  icon: 'clock' };
   return { cls: 'pill-empty', lbl: 'Belum', icon: 'minus-circle' };
 }
 
@@ -294,11 +368,18 @@ function calculateAndRenderDashboard(rows) {
     else if (st.lbl === 'Proses') totalProses++;
     else totalBelum++;
 
-    const pKey = _picNormKey(r.PIC);
-    if (pKey && picStatsMap[pKey]) {
-      picStatsMap[pKey].jumlah++;
-      if (st.lbl === 'Selesai') picStatsMap[pKey].selesai++;
-    }
+    const keys = new Set();
+    splitPics(r.PIC).forEach(t => {
+      const k = picKeyOf(t);
+      if (k === 'semua deputi') Object.keys(picStatsMap).forEach(x => { if (isDeputiKey(x)) keys.add(x); });
+      else keys.add(k);
+    });
+    keys.forEach(k => {
+      if (picStatsMap[k]) {
+        picStatsMap[k].jumlah++;
+        if (st.lbl === 'Selesai') picStatsMap[k].selesai++;
+      }
+    });
   });
 
   const total = rows.length;
@@ -400,7 +481,7 @@ function renderDashboard(d) {
     const clr = picColor(i);
     const init = (p.nama || p.username || '?').charAt(0).toUpperCase();
     return `
-      <div class="pic-card" style="border-left-color:${clr}" onclick="navigate('ruang-isian','${p.username.replace(/'/g, "\\'")}')">
+      <div class="pic-card" style="border-left-color:${clr}" onclick="navigate('ruang-isian','${esc(jsq(p.username))}')">
         <div class="pic-card-top">
           <div class="pic-avatar" style="background:${clr}">${init}</div>
           <div>
@@ -485,7 +566,7 @@ function loadRuangIsian(picFilter) {
 function renderRuangIsian(rows) {
   const selesai = rows.filter(r => statusOf(r).lbl === 'Selesai').length;
   const progress = rows.length ? Math.round((selesai / rows.length) * 100) : 0;
-  const picOpts = S.picList.map(p => `<option value="${p.username}" ${S.riFilter === p.username ? 'selected' : ''}>${p.nama}</option>`).join('');
+  const picOpts = allPicOptions().map(p => `<option value="${esc(p.username)}" ${S.riFilter === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
 
   setBody(`
     <div class="hero-banner">
@@ -514,7 +595,7 @@ function filterRuangIsian() {
 }
 
 function renderEntryList() {
-  const rows = S.riFilter ? S.allR.filter(r => String(r.PIC).trim() === S.riFilter) : S.allR;
+  const rows = S.riFilter ? S.allR.filter(r => hasPic(splitPics(r.PIC), S.riFilter)) : S.allR;
   const list = document.getElementById('entry-list');
   
   if (!rows.length) {
@@ -524,6 +605,8 @@ function renderEntryList() {
         <h4 style="font-weight:700">Belum Ada Data</h4>
         <p style="font-size:12px;color:var(--text-muted)">Klik tombol "+ Tambah Temuan Baru" untuk membuat data baru.</p>
       </div>`;
+    const cnt = document.getElementById('ri-count');
+    if (cnt) cnt.textContent = '';
     refreshIcons();
     return;
   }
@@ -545,10 +628,10 @@ function renderEntryList() {
     html += `
       <div class="entry-card">
         <div class="entry-card-header" onclick="togEntry(this)">
-          <div class="entry-badge-no">${parent.No || '-'}</div>
+          <div class="entry-badge-no">${esc(parent.No) || '-'}</div>
           <div style="flex:1;">
-            <div style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(parent.PIC)}</strong> (${items.length} Rincian Sub-Tindak Lanjut)</div>
+            <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
+            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${items.length} Rincian Sub-Tindak Lanjut)</div>
           </div>
           <button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
             <i data-lucide="plus-circle" style="width:14px;"></i> Tambah Sub
@@ -561,12 +644,12 @@ function renderEntryList() {
             return `
               <div style="background:#fff;padding:14px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:10px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                  <strong style="font-size:13px;">Rincian #${idx + 1}${sub.SubTemuan ? '- ' + esc(sub.SubTemuan) : ''}</strong>
+                  <strong style="font-size:13px;">Rincian #${idx + 1}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
                   <div style="display:flex;gap:6px;align-items:center;">
                     <span class="status-pill ${st.cls}">
                       <i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}
                     </span>
-                    <button class="btn-action-sec" style="padding:4px 8px;" onclick="openModal('${sub.PIC}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i></button>
+                    <button class="btn-action-sec" style="padding:4px 8px;" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i></button>
                     <button class="btn-action-sec" style="padding:4px 8px;color:#ef4444;" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>
                   </div>
                 </div>
@@ -576,7 +659,7 @@ function renderEntryList() {
                   <div><b>REKOMENDASI:</b> ${esc(sub.Rekomendasi) || '-'}</div>
                   <div><b>RENCANA AKSI:</b> ${esc(sub.RencanaAksi) || '-'}</div>
                   <div><b>JADWAL:</b> ${esc(sub.JadwalPelaksanaan) || '-'}</div>
-                  <div><b>OUTPUT:</b> ${esc((sub.Output || '').replace(/\[(selesai\vert{}proses\vert{}belum)\]/gi, '')) || '-'}</div>
+                  <div><b>OUTPUT:</b> ${esc(cleanOutput(sub.Output)) || '-'}</div>
                 </div>
               </div>`;
           }).join('')}
@@ -611,7 +694,7 @@ function loadRekap() {
 }
 
 function renderRekap(rows) {
-  const picOpts = S.picList.map(p => `<option value="${p.username}">${p.nama}</option>`).join('');
+  const picOpts = allPicOptions().map(p => `<option value="${esc(p.username)}">${esc(p.nama)}</option>`).join('');
 
   setBody(`
     <div class="toolbar-wrap">
@@ -654,12 +737,13 @@ function renderRekap(rows) {
   cont.innerHTML = Object.keys(groups).map(noKey => {
     const items = groups[noKey];
     const parent = items[0];
-    const picObj = S.picList.find(p => p.username === parent.PIC);
+    const picTokens = groupPicTokens(items);
+    const picNames = picTokens.map(picNama);
 
     return `
-      <tr class="rrow" data-pic="${parent.PIC || ''}" data-q="${esc(parent.Temuan).toLowerCase()}" style="border-bottom:1px solid #f1f5f9;">
-        <td style="padding:12px 10px;font-weight:800;color:#2563eb;">${parent.No || '-'}</td>
-        <td style="padding:12px 10px;font-weight:700;">${picObj ? esc(picObj.nama) : (parent.PIC || '-')}</td>
+      <tr class="rrow" data-pic="${esc(picTokens.join(PIC_SEP))}" data-q="${esc(parent.Temuan).toLowerCase()}" style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:12px 10px;font-weight:800;color:#2563eb;">${esc(parent.No) || '-'}</td>
+        <td style="padding:12px 10px;font-weight:700;">${esc(picNames.join(', ')) || '-'}</td>
         <td style="padding:12px 10px;">${esc(parent.Temuan) || '—'}</td>
         <td style="padding:12px 10px;">${items.length} Detail</td>
         <td style="padding:12px 10px;text-align:right;">
@@ -680,7 +764,7 @@ function filterRekap() {
   let v = 0;
 
   document.querySelectorAll('.rrow').forEach(r => {
-    const mp = !pf || r.dataset.pic === pf;
+    const mp = !pf || hasPic(splitPics(r.dataset.pic), pf);
     const mq = !q || r.dataset.q.includes(q);
     r.style.display = (mp && mq) ? '' : 'none';
     if (mp && mq) v++;
@@ -689,6 +773,9 @@ function filterRekap() {
 }
 
 // ══════════════════ EXPORT TO EXCEL ══════════════════════════════
+// Format disamakan dengan file BPK_KINERJA.xlsx (Kak Bashar):
+// Calibri, judul 16 bold, header 14 bold, freeze di A6, merge kolom No & Temuan,
+// kolom K = status (tanpa border).
 async function exportExcel() {
   if (!S.allR.length) {
     showToast('Tidak ada data untuk diekspor', 'inf');
@@ -706,15 +793,13 @@ async function exportExcel() {
     const NC = 10;
     const thin = { style: 'thin', color: { argb: 'FF000000' } };
     const border = { top: thin, left: thin, bottom: thin, right: thin };
+    const FONT = 'Calibri';
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('BPK Kinerja');
     
-    ws.columns = [
-      { width: 6 }, { width: 35 }, { width: 35 }, { width: 25 }, 
-      { width: 25 }, { width: 30 }, { width: 25 }, { width: 30 }, 
-      { width: 18 }, { width: 25 }
-    ];
+    const WIDTHS = [5, 33, 27, 21, 23, 26, 11, 27, 20, 18, 11];
+    ws.columns = WIDTHS.map(w => ({ width: w }));
 
     [
       'TINDAKLANJUT HASIL PEMERIKSAAN BPK',
@@ -724,50 +809,138 @@ async function exportExcel() {
       ws.mergeCells(i + 1, 1, i + 1, NC);
       const c = ws.getCell(i + 1, 1);
       c.value = t;
-      c.font = { bold: true, size: 12 };
-      c.alignment = { horizontal: 'center', vertical: 'middle' };
+      c.font = { name: FONT, bold: true, size: 16 };
+      c.alignment = { horizontal: 'center' };
     });
 
     const hr = ws.getRow(5);
     ['No', 'Temuan', 'Sub Temuan', 'Kriteria', 'Sebab', 'Rekomendasi', 'PIC', 'Rencana Aksi', 'Jadwal Pelaksanaan', 'Output'].forEach((h, i) => {
       const c = hr.getCell(i + 1);
       c.value = h;
-      c.font = { bold: true, size: 11 };
+      c.font = { name: FONT, bold: true, size: 14 };
       c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
       c.border = border;
     });
 
-    const DS = 6;
-    S.allR.forEach((r, i) => {
-      const row = ws.getRow(DS + i);
-      [
-        r.No || '', r.Temuan || '', r.SubTemuan || '', r.Kriteria || '',
-        r.Sebab || '', r.Rekomendasi || '', r.PIC || '', r.RencanaAksi || '',
-        r.JadwalPelaksanaan || '', (r.Output || '').replace(/\[(selesai\vert{}proses\vert{}belum)\]/gi, '').trim()
-      ].forEach((val, j) => {
-        const c = row.getCell(j + 1);
-        c.value = val;
-        c.alignment = { vertical: 'top', wrapText: true };
-        c.border = border;
-      });
+    // Gaya per kolom (sama dengan file Kak Bashar)
+    const COL_STYLE = [
+      { size: 14, bold: false, h: 'center' }, // A No
+      { size: 14, bold: true,  h: 'left'   }, // B Temuan
+      { size: 12, bold: false, h: 'left'   }, // C Sub Temuan
+      { size: 14, bold: true,  h: 'left'   }, // D Kriteria
+      { size: 12, bold: false, h: 'left'   }, // E Sebab
+      { size: 12, bold: false, h: 'left'   }, // F Rekomendasi
+      { size: 12, bold: false, h: 'center' }, // G PIC
+      { size: 12, bold: false, h: 'left'   }, // H Rencana Aksi
+      { size: 12, bold: false, h: 'left'   }, // I Jadwal
+      { size: 12, bold: false, h: 'left'   }, // J Output
+    ];
+
+    // ── Gabungkan baris: No + Sub Temuan yang sama => 1 baris saja ─────
+    // Kriteria, Sebab, Rekomendasi, PIC, Rencana Aksi, Jadwal, Output
+    // yang baru TIDAK menambah baris, tapi digabung dalam 1 sel dengan penomoran "1. ... 2. ..."
+    const NUM_RE = /^\s*(?:\d+|[a-zA-Z])[.)]\s/;
+    const joinNumbered = (vals, unique) => {
+      let list = vals.map(v => String(v == null ? '' : v).trim()).filter(Boolean);
+      if (unique) list = list.filter((v, i) => list.indexOf(v) === i);
+      if (list.length <= 1) return list[0] || '';
+      const sep = list.some(v => v.includes('\n')) ? '\n\n' : '\n';
+      return list.map((v, i) => (NUM_RE.test(v) ? v : `${i + 1}. ${v}`)).join(sep);
+    };
+
+    const noOrder = [], byNo = {};
+    S.allR.forEach(r => {
+      const no = String(r.No == null ? '' : r.No).trim();
+      if (!byNo[no]) { byNo[no] = []; noOrder.push(no); }
+      byNo[no].push(r);
     });
 
+    const sheetRows = []; // 1 entri = 1 baris Excel
+    noOrder.forEach(no => {
+      const subs = {}, subOrder = [];
+      byNo[no].forEach(r => {
+        const k = String(r.SubTemuan || '').trim();
+        if (!subs[k]) { subs[k] = []; subOrder.push(k); }
+        subs[k].push(r);
+      });
+      subOrder.forEach(k => sheetRows.push({ no, items: subs[k] }));
+    });
+
+    // Estimasi tinggi baris supaya teks panjang tidak terpotong
+    const estHeight = (text, colIdx, size, bold) => {
+      const cpl = Math.max(1, Math.floor(WIDTHS[colIdx] * (11 / size) * (bold ? 0.8 : 0.9)));
+      const lines = String(text || '').split('\n')
+        .reduce((n, l) => n + Math.max(1, Math.ceil(l.length / cpl)), 0);
+      return lines * size * 1.3 + 6;
+    };
+
+    const DS = 6;
+    const rowHeights = [];
+    sheetRows.forEach((g, i) => {
+      const it = g.items;
+      const first = it[0];
+      const noVal = (g.no !== '' && !isNaN(Number(g.no))) ? Number(g.no) : g.no;
+      const vals = [
+        noVal,
+        it.map(x => x.Temuan).find(v => String(v || '').trim()) || '',
+        it.map(x => x.SubTemuan).find(v => String(v || '').trim()) || '',
+        joinNumbered(it.map(x => x.Kriteria)),
+        joinNumbered(it.map(x => x.Sebab)),
+        joinNumbered(it.map(x => x.Rekomendasi)),
+        groupPicNames(it).join(',\n'),
+        joinNumbered(it.map(x => x.RencanaAksi)),
+        joinNumbered(it.map(x => x.JadwalPelaksanaan)),
+        joinNumbered(it.map(x => cleanOutput(x.Output)))
+      ];
+
+      const row = ws.getRow(DS + i);
+      let h = 20;
+      const multiNo = byNo[g.no].length > 1 && sheetRows.filter(x => x.no === g.no).length > 1;
+      vals.forEach((val, j) => {
+        const c = row.getCell(j + 1);
+        const st = COL_STYLE[j];
+        c.value = val;
+        c.font = { name: FONT, size: st.size, bold: st.bold };
+        c.alignment = { horizontal: st.h, vertical: 'middle', wrapText: true };
+        c.border = border;
+        // kolom A & B yang akan di-merge lintas baris dihitung terpisah di bawah
+        if (multiNo && j < 2) return;
+        h = Math.max(h, estHeight(val, j, st.size, st.bold));
+      });
+      rowHeights.push(h);
+
+      // Kolom K: status (di luar tabel, tanpa border) seperti file Kak Bashar
+      const sts = it.map(x => statusOf(x).lbl);
+      const k = row.getCell(11);
+      k.value = sts.every(s => s === 'Selesai') ? 'Selesai' : (sts.every(s => s === 'Belum') ? 'Belum' : 'Proses');
+      k.font = { name: FONT, size: 11 };
+      k.alignment = { vertical: 'middle', wrapText: true };
+    });
+
+    // Merge No & Temuan untuk No yang punya lebih dari 1 baris (Sub Temuan berbeda)
     let gs = 0;
-    for (let i = 1; i <= S.allR.length; i++) {
-      if (i === S.allR.length || String(S.allR[i].No || '') !== String(S.allR[gs].No || '')) {
+    for (let i = 1; i <= sheetRows.length; i++) {
+      if (i === sheetRows.length || sheetRows[i].no !== sheetRows[gs].no) {
         if (i - gs > 1) {
           ws.mergeCells(DS + gs, 1, DS + i - 1, 1);
           ws.mergeCells(DS + gs, 2, DS + i - 1, 2);
+          // pastikan total tinggi cukup untuk teks Temuan yang di-merge
+          const need = estHeight(ws.getCell(DS + gs, 2).value, 1, COL_STYLE[1].size, true);
+          let sum = 0;
+          for (let x = gs; x < i; x++) sum += rowHeights[x];
+          if (need > sum) rowHeights[i - 1] += (need - sum);
         }
         gs = i;
       }
     }
+    rowHeights.forEach((h, i) => { ws.getRow(DS + i).height = Math.min(409, Math.max(20, h)); });
+
+    ws.views = [{ state: 'frozen', ySplit: 5 }];
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const now = new Date();
-    const fname = `NKP_Kinerja_BPK_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.xlsx`;
+    const fname = `BPK_Kinerja_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.xlsx`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -790,10 +963,29 @@ async function exportExcel() {
 }
 
 // ══════════════════ MODAL & CRUD API ═════════════════════════════
-function openModal(pic, row) {
-  const sel = document.getElementById('m-pic');
-  sel.innerHTML = '<option value="">— Pilih PIC —</option>' + S.picList.map(p => `<option value="${p.username}">${p.nama}</option>`).join('');
+// Daftar centang PIC (bisa pilih lebih dari satu)
+function renderPicChecklist(selected) {
+  const box = document.getElementById('m-pic');
+  if (!box) return;
+  const opts = allPicOptions().slice();
+  const selKeys = new Set((selected || []).map(picKeyOf));
+  // PIC lama yang tidak ada di daftar tetap ditampilkan supaya tidak hilang saat edit
+  (selected || []).forEach(t => {
+    const k = picKeyOf(t);
+    if (!opts.some(o => _picNormKey(o.username) === k)) opts.push({ username: t, nama: t });
+  });
+  box.innerHTML = opts.map(p => `
+    <label class="pic-check-item">
+      <input type="checkbox" value="${esc(p.username)}" ${selKeys.has(_picNormKey(p.username)) ? 'checked' : ''}>
+      <span>${esc(p.nama)}</span>
+    </label>`).join('');
+}
 
+function getSelectedPics() {
+  return Array.from(document.querySelectorAll('#m-pic input[type="checkbox"]:checked')).map(i => i.value);
+}
+
+function openModal(pic, row) {
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = '';
   document.getElementById('m-is-sub').value = 'false';
@@ -809,13 +1001,14 @@ function openModal(pic, row) {
     document.getElementById(id).value = '';
   });
   document.getElementById('m-status-select').value = 'proses';
+
+  const r = row ? S.allR.find(x => String(x._row) === String(row)) : null;
+  renderPicChecklist(r ? splitPics(r.PIC) : (pic ? splitPics(pic) : []));
   document.getElementById('modal-bg').classList.add('open');
 
   if (row) {
     document.getElementById('m-row').value = row;
-    const r = S.allR.find(x => String(x._row) === String(row));
     if (r) {
-      sel.value = r.PIC || '';
       document.getElementById('m-no').value           = r.No || '';
       document.getElementById('m-temuan').value       = r.Temuan || '';
       document.getElementById('m-subtemuan').value    = r.SubTemuan || '';
@@ -824,13 +1017,12 @@ function openModal(pic, row) {
       document.getElementById('m-rekomendasi').value  = r.Rekomendasi || '';
       document.getElementById('m-rencanaaksi').value  = r.RencanaAksi || '';
       document.getElementById('m-jadwal').value       = r.JadwalPelaksanaan || '';
-      document.getElementById('m-output').value       = (r.Output || '').replace(/\[(selesai\vert{}proses\vert{}belum)\]/gi, '').trim();
+      document.getElementById('m-output').value       = cleanOutput(r.Output);
 
       const st = statusOf(r);
       document.getElementById('m-status-select').value = st.lbl === 'Selesai' ? 'selesai' : (st.lbl === 'Proses' ? 'proses' : 'belum');
     }
   } else {
-    sel.value = pic || '';
     document.getElementById('m-no').value = '...';
     apiFetch('/api/temuan/next-no').then(n => {
       document.getElementById('m-no').value = n;
@@ -841,9 +1033,6 @@ function openModal(pic, row) {
 function openAddSubModal(row) {
   const r = S.allR.find(x => String(x._row) === String(row));
   if (!r) return;
-
-  const sel = document.getElementById('m-pic');
-  sel.innerHTML = '<option value="">— Pilih PIC —</option>' + S.picList.map(p => `<option value="${p.username}">${p.nama}</option>`).join('');
 
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = row;
@@ -858,7 +1047,7 @@ function openAddSubModal(row) {
   temuanInp.readOnly = true;
   temuanInp.style.background = '#eef2ff';
 
-  sel.value = r.PIC || '';
+  renderPicChecklist(splitPics(r.PIC));
   document.getElementById('m-status-select').value = 'proses';
 
   ['m-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
@@ -875,7 +1064,7 @@ function closeModalBg(e) { if (e.target === document.getElementById('modal-bg'))
 function saveTemuan() {
   const isSub = document.getElementById('m-is-sub').value === 'true';
   const sel   = document.getElementById('m-status-select').value;
-  let raw     = document.getElementById('m-output').value.trim();
+  let raw     = cleanOutput(document.getElementById('m-output').value);
 
   if (sel === 'selesai') raw = raw ? raw + ' [Selesai]' : 'Selesai [Selesai]';
   else if (sel === 'proses') raw = raw ? raw + ' [Proses]' : '[Proses]';
@@ -883,7 +1072,7 @@ function saveTemuan() {
 
   const fd = {
     No: document.getElementById('m-no').value,
-    PIC: document.getElementById('m-pic').value,
+    PIC: getSelectedPics().join(PIC_SEP),
     Temuan: document.getElementById('m-temuan').value.trim(),
     SubTemuan: document.getElementById('m-subtemuan').value.trim(),
     Kriteria: document.getElementById('m-kriteria').value.trim(),
@@ -897,7 +1086,7 @@ function saveTemuan() {
   };
 
   if (!fd.Temuan) { showToast('Uraian Temuan wajib diisi', 'err'); return; }
-  if (!fd.PIC) { showToast('PIC wajib dipilih', 'err'); return; }
+  if (!fd.PIC) { showToast('Pilih minimal 1 PIC', 'err'); return; }
 
   const row = document.getElementById('m-row').value;
   const btn = document.querySelector('.modal-footer-area .btn-action-pri');
@@ -987,6 +1176,11 @@ function esc(s) {
     '"': '&quot;',
     "'": '&#039;'
   }[c]));
+}
+
+// Escape untuk string di dalam onclick="fn('...')": pakai bareng esc() → esc(jsq(x))
+function jsq(s) {
+  return (s == null ? '' : String(s)).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 function showToast(msg, type = 'inf') {

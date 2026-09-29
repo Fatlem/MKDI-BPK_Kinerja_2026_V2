@@ -89,7 +89,7 @@
           
           <div class="login-security">
             <i data-lucide="shield-check" style="width:15px;height:15px;color:#10b981;"></i>
-            <span>Sistem resmi MKDI &nbsp;|&nbsp; Aman • Terpercaya • Profesional</span>
+            <span>Sistem resmi MKDI</span>
           </div>
         </div>
 
@@ -138,31 +138,6 @@
           </div>
         </div>
 
-      </div>
-
-      <!-- Bottom Feature Highlights Strip -->
-      <div class="login-bottom-highlights">
-        <div class="highlight-item">
-          <div class="highlight-icon"><i data-lucide="monitor" style="width:20px;height:20px;"></i></div>
-          <div class="highlight-text">
-            <h4>Responsive</h4>
-            <p>Optimal di semua perangkat</p>
-          </div>
-        </div>
-        <div class="highlight-item">
-          <div class="highlight-icon"><i data-lucide="shield" style="width:20px;height:20px;"></i></div>
-          <div class="highlight-text">
-            <h4>Aman</h4>
-            <p>Dengan sistem keamanan terbaru</p>
-          </div>
-        </div>
-        <div class="highlight-item">
-          <div class="highlight-icon"><i data-lucide="sparkles" style="width:20px;height:20px;"></i></div>
-          <div class="highlight-text">
-            <h4>Modern</h4>
-            <p>Desain bersih &amp; profesional</p>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -284,15 +259,15 @@
         <input type="hidden" id="m-parent-row">
         <input type="hidden" id="m-is-sub">
 
-        <div class="form-grid-2">
-          <div class="form-field">
-            <label>No Temuan</label>
-            <input id="m-no" type="text" placeholder="Contoh: 1">
-          </div>
-          <div class="form-field">
-            <label>PIC (Penanggung Jawab)</label>
-            <select id="m-pic"></select>
-          </div>
+        <div class="form-field">
+          <label>No Temuan</label>
+          <input id="m-no" type="text" placeholder="Contoh: 1">
+        </div>
+
+        <div class="form-field">
+          <label>PIC (Penanggung Jawab)</label>
+          <div id="m-pic" class="pic-check-list"></div>
+          <div class="field-hint">Centang lebih dari satu jika PIC-nya banyak.</div>
         </div>
 
         <div class="form-field">
@@ -322,10 +297,8 @@
         <div class="form-field"><label>Rekomendasi MKDI</label><textarea id="m-rekomendasi" placeholder="Rekomendasi resmi MKDI"></textarea></div>
         <div class="form-field"><label>Rencana Aksi</label><textarea id="m-rencanaaksi" placeholder="Rencana aksi unit kerja"></textarea></div>
 
-        <div class="form-grid-2">
-          <div class="form-field"><label>Jadwal Pelaksanaan</label><input id="m-jadwal" type="text" placeholder="mis. Triwulan II 2026"></div>
-          <div class="form-field"><label>Output / Hasil</label><input id="m-output" type="text" placeholder="Dokumen bukti atau hasil"></div>
-        </div>
+        <div class="form-field"><label>Jadwal Pelaksanaan</label><textarea id="m-jadwal" placeholder="mis. Triwulan II 2026 (boleh lebih dari satu baris, tekan Enter)"></textarea></div>
+        <div class="form-field"><label>Output / Hasil</label><textarea id="m-output" placeholder="Dokumen bukti atau hasil (boleh lebih dari satu baris, tekan Enter)"></textarea></div>
       </div>
 
       <div class="modal-footer-area">
