@@ -18,7 +18,6 @@ const PIC_SEP = ', ';
 // Pilihan tambahan di luar daftar /api/pic
 const PIC_EXTRA = [
   { username: 'Staf Ahli Bidang Konektivitas', nama: 'Staf Ahli Bidang Konektivitas' },
-  { username: 'Semua Deputi',                  nama: 'Semua Deputi' },
 ];
 
 function splitPics(s) {
@@ -43,18 +42,10 @@ function picNama(token) {
   return p ? p.nama : token;
 }
 
-function isDeputiKey(k) {
-  const p = (S.picList || []).find(x => _picNormKey(x.username) === k);
-  return !!p && (_picNormKey(p.username).startsWith('deputi') || _picNormKey(p.nama).startsWith('deputi'));
-}
-
-// Apakah daftar PIC (array teks) memuat PIC dengan username `key`? ("Semua Deputi" mencakup semua Deputi)
+// Apakah daftar PIC (array teks) memuat PIC dengan username `key`?
 function hasPic(tokens, key) {
   const k = picKeyOf(key);
-  return tokens.some(t => {
-    const tk = picKeyOf(t);
-    return tk === k || (tk === 'semua deputi' && isDeputiKey(k));
-  });
+  return tokens.some(t => picKeyOf(t) === k);
 }
 
 // Semua PIC unik dari sekelompok baris (untuk tampilan & export)
@@ -369,11 +360,7 @@ function calculateAndRenderDashboard(rows) {
     else totalBelum++;
 
     const keys = new Set();
-    splitPics(r.PIC).forEach(t => {
-      const k = picKeyOf(t);
-      if (k === 'semua deputi') Object.keys(picStatsMap).forEach(x => { if (isDeputiKey(x)) keys.add(x); });
-      else keys.add(k);
-    });
+    splitPics(r.PIC).forEach(t => keys.add(picKeyOf(t)));
     keys.forEach(k => {
       if (picStatsMap[k]) {
         picStatsMap[k].jumlah++;
@@ -967,6 +954,8 @@ async function exportExcel() {
 function renderPicChecklist(selected) {
   const box = document.getElementById('m-pic');
   if (!box) return;
+  const manual = document.getElementById('m-pic-manual');
+  if (manual) manual.value = '';
   const opts = allPicOptions().slice();
   const selKeys = new Set((selected || []).map(picKeyOf));
   // PIC lama yang tidak ada di daftar tetap ditampilkan supaya tidak hilang saat edit
@@ -979,6 +968,31 @@ function renderPicChecklist(selected) {
       <input type="checkbox" value="${esc(p.username)}" ${selKeys.has(_picNormKey(p.username)) ? 'checked' : ''}>
       <span>${esc(p.nama)}</span>
     </label>`).join('');
+}
+
+// Tambah PIC yang diketik manual (boleh beberapa, pisahkan dengan koma)
+function addManualPic() {
+  const inp = document.getElementById('m-pic-manual');
+  const box = document.getElementById('m-pic');
+  if (!inp || !box) return;
+
+  splitPics(inp.value).forEach(name => {
+    const k = picKeyOf(name);
+    const exist = Array.from(box.querySelectorAll('input[type="checkbox"]')).find(i => picKeyOf(i.value) === k);
+    if (exist) {
+      exist.checked = true;
+    } else {
+      box.insertAdjacentHTML('beforeend', `
+        <label class="pic-check-item">
+          <input type="checkbox" value="${esc(name)}" checked>
+          <span>${esc(name)}</span>
+        </label>`);
+    }
+  });
+
+  inp.value = '';
+  box.scrollTop = box.scrollHeight;
+  inp.focus();
 }
 
 function getSelectedPics() {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>NKP Kinerja 2026 - Dashboard Monitoring MKDI</title>
+  <title>BPK Kinerja 2026 - Dashboard Monitoring MKDI</title>
   <meta name="theme-color" content="#0a0f24">
 
   <!-- Google Fonts -->
@@ -22,9 +22,7 @@
 </head>
 <body>
 
-  <!-- ================================================================= -->
-  <!-- 1. LOGIN PAGE VIEW                                                -->
-  <!-- ================================================================= -->
+  <!-- LOGIN PAGE VIEW -->
   <div id="login-view" class="login-page-wrapper">
     
     <div class="bg-glow bg-glow-top-right"></div>
@@ -40,7 +38,7 @@
               <i data-lucide="clipboard-check" style="width:22px;height:22px;"></i>
             </div>
             <div class="login-logo-text">
-              <h3>NKP Kinerja 2026</h3>
+              <h3>BPK Kinerja 2026</h3>
               <p>Dashboard Monitoring</p>
             </div>
           </div>
@@ -143,10 +141,7 @@
     </div>
   </div>
 
-
-  <!-- ================================================================= -->
-  <!-- 2. MAIN APPLICATION SHELL                                         -->
-  <!-- ================================================================= -->
+   <!-- MAIN APPLICATION SHELL -->
   <div id="app-container" style="display:none;">
     <div class="app-layout">
       <div id="sb-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
@@ -158,7 +153,7 @@
             <i data-lucide="clipboard-check" style="width:22px;height:22px;"></i>
           </div>
           <div>
-            <div class="sidebar-brand-name">NKP Kinerja 2026</div>
+            <div class="sidebar-brand-name">BPK Kinerja 2026</div>
             <div class="sidebar-brand-sub">Dashboard Monitoring</div>
           </div>
         </div>
@@ -197,7 +192,7 @@
               <i data-lucide="log-out" style="width:18px;height:18px;"></i>
             </button>
           </div>
-          <div class="sidebar-copyright">NKP Kinerja 2026 &copy; 2026</div>
+          <div class="sidebar-copyright">BPK Kinerja 2026 &copy; 2026</div>
         </div>
       </aside>
 
@@ -235,15 +230,12 @@
         </header>
 
         <div id="page-body" class="page-content"></div>
-        <footer class="app-footer">NKP Kinerja 2026 &copy; 2026 Badan Pemeriksa Keuangan RI</footer>
+        <footer class="app-footer">BPK Kinerja 2026 &copy; 2026 Badan Pemeriksa Keuangan RI</footer>
       </div>
     </div>
   </div>
 
-
-  <!-- ================================================================= -->
-  <!-- 3. MODALS & TOAST NOTIFICATION                                    -->
-  <!-- ================================================================= -->
+  <!-- MODALS & TOAST NOTIFICATION -->
   <div id="modal-bg" class="modal-backdrop" onclick="closeModalBg(event)">
     <div class="modal-window">
       <div class="modal-header-area">
@@ -267,7 +259,11 @@
         <div class="form-field">
           <label>PIC (Penanggung Jawab)</label>
           <div id="m-pic" class="pic-check-list"></div>
-          <div class="field-hint">Centang lebih dari satu jika PIC-nya banyak.</div>
+          <div class="pic-manual">
+            <input id="m-pic-manual" type="text" placeholder="Ketik PIC lain (bisa lebih dari satu, pisahkan koma)" onkeydown="if(event.key==='Enter'){event.preventDefault();addManualPic();}">
+            <button type="button" class="btn-action-sec" onclick="addManualPic()"><i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah</button>
+          </div>
+          <div class="field-hint">Centang lebih dari satu jika PIC-nya banyak, atau ketik manual jika tidak ada di daftar.</div>
         </div>
 
         <div class="form-field">

@@ -19,7 +19,6 @@ class PicSeeder extends Seeder
             'Deputi Bidang Koordinasi Usaha Pangan dan Pertanian',
             'Deputi Bidang Koordinasi Keterjangkauan dan Keamanan Pangan',
             'Staf Ahli Bidang Konektivitas',
-            'Semua Deputi',
         ];
 
         foreach ($list as $nama) {
