@@ -53,8 +53,18 @@ class TemuanController extends Controller
     }
 
     // ── POST /api/temuan ──────────────────────────────────────────
+    // Hanya Admin (Inspektorat) yang boleh membuat temuan/sub-temuan baru,
+    // karena aksi ini menyentuh kolom A-F (No, Temuan, Sub Temuan, Kriteria,
+    // Sebab, Rekomendasi) dan menentukan PIC (kolom G) yang ditugaskan.
     public function store(Request $request)
     {
+        if (! $this->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya Admin (Inspektorat) yang dapat menambah temuan atau sub-temuan baru.',
+            ], 403);
+        }
+
         $fd      = $request->all();
         $isSub   = filter_var($fd['isSubAdd'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $parentId = $fd['parentRow'] ?? null;
@@ -81,6 +91,11 @@ class TemuanController extends Controller
     }
 
     // ── PUT /api/temuan/{id} ──────────────────────────────────────
+    // Admin: boleh ubah semua kolom (A-J).
+    // PIC  : hanya boleh ubah kolom H-J (Rencana Aksi, Jadwal Pelaksanaan, Output),
+    //        dan HANYA untuk baris yang kolom PIC-nya (kolom G) memuat username-nya
+    //        sendiri. Kolom A-G sama sekali diabaikan/tidak diproses dari request PIC,
+    //        meskipun dikirim dari klien.
     public function update(Request $request, int $id)
     {
         $temuan = Temuan::find($id);
@@ -88,26 +103,60 @@ class TemuanController extends Controller
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
 
-        $fd = $request->all();
-        $temuan->update([
-            'no'                  => $fd['No']               ?? $temuan->no,
-            'temuan'              => $fd['Temuan']            ?? $temuan->temuan,
-            'sub_temuan'          => $fd['SubTemuan']         ?? null,
-            'kriteria'            => $fd['Kriteria']          ?? null,
-            'sebab'               => $fd['Sebab']             ?? null,
-            'rekomendasi'         => $fd['Rekomendasi']       ?? null,
-            'pic'                 => $fd['PIC']               ?? null,
-            'rencana_aksi'        => $fd['RencanaAksi']       ?? null,
-            'jadwal_pelaksanaan'  => $fd['JadwalPelaksanaan'] ?? null,
-            'output'              => $fd['Output']            ?? null,
-        ]);
+        $me   = $this->currentUser();
+        $role = $me['role'] ?? null;
+        $fd   = $request->all();
 
-        return response()->json(['success' => true]);
+        if ($role === 'admin') {
+            $temuan->update([
+                'no'                  => $fd['No']               ?? $temuan->no,
+                'temuan'              => $fd['Temuan']            ?? $temuan->temuan,
+                'sub_temuan'          => $fd['SubTemuan']         ?? null,
+                'kriteria'            => $fd['Kriteria']          ?? null,
+                'sebab'               => $fd['Sebab']             ?? null,
+                'rekomendasi'         => $fd['Rekomendasi']       ?? null,
+                'pic'                 => $fd['PIC']               ?? null,
+                'rencana_aksi'        => $fd['RencanaAksi']       ?? null,
+                'jadwal_pelaksanaan'  => $fd['JadwalPelaksanaan'] ?? null,
+                'output'              => $fd['Output']            ?? null,
+            ]);
+
+            return response()->json(['success' => true]);
+        }
+
+        if ($role === 'pic') {
+            if (! $this->isOwnerPic($temuan, $me['username'] ?? '')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak berwenang mengubah data milik PIC lain.',
+                ], 403);
+            }
+
+            // Kolom A-G dikunci untuk PIC: nilai lama dipertahankan apa pun
+            // yang dikirim dari klien. Hanya H-J yang benar-benar diproses.
+            $temuan->update([
+                'rencana_aksi'        => $fd['RencanaAksi']       ?? $temuan->rencana_aksi,
+                'jadwal_pelaksanaan'  => $fd['JadwalPelaksanaan'] ?? $temuan->jadwal_pelaksanaan,
+                'output'              => $fd['Output']            ?? $temuan->output,
+            ]);
+
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Sesi tidak valid, silakan login ulang.'], 401);
     }
 
     // ── DELETE /api/temuan/{id} ───────────────────────────────────
+    // Hanya Admin yang dapat menghapus data (aksi destruktif atas temuan resmi).
     public function destroy(int $id)
     {
+        if (! $this->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya Admin (Inspektorat) yang dapat menghapus data.',
+            ], 403);
+        }
+
         $temuan = Temuan::find($id);
         if (! $temuan) {
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
@@ -115,6 +164,44 @@ class TemuanController extends Controller
 
         $temuan->delete();
         return response()->json(['success' => true]);
+    }
+
+    // ── Helper: Role & Kepemilikan PIC ─────────────────────────────
+    private function currentUser(): ?array
+    {
+        return session('kmdi_user');
+    }
+
+    private function isAdmin(): bool
+    {
+        $me = $this->currentUser();
+        return ($me['role'] ?? null) === 'admin';
+    }
+
+    /**
+     * Kolom PIC disimpan sebagai teks dipisah koma, mis. "Biro A, Biro B".
+     * Pisahkan jadi token-token bersih untuk dicocokkan satu per satu.
+     */
+    private function picTokens(?string $s): array
+    {
+        if (! $s) return [];
+        $parts = preg_split('/\s*[,;\n]\s*/', $s);
+        return array_values(array_filter(array_map('trim', $parts)));
+    }
+
+    /**
+     * Apakah username ini termasuk salah satu PIC yang tercantum di baris $temuan?
+     * Dicocokkan case-insensitive & trim, sama seperti pola picKeyOf() di kmdi.js.
+     */
+    private function isOwnerPic(Temuan $temuan, string $username): bool
+    {
+        $target = mb_strtolower(trim($username));
+        if ($target === '') return false;
+
+        foreach ($this->picTokens($temuan->pic) as $t) {
+            if (mb_strtolower($t) === $target) return true;
+        }
+        return false;
     }
 
     // ── Helper ────────────────────────────────────────────────────

@@ -293,6 +293,21 @@ function navigate(page, arg) {
   }
 }
 
+// ══════════════════ ROLE HELPERS (AKSES A-F vs G-J) ═════════════
+// A-F (No, Temuan, Sub Temuan, Kriteria, Sebab, Rekomendasi) & G (PIC):
+// hanya Admin (Inspektorat) yang boleh isi/ubah. PIC hanya boleh mengisi
+// H-J (Rencana Aksi, Jadwal Pelaksanaan, Output) pada baris yang PIC-nya
+// (kolom G) memuat username mereka sendiri. Backend (TemuanController)
+// menegakkan ini secara mutlak; helper di sini murni untuk tampilan.
+function isAdminUser() {
+  return !!(S.user && S.user.role === 'admin');
+}
+function ownsRow(row) {
+  if (isAdminUser()) return true;
+  if (!S.user) return false;
+  return hasPic(splitPics(row.PIC), S.user.username);
+}
+
 // ══════════════════ HELPER STATUS TEMUAN ════════════════════════
 // Tag status ([Selesai] / [Proses] / [Belum]) disimpan di dalam kolom Output.
 // Regex ini dipakai untuk membuang tag saat ditampilkan / diedit / diekspor.
@@ -562,7 +577,7 @@ function renderRuangIsian(rows) {
     </div>
 
     <div class="toolbar-wrap">
-      <button class="btn-action-pri" onclick="openModal()"><i data-lucide="plus" style="width:16px;"></i> Tambah Temuan Baru</button>
+      ${isAdminUser() ? `<button class="btn-action-pri" onclick="openModal()"><i data-lucide="plus" style="width:16px;"></i> Tambah Temuan Baru</button>` : ''}
       <select class="select-custom" id="ri-flt-pic" style="width:260px;" onchange="filterRuangIsian()" ${S.user?.role === 'pic' ? 'disabled' : ''}>
         <option value="">Semua PIC</option>
         ${picOpts}
@@ -620,14 +635,16 @@ function renderEntryList() {
             <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
             <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${items.length} Rincian Sub-Tindak Lanjut)</div>
           </div>
+          ${isAdminUser() ? `
           <button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
             <i data-lucide="plus-circle" style="width:14px;"></i> Tambah Sub
-          </button>
+          </button>` : ''}
         </div>
 
         <div class="sub-item-block" style="display:none;">
           ${items.map((sub, idx) => {
             const st = statusOf(sub);
+            const canEditThis = ownsRow(sub);
             return `
               <div style="background:#fff;padding:14px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:10px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -636,8 +653,8 @@ function renderEntryList() {
                     <span class="status-pill ${st.cls}">
                       <i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}
                     </span>
-                    <button class="btn-action-sec" style="padding:4px 8px;" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i></button>
-                    <button class="btn-action-sec" style="padding:4px 8px;color:#ef4444;" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>
+                    ${canEditThis ? `<button class="btn-action-sec" style="padding:4px 8px;" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i></button>` : ''}
+                    ${isAdminUser() ? `<button class="btn-action-sec" style="padding:4px 8px;color:#ef4444;" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>` : ''}
                   </div>
                 </div>
                 <div class="sub-grid">
@@ -734,9 +751,10 @@ function renderRekap(rows) {
         <td style="padding:12px 10px;">${esc(parent.Temuan) || '—'}</td>
         <td style="padding:12px 10px;">${items.length} Detail</td>
         <td style="padding:12px 10px;text-align:right;">
+          ${isAdminUser() ? `
           <button class="btn-action-sec" style="padding:4px 8px;" onclick="openAddSubModal(${items[items.length - 1]._row})">
             <i data-lucide="plus" style="width:14px;"></i> Sub
-          </button>
+          </button>` : ''}
         </td>
       </tr>`;
   }).join('');
@@ -999,7 +1017,45 @@ function getSelectedPics() {
   return Array.from(document.querySelectorAll('#m-pic input[type="checkbox"]:checked')).map(i => i.value);
 }
 
+// Kunci/lepas field A-F (& kolom PIC) di modal sesuai role yang sedang login.
+// PIC hanya boleh menyentuh Rencana Aksi, Jadwal Pelaksanaan, dan Output.
+function applyModalRoleLock() {
+  const admin = isAdminUser();
+  const lockedIds = ['m-no', 'm-temuan', 'm-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi'];
+
+  lockedIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.readOnly = !admin;
+      el.style.background = admin ? '' : '#eef2ff';
+      el.style.cursor = admin ? '' : 'not-allowed';
+    }
+  });
+
+  const picBox = document.getElementById('m-pic');
+  const picManualWrap = document.querySelector('.pic-manual');
+  const picHint = document.querySelector('.form-field .field-hint');
+  if (picBox) {
+    picBox.style.pointerEvents = admin ? '' : 'none';
+    picBox.style.opacity = admin ? '' : '0.65';
+    picBox.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.disabled = !admin; });
+  }
+  if (picManualWrap) picManualWrap.style.display = admin ? '' : 'none';
+  if (picHint) {
+    picHint.textContent = admin
+      ? 'Centang lebih dari satu jika PIC-nya banyak, atau ketik manual jika tidak ada di daftar.'
+      : 'Kolom PIC ditentukan oleh Admin (Inspektorat) dan tidak dapat diubah.';
+  }
+}
+
 function openModal(pic, row) {
+  // Membuat temuan/sub-temuan baru (row kosong) menyentuh kolom A-F,
+  // jadi hanya Admin yang boleh membukanya dalam mode "tambah baru".
+  if (!row && !isAdminUser()) {
+    showToast('Hanya Admin (Inspektorat) yang dapat menambah temuan baru.', 'err');
+    return;
+  }
+
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = '';
   document.getElementById('m-is-sub').value = 'false';
@@ -1017,6 +1073,13 @@ function openModal(pic, row) {
   document.getElementById('m-status-select').value = 'proses';
 
   const r = row ? S.allR.find(x => String(x._row) === String(row)) : null;
+
+  // PIC hanya boleh membuka baris yang PIC-nya memuat dirinya sendiri
+  if (row && r && !ownsRow(r)) {
+    showToast('Anda tidak berwenang mengubah data milik PIC lain.', 'err');
+    return;
+  }
+
   renderPicChecklist(r ? splitPics(r.PIC) : (pic ? splitPics(pic) : []));
   document.getElementById('modal-bg').classList.add('open');
 
@@ -1042,9 +1105,18 @@ function openModal(pic, row) {
       document.getElementById('m-no').value = n;
     });
   }
+
+  applyModalRoleLock();
 }
 
 function openAddSubModal(row) {
+  // Menambah sub-temuan baru menyentuh kolom A-F (Sub Temuan, Kriteria, Sebab,
+  // Rekomendasi), jadi ini murni tugas Admin.
+  if (!isAdminUser()) {
+    showToast('Hanya Admin (Inspektorat) yang dapat menambah sub-temuan baru.', 'err');
+    return;
+  }
+
   const r = S.allR.find(x => String(x._row) === String(row));
   if (!r) return;
 
@@ -1069,6 +1141,7 @@ function openAddSubModal(row) {
   });
 
   document.getElementById('modal-bg').classList.add('open');
+  applyModalRoleLock();
   refreshIcons();
 }
 
@@ -1099,6 +1172,9 @@ function saveTemuan() {
     parentRow: document.getElementById('m-parent-row').value,
   };
 
+  // PIC hanya diperbolehkan mengubah H-J; kolom lain yang terkunci tetap
+  // dikirim (berisi nilai lama yang tidak diubah) tapi backend akan
+  // mengabaikannya sepenuhnya untuk role 'pic' — ini murni jaga-jaga di sisi klien.
   if (!fd.Temuan) { showToast('Uraian Temuan wajib diisi', 'err'); return; }
   if (!fd.PIC) { showToast('Pilih minimal 1 PIC', 'err'); return; }
 
@@ -1147,6 +1223,10 @@ function refreshCurrentPage() {
 let _delRow = null;
 
 function confirmDel(row) {
+  if (!isAdminUser()) {
+    showToast('Hanya Admin (Inspektorat) yang dapat menghapus data.', 'err');
+    return;
+  }
   _delRow = row;
   document.getElementById('conf-bg').classList.add('open');
 }
