@@ -51,10 +51,13 @@
           <form id="form-login" onsubmit="event.preventDefault(); doLogin();">
             <div class="form-group">
               <label class="form-label" for="lg-user">Pengguna / User</label>
-              <div class="input-wrapper">
+              <div id="user-combo" class="input-wrapper combo-wrapper">
                 <span class="input-icon-left"><i data-lucide="user-check" style="width:16px;height:16px;"></i></span>
-                <input id="lg-user" type="text" class="input-control no-icon-right" placeholder="Ketik atau pilih pengguna..." list="user-list-options" autocomplete="username" required>
-                <datalist id="user-list-options"></datalist>
+                <input id="lg-user" type="text" class="input-control" placeholder="Ketik atau pilih pengguna..." autocomplete="off" required>
+                <button id="user-combo-btn" class="input-icon-right" type="button" onclick="toggleUserCombo()" tabindex="-1" title="Pilih pengguna">
+                  <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+                </button>
+                <div id="user-combo-list" class="combo-list" style="display:none;" role="listbox"></div>
               </div>
             </div>
 
@@ -141,7 +144,7 @@
     </div>
   </div>
 
-   <!-- MAIN APPLICATION SHELL -->
+  <!-- MAIN APPLICATION SHELL -->
   <div id="app-container" style="display:none;">
     <div class="app-layout">
       <div id="sb-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
@@ -250,6 +253,10 @@
         <input type="hidden" id="m-row">
         <input type="hidden" id="m-parent-row">
         <input type="hidden" id="m-is-sub">
+
+        <div id="m-role-note" class="role-note" style="display:none;">
+          Kolom No sampai PIC diisi oleh admin (Inspektorat) dan tidak dapat diubah. Silakan isi <b>Rencana Aksi</b>, <b>Jadwal Pelaksanaan</b>, dan <b>Output</b>.
+        </div>
 
         <div class="form-field">
           <label>No Temuan</label>

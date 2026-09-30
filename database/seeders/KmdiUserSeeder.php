@@ -2,24 +2,36 @@
 
 namespace Database\Seeders;
 
+use App\Models\KmdiUser;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\KmdiUser;
 
 class KmdiUserSeeder extends Seeder
 {
     public function run(): void
     {
+        $password = 'pangan2026';
+
+        // [username, nama, role]
         $users = [
-            ['username' => 'admin', 'nama' => 'Administrator', 'password' => 'pangan2026', 'role' => 'admin'],
-            // Tambahkan user PIC di sini sesuai kebutuhan
-            // ['username' => 'biro_mkdi', 'nama' => 'Biro MKDI', 'password' => 'password123', 'role' => 'pic'],
+            ['admin',     'Administrator',                                               'admin'],
+            ['Biro MKDI', 'Biro Manajemen Kinerja Data dan Informasi',                   'pic'],
+            ['Biro HKS',  'Biro Hukum dan Kerjasama',                                    'pic'],
+            ['Biro SDMO', 'Biro Sumber Daya Manusia dan Organisasi',                     'pic'],
+            ['Biro UHM',  'Biro Umum dan Hubungan Masyarakat',                           'pic'],
+            ['Biro KBMN', 'Biro Keuangan dan BMN',                                       'pic'],
+            ['Deputi 1',  'Deputi Bidang Koordinasi Tata Niaga dan Distribusi Pangan',   'pic'],
+            ['Deputi 2',  'Deputi Bidang Koordinasi Usaha Pangan dan Pertanian',         'pic'],
+            ['Deputi 3',  'Deputi Bidang Koordinasi Keterjangkauan dan Keamanan Pangan', 'pic'],
+            ['Deputi 4',  'Deputi Bidang Koordinasi Sumber Daya Maritim',                'pic'],
         ];
 
-        foreach ($users as $u) {
-            KmdiUser::updateOrCreate(
-                ['username' => $u['username']],
-                ['nama' => $u['nama'], 'password' => Hash::make($u['password']), 'role' => $u['role']]
+        foreach ($users as [$username, $nama, $role]) {
+            // Model KmdiUser tidak punya cast "hashed", jadi password di-hash di sini (bcrypt),
+            // sesuai pengecekan Hash::check() di AuthController.
+            KmdiUser::query()->updateOrCreate(
+                ['username' => $username],
+                ['nama' => $nama, 'password' => Hash::make($password), 'role' => $role]
             );
         }
     }

@@ -17,6 +17,7 @@ function picColor(i) { return PIC_COLORS[i % PIC_COLORS.length]; }
 const PIC_SEP = ', ';
 // Pilihan tambahan di luar daftar /api/pic
 const PIC_EXTRA = [
+  { username: 'Deputi 4',                      nama: 'Deputi Bidang Koordinasi Sumber Daya Maritim' },
   { username: 'Staf Ahli Bidang Konektivitas', nama: 'Staf Ahli Bidang Konektivitas' },
 ];
 
@@ -25,8 +26,9 @@ function splitPics(s) {
 }
 
 function allPicOptions() {
-  const have = new Set((S.picList || []).map(p => _picNormKey(p.username)));
-  return (S.picList || []).concat(PIC_EXTRA.filter(e => !have.has(_picNormKey(e.username))));
+  const have = new Set();
+  (S.picList || []).forEach(p => { have.add(_picNormKey(p.username)); have.add(_picNormKey(p.nama)); });
+  return (S.picList || []).concat(PIC_EXTRA.filter(e => !have.has(_picNormKey(e.username)) && !have.has(_picNormKey(e.nama))));
 }
 
 // Cocokkan teks PIC (username ATAU nama) ke key username yang dinormalisasi
@@ -59,6 +61,25 @@ function groupPicTokens(items) {
 }
 function groupPicNames(items) { return groupPicTokens(items).map(picNama); }
 
+// ── HAK AKSES ──────────────────────────────────────────────────────────
+// Admin (Inspektorat) : mengisi kolom A–G  (No, Temuan, Sub Temuan, Kriteria, Sebab, Rekomendasi, PIC)
+// PIC (akun masing2)  : hanya mengisi kolom H–J (Rencana Aksi, Jadwal Pelaksanaan, Output) + status
+const ADMIN_ONLY_FIELDS = ['m-no', 'm-temuan', 'm-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi'];
+
+function roleOf(u) { return String((u && u.role) || '').trim().toLowerCase(); }
+function isPicUser() { return roleOf(S.user) === 'pic'; }
+function isAdminUser() { return roleOf(S.user) === 'admin'; }
+
+// Apakah baris ini ditugaskan ke user yang sedang login? (cocokkan username / nama PIC)
+function isMyRow(r) {
+  const u = S.user || {};
+  const mine = new Set([_picNormKey(u.username), _picNormKey(u.nama), picKeyOf(u.username), picKeyOf(u.nama)].filter(Boolean));
+  return splitPics(r.PIC).some(t => mine.has(_picNormKey(t)) || mine.has(picKeyOf(t)));
+}
+
+// Akun PIC hanya melihat temuan yang ditugaskan kepadanya
+function scopeRows(rows) { return isPicUser() ? (rows || []).filter(isMyRow) : (rows || []); }
+
 // ── Chart.js Center-Text Donut Plugin ─────────────────────────────
 const centerTextPlugin = {
   id: 'centerText',
@@ -90,6 +111,7 @@ if (typeof Chart !== 'undefined') {
 // ── INIT ─────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   S.csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+  initUserCombo();   // harus sebelum listener Enter di bawah
   refreshIcons();
   loadLoginUsers();
   applyResponsiveMode();
@@ -241,7 +263,7 @@ function enterApp() {
   const initial = (S.user.nama || S.user.username || '?').charAt(0).toUpperCase();
   document.getElementById('sb-av').textContent      = initial;
   document.getElementById('sb-uname').textContent   = S.user.nama || S.user.username;
-  document.getElementById('sb-urole').textContent   = S.user.role === 'admin' ? 'ADMINISTRATOR' : 'PIC UNIT';
+  document.getElementById('sb-urole').textContent   = isAdminUser() ? 'ADMINISTRATOR' : 'PIC UNIT';
   document.getElementById('hdr-avatar').textContent = initial;
 
   apiFetch('/api/pic')
@@ -257,13 +279,135 @@ function enterApp() {
     });
 }
 
+// ── PILIH ATAU KETIK PENGGUNA (halaman login) ───────────────────────
+// Daftar cadangan: dipakai kalau /api/users/list tidak bisa diakses sebelum login (401)
+const LOGIN_USERS_FALLBACK = [
+  { username: 'admin',     nama: 'Administrator',                                              role: 'admin' },
+  { username: 'Biro MKDI', nama: 'Biro Manajemen Kinerja Data dan Informasi',                  role: 'pic' },
+  { username: 'Biro HKS',  nama: 'Biro Hukum dan Kerjasama',                                   role: 'pic' },
+  { username: 'Biro SDMO', nama: 'Biro Sumber Daya Manusia dan Organisasi',                    role: 'pic' },
+  { username: 'Biro UHM',  nama: 'Biro Umum dan Hubungan Masyarakat',                          role: 'pic' },
+  { username: 'Biro KBMN', nama: 'Biro Keuangan dan BMN',                                      role: 'pic' },
+  { username: 'Deputi 1',  nama: 'Deputi Bidang Koordinasi Tata Niaga dan Distribusi Pangan',  role: 'pic' },
+  { username: 'Deputi 2',  nama: 'Deputi Bidang Koordinasi Usaha Pangan dan Pertanian',        role: 'pic' },
+  { username: 'Deputi 3',  nama: 'Deputi Bidang Koordinasi Keterjangkauan dan Keamanan Pangan', role: 'pic' },
+  { username: 'Deputi 4',  nama: 'Deputi Bidang Koordinasi Sumber Daya Maritim',               role: 'pic' },
+];
+let _loginUsers = LOGIN_USERS_FALLBACK.slice();
+let _comboIdx = -1;
+let _comboItems = [];
+
 function loadLoginUsers() {
-  const dl = document.getElementById('user-list-options');
-  if (!dl) return;
   apiFetch('/api/users/list').then(list => {
-    if (!list || !list.length) return;
-    dl.innerHTML = list.map(u => `<option value="${esc(u.username)}">${esc(u.nama || u.username)}${u.role === 'admin' ? ' (Admin)' : ''}</option>`).join('');
+    if (Array.isArray(list) && list.length) {
+      _loginUsers = list.map(u => ({ username: u.username, nama: u.nama || u.username, role: u.role }));
+    }
   }).catch(() => {});
+}
+
+function isUserComboOpen() {
+  const l = document.getElementById('user-combo-list');
+  return !!l && l.style.display !== 'none';
+}
+
+function renderUserCombo() {
+  const input = document.getElementById('lg-user');
+  const list  = document.getElementById('user-combo-list');
+  if (!input || !list) return;
+
+  const q = _picNormKey(input.value);
+  const exact = _loginUsers.some(u => _picNormKey(u.username) === q);   // sudah terpilih -> tampilkan semua
+  _comboItems = (!q || exact)
+    ? _loginUsers.slice()
+    : _loginUsers.filter(u => _picNormKey(u.username).includes(q) || _picNormKey(u.nama).includes(q));
+
+  list.innerHTML = _comboItems.map((u, i) => {
+    const admin = roleOf(u) === 'admin';
+    return `
+      <div class="combo-item${i === _comboIdx ? ' active' : ''}" role="option" data-user="${esc(u.username)}">
+        <div class="combo-avatar">${esc((u.username || '?').charAt(0).toUpperCase())}</div>
+        <div class="combo-text">
+          <div class="cu-name">${esc(u.username)}</div>
+          <div class="cu-sub">${esc(u.nama || '')}</div>
+        </div>
+        <span class="cu-badge${admin ? ' admin' : ''}">${admin ? 'Admin' : 'PIC'}</span>
+      </div>`;
+  }).join('') || '<div class="combo-empty">Tidak ada di daftar. Anda tetap bisa mengetik manual.</div>';
+}
+
+function openUserCombo() {
+  const list = document.getElementById('user-combo-list');
+  const wrap = document.getElementById('user-combo');
+  if (!list) return;
+  renderUserCombo();
+  list.style.display = 'block';
+  wrap?.classList.add('open');
+}
+
+function closeUserCombo() {
+  const list = document.getElementById('user-combo-list');
+  const wrap = document.getElementById('user-combo');
+  if (list) list.style.display = 'none';
+  wrap?.classList.remove('open');
+  _comboIdx = -1;
+}
+
+function toggleUserCombo() {
+  if (isUserComboOpen()) { closeUserCombo(); return; }
+  document.getElementById('lg-user')?.focus();
+  _comboIdx = -1;
+  openUserCombo();
+}
+
+function pickUser(username) {
+  const input = document.getElementById('lg-user');
+  if (input) input.value = username;
+  closeUserCombo();
+  const err = document.getElementById('login-err');
+  if (err) err.style.display = 'none';
+  document.getElementById('lg-pass')?.focus();
+}
+
+function initUserCombo() {
+  const input = document.getElementById('lg-user');
+  const list  = document.getElementById('user-combo-list');
+  if (!input || !list) return;
+
+  input.addEventListener('focus', () => { _comboIdx = -1; openUserCombo(); });
+  input.addEventListener('click', () => { if (!isUserComboOpen()) { _comboIdx = -1; openUserCombo(); } });
+  input.addEventListener('input', () => { _comboIdx = -1; openUserCombo(); });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isUserComboOpen()) openUserCombo();
+      if (!_comboItems.length) return;
+      _comboIdx = e.key === 'ArrowDown'
+        ? Math.min(_comboIdx + 1, _comboItems.length - 1)
+        : Math.max(_comboIdx - 1, 0);
+      renderUserCombo();
+      list.children[_comboIdx]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && isUserComboOpen() && _comboIdx >= 0 && _comboItems[_comboIdx]) {
+      e.preventDefault();
+      e.stopImmediatePropagation();          // jangan langsung login, cukup pilih user
+      pickUser(_comboItems[_comboIdx].username);
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      closeUserCombo();
+    }
+  });
+
+  // pilih dengan klik (mousedown supaya terjadi sebelum input kehilangan fokus)
+  list.addEventListener('mousedown', e => {
+    const it = e.target.closest('.combo-item');
+    if (!it) return;
+    e.preventDefault();
+    pickUser(it.dataset.user);
+  });
+
+  document.addEventListener('mousedown', e => {
+    const wrap = document.getElementById('user-combo');
+    if (wrap && !wrap.contains(e.target)) closeUserCombo();
+  });
 }
 
 // ══════════════════ NAVIGASI ═════════════════════════════════════
@@ -291,21 +435,6 @@ function navigate(page, arg) {
     setActiveNav('nav-rekap');
     loadRekap();
   }
-}
-
-// ══════════════════ ROLE HELPERS (AKSES A-F vs G-J) ═════════════
-// A-F (No, Temuan, Sub Temuan, Kriteria, Sebab, Rekomendasi) & G (PIC):
-// hanya Admin (Inspektorat) yang boleh isi/ubah. PIC hanya boleh mengisi
-// H-J (Rencana Aksi, Jadwal Pelaksanaan, Output) pada baris yang PIC-nya
-// (kolom G) memuat username mereka sendiri. Backend (TemuanController)
-// menegakkan ini secara mutlak; helper di sini murni untuk tampilan.
-function isAdminUser() {
-  return !!(S.user && S.user.role === 'admin');
-}
-function ownsRow(row) {
-  if (isAdminUser()) return true;
-  if (!S.user) return false;
-  return hasPic(splitPics(row.PIC), S.user.username);
 }
 
 // ══════════════════ HELPER STATUS TEMUAN ════════════════════════
@@ -408,7 +537,7 @@ function calculateAndRenderDashboard(rows) {
 
 function renderDashboard(d) {
   if (!d) return;
-  const isPic = S.user && S.user.role === 'pic';
+  const isPic = isPicUser();
   let picGrid = d.picStats || [];
   if (isPic) picGrid = picGrid.filter(p => p.username === S.user.username);
 
@@ -552,15 +681,15 @@ function renderDashboard(d) {
 // ══════════════════ RUANG ISIAN VIEW ═════════════════════════════
 function loadRuangIsian(picFilter) {
   document.getElementById('hdr-title').textContent = 'Ruang Isian';
-  document.getElementById('hdr-sub').textContent   = 'Tambah, ubah, atau hapus data tindak lanjut';
+  document.getElementById('hdr-sub').textContent   = isPicUser() ? 'Isi tindak lanjut untuk temuan yang ditugaskan kepada Anda' : 'Tambah, ubah, atau hapus data tindak lanjut';
   setBody(loadingHtml());
   refreshIcons();
 
   apiFetch('/api/temuan')
     .then(rows => {
-      S.allR = rows || [];
+      S.allR = scopeRows(rows);
       S.riFilter = picFilter || '';
-      renderRuangIsian(rows || []);
+      renderRuangIsian(S.allR);
     })
     .catch(() => showToast('Gagal memuat data dari server', 'err'));
 }
@@ -573,12 +702,12 @@ function renderRuangIsian(rows) {
   setBody(`
     <div class="hero-banner">
       <h2 class="hero-title">Ruang Isian Tindak Lanjut</h2>
-      <p class="hero-sub">Kelola administrasi dan dokumen tindak lanjut hasil pemeriksaan BPK RI</p>
+      <p class="hero-sub">${isPicUser() ? 'Isi Rencana Aksi, Jadwal Pelaksanaan, dan Output untuk temuan yang ditugaskan kepada Anda' : 'Kelola administrasi dan dokumen tindak lanjut hasil pemeriksaan BPK RI'}</p>
     </div>
 
     <div class="toolbar-wrap">
-      ${isAdminUser() ? `<button class="btn-action-pri" onclick="openModal()"><i data-lucide="plus" style="width:16px;"></i> Tambah Temuan Baru</button>` : ''}
-      <select class="select-custom" id="ri-flt-pic" style="width:260px;" onchange="filterRuangIsian()" ${S.user?.role === 'pic' ? 'disabled' : ''}>
+      ${isPicUser() ? '' : '<button class="btn-action-pri" onclick="openModal()"><i data-lucide="plus" style="width:16px;"></i> Tambah Temuan Baru</button>'}
+      <select class="select-custom" id="ri-flt-pic" style="width:260px;" onchange="filterRuangIsian()" ${isPicUser() ? 'disabled' : ''}>
         <option value="">Semua PIC</option>
         ${picOpts}
       </select>
@@ -599,6 +728,7 @@ function filterRuangIsian() {
 function renderEntryList() {
   const rows = S.riFilter ? S.allR.filter(r => hasPic(splitPics(r.PIC), S.riFilter)) : S.allR;
   const list = document.getElementById('entry-list');
+  const canAdmin = !isPicUser();
   
   if (!rows.length) {
     list.innerHTML = `
@@ -635,8 +765,7 @@ function renderEntryList() {
             <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
             <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${items.length} Rincian Sub-Tindak Lanjut)</div>
           </div>
-          ${isAdminUser() ? `
-          <button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
+          ${canAdmin ? `<button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
             <i data-lucide="plus-circle" style="width:14px;"></i> Tambah Sub
           </button>` : ''}
         </div>
@@ -644,7 +773,6 @@ function renderEntryList() {
         <div class="sub-item-block" style="display:none;">
           ${items.map((sub, idx) => {
             const st = statusOf(sub);
-            const canEditThis = ownsRow(sub);
             return `
               <div style="background:#fff;padding:14px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:10px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -653,8 +781,8 @@ function renderEntryList() {
                     <span class="status-pill ${st.cls}">
                       <i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}
                     </span>
-                    ${canEditThis ? `<button class="btn-action-sec" style="padding:4px 8px;" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i></button>` : ''}
-                    ${isAdminUser() ? `<button class="btn-action-sec" style="padding:4px 8px;color:#ef4444;" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>` : ''}
+                    <button class="btn-action-sec" style="padding:4px 8px;" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i></button>
+                    ${canAdmin ? `<button class="btn-action-sec" style="padding:4px 8px;color:#ef4444;" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>` : ''}
                   </div>
                 </div>
                 <div class="sub-grid">
@@ -691,8 +819,8 @@ function loadRekap() {
 
   apiFetch('/api/temuan')
     .then(rows => {
-      S.allR = rows || [];
-      renderRekap(rows || []);
+      S.allR = scopeRows(rows);
+      renderRekap(S.allR);
     })
     .catch(() => showToast('Gagal memuat data dari server', 'err'));
 }
@@ -751,10 +879,9 @@ function renderRekap(rows) {
         <td style="padding:12px 10px;">${esc(parent.Temuan) || '—'}</td>
         <td style="padding:12px 10px;">${items.length} Detail</td>
         <td style="padding:12px 10px;text-align:right;">
-          ${isAdminUser() ? `
-          <button class="btn-action-sec" style="padding:4px 8px;" onclick="openAddSubModal(${items[items.length - 1]._row})">
+          ${isPicUser() ? '' : `<button class="btn-action-sec" style="padding:4px 8px;" onclick="openAddSubModal(${items[items.length - 1]._row})">
             <i data-lucide="plus" style="width:14px;"></i> Sub
-          </button>` : ''}
+          </button>`}
         </td>
       </tr>`;
   }).join('');
@@ -1013,49 +1140,38 @@ function addManualPic() {
   inp.focus();
 }
 
+// Kunci kolom milik admin (A–G) kalau yang login adalah PIC
+function applyModalRole() {
+  const pic = isPicUser();
+  ADMIN_ONLY_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!pic && id === 'm-temuan') { el.classList.remove('field-locked'); return; } // diatur oleh pemanggil
+    el.readOnly = pic;
+    el.classList.toggle('field-locked', pic);
+  });
+
+  const list = document.getElementById('m-pic');
+  if (list) {
+    list.classList.toggle('field-locked', pic);
+    list.querySelectorAll('input[type="checkbox"]').forEach(i => { i.disabled = pic; });
+  }
+  const manual = document.querySelector('.pic-manual');
+  if (manual) manual.style.display = pic ? 'none' : '';
+  const note = document.getElementById('m-role-note');
+  if (note) note.style.display = pic ? 'block' : 'none';
+
+  if (pic) {
+    document.getElementById('modal-title').textContent = 'Isi Tindak Lanjut';
+    document.getElementById('modal-sub').textContent   = 'Anda mengisi Rencana Aksi, Jadwal Pelaksanaan, dan Output';
+  }
+}
+
 function getSelectedPics() {
   return Array.from(document.querySelectorAll('#m-pic input[type="checkbox"]:checked')).map(i => i.value);
 }
 
-// Kunci/lepas field A-F (& kolom PIC) di modal sesuai role yang sedang login.
-// PIC hanya boleh menyentuh Rencana Aksi, Jadwal Pelaksanaan, dan Output.
-function applyModalRoleLock() {
-  const admin = isAdminUser();
-  const lockedIds = ['m-no', 'm-temuan', 'm-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi'];
-
-  lockedIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.readOnly = !admin;
-      el.style.background = admin ? '' : '#eef2ff';
-      el.style.cursor = admin ? '' : 'not-allowed';
-    }
-  });
-
-  const picBox = document.getElementById('m-pic');
-  const picManualWrap = document.querySelector('.pic-manual');
-  const picHint = document.querySelector('.form-field .field-hint');
-  if (picBox) {
-    picBox.style.pointerEvents = admin ? '' : 'none';
-    picBox.style.opacity = admin ? '' : '0.65';
-    picBox.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.disabled = !admin; });
-  }
-  if (picManualWrap) picManualWrap.style.display = admin ? '' : 'none';
-  if (picHint) {
-    picHint.textContent = admin
-      ? 'Centang lebih dari satu jika PIC-nya banyak, atau ketik manual jika tidak ada di daftar.'
-      : 'Kolom PIC ditentukan oleh Admin (Inspektorat) dan tidak dapat diubah.';
-  }
-}
-
 function openModal(pic, row) {
-  // Membuat temuan/sub-temuan baru (row kosong) menyentuh kolom A-F,
-  // jadi hanya Admin yang boleh membukanya dalam mode "tambah baru".
-  if (!row && !isAdminUser()) {
-    showToast('Hanya Admin (Inspektorat) yang dapat menambah temuan baru.', 'err');
-    return;
-  }
-
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = '';
   document.getElementById('m-is-sub').value = 'false';
@@ -1073,14 +1189,8 @@ function openModal(pic, row) {
   document.getElementById('m-status-select').value = 'proses';
 
   const r = row ? S.allR.find(x => String(x._row) === String(row)) : null;
-
-  // PIC hanya boleh membuka baris yang PIC-nya memuat dirinya sendiri
-  if (row && r && !ownsRow(r)) {
-    showToast('Anda tidak berwenang mengubah data milik PIC lain.', 'err');
-    return;
-  }
-
   renderPicChecklist(r ? splitPics(r.PIC) : (pic ? splitPics(pic) : []));
+  applyModalRole();
   document.getElementById('modal-bg').classList.add('open');
 
   if (row) {
@@ -1105,18 +1215,9 @@ function openModal(pic, row) {
       document.getElementById('m-no').value = n;
     });
   }
-
-  applyModalRoleLock();
 }
 
 function openAddSubModal(row) {
-  // Menambah sub-temuan baru menyentuh kolom A-F (Sub Temuan, Kriteria, Sebab,
-  // Rekomendasi), jadi ini murni tugas Admin.
-  if (!isAdminUser()) {
-    showToast('Hanya Admin (Inspektorat) yang dapat menambah sub-temuan baru.', 'err');
-    return;
-  }
-
   const r = S.allR.find(x => String(x._row) === String(row));
   if (!r) return;
 
@@ -1134,6 +1235,7 @@ function openAddSubModal(row) {
   temuanInp.style.background = '#eef2ff';
 
   renderPicChecklist(splitPics(r.PIC));
+  applyModalRole();
   document.getElementById('m-status-select').value = 'proses';
 
   ['m-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
@@ -1141,7 +1243,6 @@ function openAddSubModal(row) {
   });
 
   document.getElementById('modal-bg').classList.add('open');
-  applyModalRoleLock();
   refreshIcons();
 }
 
@@ -1172,9 +1273,16 @@ function saveTemuan() {
     parentRow: document.getElementById('m-parent-row').value,
   };
 
-  // PIC hanya diperbolehkan mengubah H-J; kolom lain yang terkunci tetap
-  // dikirim (berisi nilai lama yang tidak diubah) tapi backend akan
-  // mengabaikannya sepenuhnya untuk role 'pic' — ini murni jaga-jaga di sisi klien.
+  if (isPicUser()) {
+    // Akun PIC: kolom A–G selalu diambil dari data asli, hanya H–J + status yang boleh berubah
+    const rowId = document.getElementById('m-row').value;
+    const orig = rowId ? S.allR.find(x => String(x._row) === String(rowId)) : null;
+    if (!orig) { showToast('Akun PIC hanya dapat mengisi temuan yang ditugaskan kepadanya', 'err'); return; }
+    ['No', 'Temuan', 'SubTemuan', 'Kriteria', 'Sebab', 'Rekomendasi', 'PIC'].forEach(k => { fd[k] = orig[k] == null ? '' : orig[k]; });
+    fd.isSubAdd = false;
+    fd.parentRow = '';
+  }
+
   if (!fd.Temuan) { showToast('Uraian Temuan wajib diisi', 'err'); return; }
   if (!fd.PIC) { showToast('Pilih minimal 1 PIC', 'err'); return; }
 
@@ -1223,10 +1331,6 @@ function refreshCurrentPage() {
 let _delRow = null;
 
 function confirmDel(row) {
-  if (!isAdminUser()) {
-    showToast('Hanya Admin (Inspektorat) yang dapat menghapus data.', 'err');
-    return;
-  }
   _delRow = row;
   document.getElementById('conf-bg').classList.add('open');
 }
