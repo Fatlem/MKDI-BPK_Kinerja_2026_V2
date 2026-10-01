@@ -585,4 +585,3 @@ a { text-decoration: none; color: inherit; }
 .cu-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; background: #f1f5f9; color: #64748b; flex-shrink: 0; }
 .cu-badge.admin { background: #ede9fe; color: #6d28d9; }
 .combo-empty { padding: 12px; font-size: 12px; color: #64748b; text-align: center; }
-
