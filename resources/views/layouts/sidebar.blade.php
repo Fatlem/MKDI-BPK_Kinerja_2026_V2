@@ -1,4 +1,3 @@
-<!-- Dark Navy Sidebar -->
 <aside id="sidebar" class="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo">

@@ -5,10 +5,8 @@
 </head>
 <body>
 
-  {{-- Halaman login --}}
   @include('auth.login')
 
-  {{-- Aplikasi utama (tampil setelah login) --}}
   <div id="app-container" style="display:none;">
     <div class="app-layout">
       <div id="sb-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
@@ -25,11 +23,14 @@
     </div>
   </div>
 
-  {{-- Modal & toast --}}
   <x-modals.form-temuan />
   <x-modals.confirm-delete />
   <div id="toast" class="toast-msg"></div>
 
-  <script src="{{ asset('js/kmdi.js') }}"></script>
+  <script src="{{ asset('js/kmdi/core.js') }}"></script>
+  <script src="{{ asset('js/kmdi/auth.js') }}"></script>
+  <script src="{{ asset('js/kmdi/dashboard.js') }}"></script>
+  <script src="{{ asset('js/kmdi/ruang-isian.js') }}"></script>
+  <script src="{{ asset('js/kmdi/rekap.js') }}"></script>
 </body>
 </html>

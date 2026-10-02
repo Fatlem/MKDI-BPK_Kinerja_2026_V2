@@ -1,4 +1,3 @@
-<!-- LOGIN PAGE VIEW -->
 <div id="login-view" class="login-page-wrapper">
 
   <div class="bg-glow bg-glow-top-right"></div>
@@ -7,7 +6,6 @@
   <div class="login-main-container">
     <div class="login-card-box">
 
-      <!-- Left Panel: Form Login -->
       <div class="login-left-panel">
         <div class="login-logo-area">
           <div class="login-logo-icon">
