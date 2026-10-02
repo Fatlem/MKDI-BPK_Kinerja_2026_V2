@@ -32,5 +32,6 @@
   <script src="{{ asset('js/kmdi/dashboard.js') }}"></script>
   <script src="{{ asset('js/kmdi/ruang-isian.js') }}"></script>
   <script src="{{ asset('js/kmdi/rekap.js') }}"></script>
+  <script src="{{ asset('js/kmdi/router.js') }}?v={{ @filemtime(public_path('js/kmdi/router.js')) }}"></script>
 </body>
 </html>

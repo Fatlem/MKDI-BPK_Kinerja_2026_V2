@@ -6,17 +6,16 @@ use App\Http\Controllers\TemuanController;
 use App\Http\Controllers\PicController;
 use App\Http\Controllers\UserController;
 
-// ── SPA Entry Point ──────────────────────────────────────────────
-Route::get('/', fn() => view('app'));
+Route::view('/',             'app');
+Route::view('/dashboard',    'app');
+Route::view('/ruang-isian',  'app');
+Route::view('/rekap-laporan','app');
 
-// ── API Routes (web middleware agar session tersedia) ─────────────
 Route::prefix('api')->group(function () {
 
-    // Auth (public)
     Route::post('/auth/login',  [AuthController::class, 'login']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    // Protected
     Route::middleware('auth.kmdi')->group(function () {
         Route::get('/users/list',       [UserController::class,  'listForLogin']);
         Route::get('/pic',              [PicController::class,   'index']);
