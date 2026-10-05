@@ -297,6 +297,28 @@ a { text-decoration: none; color: inherit; }
 .notif-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 8px; right: 8px; border: 2px solid #fff; }
 .header-avatar-btn { width: 38px; height: 38px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 14px; }
 
+/* LOGO HEADER (Kemenko Pangan) */
+.header-brand-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+.header-brand-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+@media (max-width: 1280px) {
+  .header-brand-logo { height: 32px; }
+}
+/* Header tablet/HP terlalu sempit untuk logo selebar ini */
+@media (max-width: 1024px) {
+  .header-brand-logo,
+  .header-brand-divider { display: none; }
+}
+
 .page-content { padding: 28px 32px; max-width: 1400px; width: 100%; margin: 0 auto; flex: 1; }
 .app-footer { text-align: center; padding: 16px 32px; font-size: 12px; color: #94a3b8; font-weight: 600; border-top: 1px solid var(--border-color); }
 
@@ -585,3 +607,281 @@ a { text-decoration: none; color: inherit; }
 .cu-badge { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; background: #f1f5f9; color: #64748b; flex-shrink: 0; }
 .cu-badge.admin { background: #ede9fe; color: #6d28d9; }
 .combo-empty { padding: 12px; font-size: 12px; color: #64748b; text-align: center; }
+
+
+/* LOGO HEADER: TAMPIL DI HP (taruh paling bawah supaya menang dari aturan sebelumnya) */
+@media (max-width: 768px) {
+  .header-brand-logo { display: block; height: 26px; max-width: 100%; }
+  .header-brand-divider { display: none; }
+}
+
+/* HP: logo menggantikan sapaan agar tidak berdesakan */
+@media (max-width: 560px) {
+  .header-brand-logo { height: 30px; }
+  .header-greeting { display: none; }
+}
+
+
+/* LOGIN: LOGO KEMENKO & RESPONSIVE MOBILE (taruh paling bawah) */
+.login-ministry { padding-bottom: 18px; margin-bottom: 22px; border-bottom: 1px solid var(--border-color); }
+.login-ministry-logo { display: block; height: 46px; width: auto; max-width: 100%; }
+.login-page-wrapper { min-height: 100vh; min-height: 100dvh; }
+
+@media (max-width: 1024px) {
+  .login-main-container { max-width: 560px; }
+  .login-right-panel { padding: 32px 28px; }
+}
+
+@media (max-width: 768px) {
+  .login-page-wrapper { align-items: flex-start; padding: 20px 14px 28px; }
+  .login-main-container { gap: 20px; }
+  .login-ministry { padding-bottom: 14px; margin-bottom: 18px; }
+  .login-ministry-logo { height: 38px; }
+  .login-logo-area { margin-bottom: 20px; }
+  .login-heading { font-size: 22px; }
+  .login-subheading { margin-bottom: 18px; }
+  .rp-bpk-badge { margin-bottom: 18px; }
+  .rp-headline { margin-bottom: 20px; }
+  .rp-headline p { max-width: none; }
+  .bg-glow-top-right, .bg-glow-bottom-left { width: 280px; height: 280px; }
+}
+
+@media (max-width: 480px) {
+  .login-ministry-logo { height: 32px; }
+  .login-left-panel { padding: 24px 18px; }
+  .login-right-panel { padding: 24px 18px; }
+  .login-options { flex-wrap: wrap; gap: 8px; }
+  .rp-features { display: none; }
+  .rp-headline { margin-bottom: 0; }
+}
+
+
+/* LOGIN: VERSI HP LEBIH KOMPAK (taruh paling bawah) */
+@media (max-width: 768px) {
+  .login-page-wrapper { padding: 14px 12px 20px; }
+  .login-card-box { border-radius: 18px; }
+  .login-left-panel { padding: 22px 18px; }
+
+  .login-ministry { padding-bottom: 12px; margin-bottom: 14px; }
+  .login-ministry-logo { height: 30px; }
+
+  .login-logo-area { gap: 10px; margin-bottom: 14px; }
+  .login-logo-icon { width: 34px; height: 34px; border-radius: 10px; }
+  .login-logo-icon svg { width: 18px !important; height: 18px !important; }
+  .login-logo-text h3 { font-size: 13.5px; }
+  .login-logo-text p { font-size: 9px; }
+
+  .login-heading { font-size: 19px; margin-bottom: 4px; }
+  .login-subheading { font-size: 12px; margin-bottom: 14px; line-height: 1.45; }
+
+  .form-group { margin-bottom: 12px; }
+  .form-label { font-size: 11.5px; margin-bottom: 4px; }
+  .input-control { padding: 8px 36px; font-size: 14px; border-radius: 9px; }
+  .input-icon-left { left: 11px; }
+  .input-icon-right { right: 9px; }
+
+  .login-options { margin: 4px 0 14px; }
+  .checkbox-label, .forgot-link { font-size: 12px; }
+  .btn-login-submit { padding: 10px; font-size: 13px; border-radius: 9px; }
+  .login-divider { margin: 12px 0; font-size: 11px; }
+  .login-security { font-size: 10.5px; }
+
+  .login-right-panel { padding: 20px 18px; }
+  .rp-bpk-emblem { width: 36px; height: 36px; }
+  .rp-bpk-badge { margin-bottom: 14px; }
+  .rp-headline h1 { font-size: 19px; margin-bottom: 8px; }
+  .rp-headline p { font-size: 11.5px; }
+}
+
+/* HP: panel promosi di bawah form disembunyikan supaya login muat satu layar.
+   Hapus aturan ini kalau mau panel itu tetap tampil. */
+@media (max-width: 560px) {
+  .login-right-panel { display: none; }
+}
+
+
+/* LOGIN: KARTU DI TENGAH LAYAR (HP) */
+@media (max-width: 768px) {
+  .login-page-wrapper { align-items: center; justify-content: center; }
+  .login-main-container { margin: 0 auto; }
+}
+
+
+/* LOGIN: HP LEBIH KECIL LAGI (taruh paling bawah) */
+@media (max-width: 560px) {
+  .login-page-wrapper { padding: 12px 14px; }
+  .login-main-container { max-width: 320px; }
+  .login-card-box { border-radius: 16px; }
+  .login-left-panel { padding: 18px 16px; }
+
+  .login-ministry { padding-bottom: 10px; margin-bottom: 12px; }
+  .login-ministry-logo { height: 24px; }
+
+  .login-logo-area { gap: 8px; margin-bottom: 12px; }
+  .login-logo-icon { width: 28px; height: 28px; border-radius: 8px; }
+  .login-logo-icon svg { width: 15px !important; height: 15px !important; }
+  .login-logo-text h3 { font-size: 12px; }
+  .login-logo-text p { font-size: 8px; letter-spacing: 0.6px; }
+
+  .login-heading { font-size: 16px; margin-bottom: 3px; }
+  .login-subheading { font-size: 10.5px; margin-bottom: 12px; line-height: 1.4; }
+  .login-err { font-size: 11px; padding: 8px 10px; margin-bottom: 10px; }
+
+  .form-group { margin-bottom: 10px; }
+  .form-label { font-size: 10.5px; margin-bottom: 3px; }
+  .input-control { padding: 6px 30px; font-size: 12px; border-radius: 8px; }
+  .input-icon-left { left: 9px; }
+  .input-icon-right { right: 7px; }
+  .input-icon-left svg, .input-icon-right svg { width: 13px !important; height: 13px !important; }
+
+  .login-options { margin: 2px 0 12px; }
+  .checkbox-label { gap: 6px; }
+  .checkbox-label, .forgot-link { font-size: 10.5px; }
+  .checkbox-label input[type="checkbox"] { width: 14px; height: 14px; }
+  .btn-login-submit { padding: 8px; font-size: 12px; border-radius: 8px; gap: 6px; }
+  .btn-login-submit svg { width: 15px !important; height: 15px !important; }
+  .login-divider { margin: 10px 0; font-size: 10px; }
+  .login-security { font-size: 9.5px; gap: 5px; }
+  .login-security svg { width: 13px !important; height: 13px !important; }
+
+  .combo-item { padding: 6px 8px; }
+  .combo-avatar { width: 26px; height: 26px; font-size: 11px; }
+  .cu-name { font-size: 12px; }
+  .cu-sub { font-size: 10px; }
+}
+
+
+/* RUANG ISIAN: DESAIN RINCIAN BARU (kartu berwarna) */
+.sub-item-block { padding: 14px 16px; }
+.ri-sub { background: #fff; border: 1.5px solid var(--border-color); border-radius: var(--r-xl); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
+.ri-sub:last-child { margin-bottom: 0; }
+
+.ri-sub-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.ri-sub-title { display: flex; gap: 12px; align-items: flex-start; min-width: 0; flex: 1; }
+.ri-sub-badge { width: 34px; height: 34px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ri-sub-titletext { min-width: 0; }
+.ri-sub-titletext strong { font-size: 14px; color: var(--text-main); overflow-wrap: anywhere; }
+.ri-sub-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 3px; font-size: 11.5px; color: var(--text-muted); }
+.ri-sub-meta span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.ri-sub-meta svg, .ri-sub-meta i { width: 13px; height: 13px; flex-shrink: 0; }
+.ri-sub-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ri-btn { padding: 6px 12px; font-size: 12px; }
+.ri-btn-del { color: #ef4444; padding: 6px 9px; }
+
+.ri-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+.ri-wide { margin-bottom: 14px; }
+.ri-wide:last-child { margin-bottom: 0; }
+
+.ri-card { border: 1.5px solid var(--border-color); border-radius: var(--r-lg); overflow: hidden; background: #fff; min-width: 0; }
+.ri-card-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 13px; font-weight: 800; color: var(--text-main); }
+.ri-card-head svg, .ri-card-head i { width: 18px; height: 18px; flex-shrink: 0; }
+.ri-card-body { padding: 12px 14px 14px; }
+
+.ri-blue   { border-color: #dbeafe; }
+.ri-blue   .ri-card-head { background: linear-gradient(90deg, #eff6ff, #fff); }
+.ri-blue   .ri-card-head svg { color: #2563eb; }
+.ri-blue   .ri-num { background: #dbeafe; color: #2563eb; }
+
+.ri-green  { border-color: #dcfce7; }
+.ri-green  .ri-card-head { background: linear-gradient(90deg, #f0fdf4, #fff); }
+.ri-green  .ri-card-head svg { color: #16a34a; }
+.ri-green  .ri-num { background: #dcfce7; color: #15803d; }
+
+.ri-purple { border-color: #ede9fe; }
+.ri-purple .ri-card-head { background: linear-gradient(90deg, #f5f3ff, #fff); }
+.ri-purple .ri-card-head svg { color: #7c3aed; }
+.ri-purple .ri-num { background: #ede9fe; color: #6d28d9; }
+
+.ri-orange { border-color: #fef3c7; }
+.ri-orange .ri-card-head { background: linear-gradient(90deg, #fffbeb, #fff); }
+.ri-orange .ri-card-head svg { color: #d97706; }
+.ri-orange .ri-num { background: #fef3c7; color: #b45309; }
+
+.ri-sky    { border-color: #bae6fd; }
+.ri-sky    .ri-card-head { background: linear-gradient(90deg, #f0f9ff, #fff); }
+.ri-sky    .ri-card-head svg { color: #0284c7; }
+.ri-sky    .ri-num { background: #e0f2fe; color: #0369a1; }
+
+.ri-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.ri-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.55; color: #334155; }
+.ri-num { width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.ri-txt { min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
+.ri-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; }
+.ri-para { font-size: 12.5px; line-height: 1.6; color: #334155; white-space: pre-line; overflow-wrap: anywhere; }
+.ri-empty { font-size: 12px; color: #94a3b8; font-style: italic; }
+.ri-caption { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 10px; white-space: pre-line; overflow-wrap: anywhere; }
+
+.ri-rel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
+.ri-rel-block { min-width: 0; }
+.ri-rel-title { font-size: 12px; font-weight: 800; color: #334155; margin-bottom: 6px; overflow-wrap: anywhere; white-space: pre-line; }
+.ri-rel-box { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 10px; padding: 10px 12px; }
+.ri-plain { gap: 6px; }
+.ri-plain li { gap: 6px; font-size: 12px; }
+.ri-plain .ri-num { width: auto; height: auto; background: none !important; color: #475569 !important; font-size: 12px; font-weight: 600; border-radius: 0; margin-top: 0; }
+
+@media (max-width: 900px) {
+  .ri-grid, .ri-cols, .ri-rel-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 768px) {
+  .sub-item-block { padding: 10px; }
+  .ri-sub { padding: 12px; border-radius: 16px; }
+  .ri-sub-actions { width: 100%; flex-wrap: wrap; }
+  .ri-card-head { padding: 9px 12px; }
+  .ri-card-body { padding: 10px 12px 12px; }
+}
+
+
+/* RUANG ISIAN: OUTPUT MULTI-BAGIAN & KARTU JADWAL */
+.ri-out-block + .ri-out-block { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-color); }
+.ri-caption { color: #334155; font-weight: 700; }
+
+
+/* SIDEBAR: SUBMENU RUANG ISIAN */
+.nav-chevron { margin-left: auto; width: 16px !important; height: 16px !important; transition: transform 0.2s; }
+.nav-parent.open .nav-chevron { transform: rotate(180deg); }
+.nav-sub-wrap { list-style: none; max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+.nav-sub-wrap.open { max-height: 140px; }
+.nav-subitem {
+  display: flex; align-items: center; gap: 12px; padding: 9px 14px 9px 22px; margin: 0 0 3px 18px;
+  border-radius: 10px; color: #94a3b8; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  border-left: 1.5px solid rgba(255,255,255,0.08);
+}
+.nav-subitem:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.nav-subitem.active { color: #fff; background: rgba(56,189,248,0.14); border-left-color: #38bdf8; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: #475569; flex-shrink: 0; }
+.nav-subitem.active .nav-dot { background: #38bdf8; }
+
+/* HALAMAN KRITERIA */
+.krit-rows { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.krit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #fff; border: 1.5px solid var(--border-color); border-radius: var(--r-md); padding: 10px 14px; flex-wrap: wrap; }
+.krit-row-main { min-width: 0; flex: 1; }
+.krit-row-title { font-size: 13px; font-weight: 600; color: var(--text-main); overflow-wrap: anywhere; }
+.krit-no { display: inline-block; font-size: 10.5px; font-weight: 800; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 20px; margin-right: 6px; }
+.krit-row-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 11.5px; color: var(--text-muted); overflow-wrap: anywhere; }
+.krit-row-meta svg, .krit-row-meta i { width: 13px; height: 13px; flex-shrink: 0; }
+.krit-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+@media (max-width: 768px) {
+  .krit-row-actions { width: 100%; flex-wrap: wrap; }
+}
+
+
+/* HALAMAN KRITERIA: TOMBOL TAMBAH */
+.krit-add-row { margin-top: 12px; display: flex; justify-content: flex-end; }
+
+
+/* HALAMAN DETAIL */
+.det-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ri-card-add {
+  margin-left: auto; width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+  background: #fff; border: 1.5px solid var(--border-color); color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+}
+.ri-card-add:hover { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
+@media (max-width: 1280px) {
+  .det-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .det-grid > :nth-child(3):last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+  .det-grid { grid-template-columns: minmax(0, 1fr); }
+  .det-grid > :nth-child(3):last-child { grid-column: auto; }
+}

@@ -20,6 +20,14 @@ async function apiFetch(url, method = 'GET', data = null) {
   };
   if (data) opts.body = JSON.stringify(data);
   const res = await fetch(url, opts);
+
+  // Sesi habis saat sedang memakai aplikasi -> kembali ke halaman login
+  if (res.status === 401 && S.user && !url.includes('/auth/')) {
+    S.user = null;
+    showLogin();
+    showToast('Sesi berakhir. Silakan login kembali.', 'err');
+  }
+
   const ct  = res.headers.get('content-type');
   if (!ct || !ct.includes('application/json')) {
     throw new Error('Server error ' + res.status + '. Periksa log Laravel.');
@@ -204,13 +212,11 @@ window.addEventListener('DOMContentLoaded', () => {
   initUserCombo();  
   refreshIcons();
   loadLoginUsers();
+  restoreSession();          // cek sesi server: kalau masih login, langsung masuk ke halaman URL saat ini
   applyResponsiveMode();
   startClock();
 
-  const p = document.getElementById('lg-pass');
-  const u = document.getElementById('lg-user');
-  if (p) p.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-  if (u) u.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  // Enter di form login ditangani oleh <form onsubmit>, jadi tidak perlu listener keydown di sini.
 
   const btnConf = document.getElementById('btn-conf-ok');
   if (btnConf) {

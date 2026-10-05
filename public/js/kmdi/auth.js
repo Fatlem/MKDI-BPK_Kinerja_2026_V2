@@ -1,9 +1,33 @@
+function showLogin() {
+  const av = document.getElementById('app-container');
+  const lv = document.getElementById('login-view');
+  if (av) av.style.display = 'none';
+  if (lv) lv.style.display = 'flex';
+}
+
+function restoreSession() {
+  const lv = document.getElementById('login-view');
+  if (lv) lv.style.display = 'none';      
+
+  return apiFetch('/api/auth/me')
+    .then(res => {
+      if (res && res.success && res.user) {
+        S.user = res.user;
+        enterApp();
+      } else {
+        showLogin();
+      }
+    })
+    .catch(() => showLogin());
+}
+
 function doLogin() {
   const uEl = document.getElementById('lg-user');
   const pEl = document.getElementById('lg-pass');
   const err = document.getElementById('login-err');
   const btn = document.getElementById('btn-login');
   if (!uEl || !pEl || !btn) return;
+  if (btn.disabled) return;             
 
   const u = uEl.value.trim();
   const p = pEl.value;
@@ -72,7 +96,7 @@ function enterApp() {
   apiFetch('/api/pic')
     .then(list => {
       S.picList = list || [];
-      navigate('dashboard');
+      navigate('dashboard');   // router.js menggantinya dengan halaman dari URL saat refresh
     })
     .catch(e => {
       // Jangan biarkan halaman menggantung kalau /api/pic gagal
@@ -119,7 +143,7 @@ function renderUserCombo() {
   if (!input || !list) return;
 
   const q = _picNormKey(input.value);
-  const exact = _loginUsers.some(u => _picNormKey(u.username) === q);   // sudah terpilih -> tampilkan semua
+  const exact = _loginUsers.some(u => _picNormKey(u.username) === q);   
   _comboItems = (!q || exact)
     ? _loginUsers.slice()
     : _loginUsers.filter(u => _picNormKey(u.username).includes(q) || _picNormKey(u.nama).includes(q));
@@ -191,15 +215,14 @@ function initUserCombo() {
       renderUserCombo();
       list.children[_comboIdx]?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'Enter' && isUserComboOpen() && _comboIdx >= 0 && _comboItems[_comboIdx]) {
-      e.preventDefault();
-      e.stopImmediatePropagation();          // jangan langsung login, cukup pilih user
+      e.preventDefault();                    // jangan submit form, cukup pilih user
+      e.stopImmediatePropagation();
       pickUser(_comboItems[_comboIdx].username);
     } else if (e.key === 'Escape' || e.key === 'Tab') {
       closeUserCombo();
     }
   });
 
-  // pilih dengan klik (mousedown supaya terjadi sebelum input kehilangan fokus)
   list.addEventListener('mousedown', e => {
     const it = e.target.closest('.combo-item');
     if (!it) return;
@@ -213,7 +236,6 @@ function initUserCombo() {
   });
 }
 
-// ══════════════════ NAVIGASI ═════════════════════════════════════
 function toggleSidebar(open) {
   document.getElementById('sidebar')?.classList.toggle('open', open);
   document.getElementById('sb-overlay')?.classList.toggle('show', open);

@@ -3,7 +3,7 @@
     <div class="modal-header-area">
       <div>
         <div id="modal-title" class="modal-title-text">Tambah Tindak Lanjut</div>
-        <div id="modal-sub" style="font-size:12px;color:var(--text-muted)">Isi rincian tindak lanjut hasil pemeriksaan MKDI</div>
+        <div id="modal-sub" style="font-size:12px;color:var(--text-muted)">Isi data tindak lanjut hasil pemeriksaan MKDI</div>
       </div>
       <button class="modal-close-btn" onclick="closeModal()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
     </div>
@@ -47,16 +47,10 @@
       </div>
 
       <div class="form-field">
-        <label>Sub / Detail Rincian Temuan</label>
-        <textarea id="m-subtemuan" placeholder="Rincian sub temuan tindak lanjut..."></textarea>
+        <label>Sub Temuan</label>
+        <textarea id="m-subtemuan" placeholder="Uraikan sub temuan tindak lanjut..."></textarea>
       </div>
 
-      <div class="form-grid-2">
-        <div class="form-field"><label>Kriteria</label><textarea id="m-kriteria" placeholder="Kriteria/dasar aturan"></textarea></div>
-        <div class="form-field"><label>Sebab</label><textarea id="m-sebab" placeholder="Penyebab temuan"></textarea></div>
-      </div>
-
-      <div class="form-field"><label>Rekomendasi MKDI</label><textarea id="m-rekomendasi" placeholder="Rekomendasi resmi MKDI"></textarea></div>
       <div class="form-field"><label>Rencana Aksi</label><textarea id="m-rencanaaksi" placeholder="Rencana aksi unit kerja"></textarea></div>
 
       <div class="form-field"><label>Jadwal Pelaksanaan</label><textarea id="m-jadwal" placeholder="mis. Triwulan II 2026 (boleh lebih dari satu baris, tekan Enter)"></textarea></div>

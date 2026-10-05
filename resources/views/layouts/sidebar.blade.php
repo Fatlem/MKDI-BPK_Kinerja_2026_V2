@@ -14,9 +14,20 @@
     <li id="nav-dashboard" class="nav-item active" onclick="navigate('dashboard')">
       <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
     </li>
-    <li id="nav-ruang-isian" class="nav-item" onclick="navigate('ruang-isian')">
+
+    <li id="nav-ruang-isian" class="nav-item nav-parent" onclick="toggleNavGroup('ruang-isian')">
       <i data-lucide="file-edit"></i> <span>Ruang Isian</span>
+      <i data-lucide="chevron-down" class="nav-chevron"></i>
     </li>
+    <li id="nav-sub-ruang-isian" class="nav-sub-wrap">
+      <div id="nav-ri-temuan" class="nav-subitem" onclick="navigate('ruang-isian')">
+        <span class="nav-dot"></span><span>Temuan / Sub Temuan</span>
+      </div>
+      <div id="nav-ri-detail" class="nav-subitem" onclick="navigate('ruang-isian-detail')">
+        <span class="nav-dot"></span><span>Detail</span>
+      </div>
+    </li>
+
     <li id="nav-rekap" class="nav-item" onclick="navigate('rekap')">
       <i data-lucide="bar-chart-3"></i> <span>Rekap &amp; Laporan</span>
     </li>

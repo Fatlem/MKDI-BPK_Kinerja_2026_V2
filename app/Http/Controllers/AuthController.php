@@ -34,6 +34,15 @@ class AuthController extends Controller
         return response()->json(['success' => true, 'user' => $userData]);
     }
 
+    public function me()
+    {
+        $user = session('kmdi_user');
+
+        return response()->json(
+            $user ? ['success' => true, 'user' => $user] : ['success' => false]
+        );
+    }
+
     public function logout()
     {
         session()->forget('kmdi_user');
