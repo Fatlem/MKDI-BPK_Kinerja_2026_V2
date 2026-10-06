@@ -21,7 +21,7 @@
 
         <div id="page-body" class="page-content"></div>
 
-        <footer class="app-footer">BPK Kinerja 2026 &copy; 2026 Badan Pemeriksa Keuangan RI</footer>
+        <footer class="app-footer">BPK &copy; 2026 Badan Pemeriksa Kinerja RI</footer>
       </div>
     </div>
   </div>

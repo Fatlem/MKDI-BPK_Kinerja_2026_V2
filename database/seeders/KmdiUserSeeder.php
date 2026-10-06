@@ -12,7 +12,6 @@ class KmdiUserSeeder extends Seeder
     {
         $password = 'pangan2026';
 
-        // [username, nama, role]
         $users = [
             ['admin',     'Administrator',                                               'admin'],
             ['Biro MKDI', 'Biro Manajemen Kinerja Data dan Informasi',                   'pic'],
@@ -27,8 +26,6 @@ class KmdiUserSeeder extends Seeder
         ];
 
         foreach ($users as [$username, $nama, $role]) {
-            // Model KmdiUser tidak punya cast "hashed", jadi password di-hash di sini (bcrypt),
-            // sesuai pengecekan Hash::check() di AuthController.
             KmdiUser::query()->updateOrCreate(
                 ['username' => $username],
                 ['nama' => $nama, 'password' => Hash::make($password), 'role' => $role]

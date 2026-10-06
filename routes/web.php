@@ -16,7 +16,7 @@ Route::view('/rekap-laporan', 'app');
 $apiRoutes = function () {
     Route::post('/auth/login',  [AuthController::class, 'login']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::get('/auth/me',      [AuthController::class, 'me']);   // cek sesi saat refresh
+    Route::get('/auth/me',      [AuthController::class, 'me']);
 
     Route::middleware('auth.kmdi')->group(function () {
         Route::get('/users/list',     [UserController::class,  'listForLogin']);

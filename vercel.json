@@ -1,12 +1,30 @@
 {
     "version": 2,
     "framework": null,
-    "outputDirectory": "public",
     "functions": {
         "api/index.php": { "runtime": "vercel-php@0.7.4" }
     },
     "routes": [
-        { "handle": "filesystem" },
+        {
+            "src": "/css/(.*)",
+            "dest": "/css/$1"
+        },
+        {
+            "src": "/js/(.*)",
+            "dest": "/js/$1"
+        },
+        {
+            "src": "/images/(.*)",
+            "dest": "/images/$1"
+        },
+        {
+            "src": "/build/(.*)",
+            "dest": "/build/$1"
+        },
+        {
+            "src": "/(favicon\\.ico|favicon\\.svg|favicon-32x32\\.png|apple-touch-icon\\.png|robots\\.txt)",
+            "dest": "/$1"
+        },
         {
             "src": "/(.*)",
             "dest": "/api/index.php"
@@ -14,7 +32,9 @@
     ],
     "env": {
         "APP_ENV": "production",
-        "APP_DEBUG": "true",
+        "APP_DEBUG": "false",
+        "APP_URL": "https://mkdi-bpk-kinerja-2026-v2-9ewq.vercel.app",
+        "ASSET_URL": "https://mkdi-bpk-kinerja-2026-v2-9ewq.vercel.app",
 
         "APP_CONFIG_CACHE": "/tmp/config.php",
         "APP_EVENTS_CACHE": "/tmp/events.php",

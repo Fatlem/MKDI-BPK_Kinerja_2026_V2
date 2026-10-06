@@ -96,18 +96,15 @@ function enterApp() {
   apiFetch('/api/pic')
     .then(list => {
       S.picList = list || [];
-      navigate('dashboard');   // router.js menggantinya dengan halaman dari URL saat refresh
+      navigate('dashboard');  
     })
     .catch(e => {
-      // Jangan biarkan halaman menggantung kalau /api/pic gagal
       S.picList = [];
       showToast('Gagal memuat daftar PIC: ' + e.message, 'err');
       navigate('dashboard');
     });
 }
 
-// ── PILIH ATAU KETIK PENGGUNA (halaman login) ───────────────────────
-// Daftar cadangan: dipakai kalau /api/users/list tidak bisa diakses sebelum login (401)
 const LOGIN_USERS_FALLBACK = [
   { username: 'admin',     nama: 'Administrator',                                              role: 'admin' },
   { username: 'Biro MKDI', nama: 'Biro Manajemen Kinerja Data dan Informasi',                  role: 'pic' },

@@ -21,7 +21,6 @@ async function apiFetch(url, method = 'GET', data = null) {
   if (data) opts.body = JSON.stringify(data);
   const res = await fetch(url, opts);
 
-  // Sesi habis saat sedang memakai aplikasi -> kembali ke halaman login
   if (res.status === 401 && S.user && !url.includes('/auth/')) {
     S.user = null;
     showLogin();
@@ -65,7 +64,6 @@ function togglePassVis() {
   refreshIcons();
 }
 
-// ── RESPONSIVE MODE ──────────────────────────────────────────────
 function applyResponsiveMode() {
   const isMobile = window.innerWidth <= 768;
   document.body.classList.toggle('is-mobile', isMobile);
@@ -160,31 +158,22 @@ function groupPicTokens(items) {
 }
 function groupPicNames(items) { return groupPicTokens(items).map(picNama); }
 
-// ── HAK AKSES ──────────────────────────────────────────────────────────
-// Admin (Inspektorat) : mengisi kolom A–G  (No, Temuan, Sub Temuan, Kriteria, Sebab, Rekomendasi, PIC)
-// PIC (akun masing2)  : hanya mengisi kolom H–J (Rencana Aksi, Jadwal Pelaksanaan, Output) + status
 const ADMIN_ONLY_FIELDS = ['m-no', 'm-temuan', 'm-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi'];
 
 function roleOf(u) { return String((u && u.role) || '').trim().toLowerCase(); }
 function isPicUser() { return roleOf(S.user) === 'pic'; }
 function isAdminUser() { return roleOf(S.user) === 'admin'; }
 
-// Apakah baris ini ditugaskan ke user yang sedang login? (cocokkan username / nama PIC)
 function isMyRow(r) {
   const u = S.user || {};
   const mine = new Set([_picNormKey(u.username), _picNormKey(u.nama), picKeyOf(u.username), picKeyOf(u.nama)].filter(Boolean));
   return splitPics(r.PIC).some(t => mine.has(_picNormKey(t)) || mine.has(picKeyOf(t)));
 }
 
-// Akun PIC hanya melihat temuan yang ditugaskan kepadanya
 function scopeRows(rows) { return isPicUser() ? (rows || []).filter(isMyRow) : (rows || []); }
 
-// Normalisasi kunci PIC (huruf kecil, tanpa spasi tepi)
 function _picNormKey(s) { return String(s || '').trim().toLowerCase(); }
 
-// ══════════════════ HELPER STATUS TEMUAN ════════════════════════
-// Tag status ([Selesai] / [Proses] / [Belum]) disimpan di dalam kolom Output.
-// Regex ini dipakai untuk membuang tag saat ditampilkan / diedit / diekspor.
 const STATUS_TAG_RE = /\s*\[(selesai|proses|belum)\]/gi;
 
 function cleanOutput(s) {
@@ -196,12 +185,10 @@ function statusOf(r) {
   const rec = String(r.RencanaAksi || '').trim();
   const jad = String(r.JadwalPelaksanaan || '').trim();
 
-  // 1) Tag eksplisit dari dropdown status selalu menang
   if (out.includes('[selesai]')) return { cls: 'pill-ok',    lbl: 'Selesai', icon: 'check-circle' };
   if (out.includes('[proses]'))  return { cls: 'pill-prog',  lbl: 'Proses',  icon: 'clock' };
   if (out.includes('[belum]'))   return { cls: 'pill-empty', lbl: 'Belum',   icon: 'minus-circle' };
 
-  // 2) Data lama / hasil import tanpa tag: tebak dari isi kolom
   if (out !== '')                return { cls: 'pill-ok',    lbl: 'Selesai', icon: 'check-circle' };
   if (rec !== '' || jad !== '')  return { cls: 'pill-prog',  lbl: 'Proses',  icon: 'clock' };
   return { cls: 'pill-empty', lbl: 'Belum', icon: 'minus-circle' };
@@ -212,11 +199,9 @@ window.addEventListener('DOMContentLoaded', () => {
   initUserCombo();  
   refreshIcons();
   loadLoginUsers();
-  restoreSession();          // cek sesi server: kalau masih login, langsung masuk ke halaman URL saat ini
+  restoreSession();        
   applyResponsiveMode();
   startClock();
-
-  // Enter di form login ditangani oleh <form onsubmit>, jadi tidak perlu listener keydown di sini.
 
   const btnConf = document.getElementById('btn-conf-ok');
   if (btnConf) {

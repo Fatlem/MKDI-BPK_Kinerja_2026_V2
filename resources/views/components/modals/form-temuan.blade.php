@@ -51,10 +51,13 @@
         <textarea id="m-subtemuan" placeholder="Uraikan sub temuan tindak lanjut..."></textarea>
       </div>
 
-      <div class="form-field"><label>Rencana Aksi</label><textarea id="m-rencanaaksi" placeholder="Rencana aksi unit kerja"></textarea></div>
+      <!-- Kolom ini diisi oleh akun PIC. Disembunyikan untuk admin. -->
+      <div id="m-pic-fields">
+        <div class="form-field"><label>Rencana Aksi</label><textarea id="m-rencanaaksi" placeholder="Rencana aksi unit kerja"></textarea></div>
 
-      <div class="form-field"><label>Jadwal Pelaksanaan</label><textarea id="m-jadwal" placeholder="mis. Triwulan II 2026 (boleh lebih dari satu baris, tekan Enter)"></textarea></div>
-      <div class="form-field"><label>Output / Hasil</label><textarea id="m-output" placeholder="Dokumen bukti atau hasil (boleh lebih dari satu baris, tekan Enter)"></textarea></div>
+        <div class="form-field"><label>Jadwal Pelaksanaan</label><textarea id="m-jadwal" placeholder="mis. Triwulan II 2026 (boleh lebih dari satu baris, tekan Enter)"></textarea></div>
+        <div class="form-field"><label>Output / Hasil</label><textarea id="m-output" placeholder="Dokumen bukti atau hasil (boleh lebih dari satu baris, tekan Enter)"></textarea></div>
+      </div>
     </div>
 
     <div class="modal-footer-area">

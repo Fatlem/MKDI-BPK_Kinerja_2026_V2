@@ -703,6 +703,10 @@ function applyModalRole() {
   const note = document.getElementById('m-role-note');
   if (note) note.style.display = pic ? 'block' : 'none';
 
+  // Rencana Aksi, Jadwal, Output = tugas PIC. Form admin berhenti sampai Sub Temuan.
+  const picFields = document.getElementById('m-pic-fields');
+  if (picFields) picFields.style.display = pic ? '' : 'none';
+
   if (pic) {
     document.getElementById('modal-title').textContent = 'Isi Tindak Lanjut';
     document.getElementById('modal-sub').textContent   = 'Anda mengisi Rencana Aksi, Jadwal Pelaksanaan, dan Output';

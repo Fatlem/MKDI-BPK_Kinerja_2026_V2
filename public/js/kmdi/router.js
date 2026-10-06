@@ -34,7 +34,6 @@
     return !!el && el.style.display !== 'none';
   }
 
-  // ── Submenu Ruang Isian ─────────────────────────────────────────
   function setGroup(name, open) {
     var sub = document.getElementById('nav-sub-' + name);
     var parent = document.getElementById('nav-' + name);
@@ -48,7 +47,6 @@
     setGroup(name, !sub.classList.contains('open'));
   };
 
-  // Samakan penanda menu aktif setelah berpindah halaman
   function syncNav(page) {
     var inRI = (page === 'ruang-isian' || page === DETAIL);
     var items = document.querySelectorAll('#sidebar .nav-item');
@@ -65,7 +63,6 @@
     setGroup('ruang-isian', inRI);
   }
 
-  // Tampilkan halaman (tanpa mengubah URL)
   function render(page, args) {
     var result;
     if (page === DETAIL && typeof window.loadDetail === 'function') {

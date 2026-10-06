@@ -174,7 +174,7 @@ async function exportExcel() {
       byNo[no].push(r);
     });
 
-    const sheetRows = []; // 1 entri = 1 baris Excel
+    const sheetRows = [];
     noOrder.forEach(no => {
       const subs = {}, subOrder = [];
       byNo[no].forEach(r => {
@@ -185,7 +185,6 @@ async function exportExcel() {
       subOrder.forEach(k => sheetRows.push({ no, items: subs[k] }));
     });
 
-    // Estimasi tinggi baris supaya teks panjang tidak terpotong
     const estHeight = (text, colIdx, size, bold) => {
       const cpl = Math.max(1, Math.floor(WIDTHS[colIdx] * (11 / size) * (bold ? 0.8 : 0.9)));
       const lines = String(text || '').split('\n')
@@ -222,13 +221,11 @@ async function exportExcel() {
         c.font = { name: FONT, size: st.size, bold: st.bold };
         c.alignment = { horizontal: st.h, vertical: 'middle', wrapText: true };
         c.border = border;
-        // kolom A & B yang akan di-merge lintas baris dihitung terpisah di bawah
         if (multiNo && j < 2) return;
         h = Math.max(h, estHeight(val, j, st.size, st.bold));
       });
       rowHeights.push(h);
 
-      // Kolom K: status (di luar tabel, tanpa border) seperti file Kak Bashar
       const sts = it.map(x => statusOf(x).lbl);
       const k = row.getCell(11);
       k.value = sts.every(s => s === 'Selesai') ? 'Selesai' : (sts.every(s => s === 'Belum') ? 'Belum' : 'Proses');
@@ -236,14 +233,12 @@ async function exportExcel() {
       k.alignment = { vertical: 'middle', wrapText: true };
     });
 
-    // Merge No & Temuan untuk No yang punya lebih dari 1 baris (Sub Temuan berbeda)
     let gs = 0;
     for (let i = 1; i <= sheetRows.length; i++) {
       if (i === sheetRows.length || sheetRows[i].no !== sheetRows[gs].no) {
         if (i - gs > 1) {
           ws.mergeCells(DS + gs, 1, DS + i - 1, 1);
           ws.mergeCells(DS + gs, 2, DS + i - 1, 2);
-          // pastikan total tinggi cukup untuk teks Temuan yang di-merge
           const need = estHeight(ws.getCell(DS + gs, 2).value, 1, COL_STYLE[1].size, true);
           let sum = 0;
           for (let x = gs; x < i; x++) sum += rowHeights[x];
