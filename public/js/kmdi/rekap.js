@@ -1,6 +1,11 @@
+/* kmdi/rekap.js - REKAP & LAPORAN (tampilan seperti Ruang Isian, hanya lihat) + ekspor Excel */
+
+// Kelompok temuan yang sedang ditampilkan di Rekap (diisi oleh renderRekap)
+let _rkGroups = [];
+
 function loadRekap() {
   document.getElementById('hdr-title').textContent = 'Rekap & Laporan';
-  document.getElementById('hdr-sub').textContent   = 'Tinjauan lengkap data tindak lanjut BPK RI';
+  document.getElementById('hdr-sub').textContent   = 'Tinjauan lengkap data tindak lanjut BPK RI (hanya lihat)';
   setBody(loadingHtml());
   refreshIcons();
 
@@ -12,8 +17,153 @@ function loadRekap() {
     .catch(() => showToast('Gagal memuat data dari server', 'err'));
 }
 
+// Hitung progres dari sekumpulan baris: Selesai / Proses / Belum
+function rkStats(rows) {
+  const s = { total: rows.length, selesai: 0, proses: 0, belum: 0, pct: 0 };
+  rows.forEach(r => {
+    const l = statusOf(r).lbl;
+    if (l === 'Selesai') s.selesai++;
+    else if (l === 'Proses') s.proses++;
+    else s.belum++;
+  });
+  s.pct = s.total ? Math.round((s.selesai / s.total) * 100) : 0;
+  return s;
+}
+
+function rkBarColor(pct) { return pct >= 100 ? '#10b981' : '#2563eb'; }
+
+// Ringkasan progres di atas daftar (mengikuti filter yang sedang aktif)
+function rkSummaryHtml(rows) {
+  if (!rows.length) return '';
+  const s = rkStats(rows);
+  return `
+    <div class="entry-card" style="padding:16px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:800;margin-bottom:8px;">
+          <span>Progres Keseluruhan</span>
+          <span style="color:${rkBarColor(s.pct)};font-size:15px;">${s.pct}%</span>
+        </div>
+        <div style="height:8px;border-radius:99px;background:#e2e8f0;overflow:hidden;">
+          <div style="height:100%;width:${s.pct}%;background:${rkBarColor(s.pct)};border-radius:99px;"></div>
+        </div>
+        <div style="font-size:11.5px;color:#64748b;margin-top:6px;">${s.selesai} dari ${s.total} rincian selesai</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="status-pill pill-ok">Selesai ${s.selesai}</span>
+        <span class="status-pill pill-prog">Proses ${s.proses}</span>
+        <span class="status-pill pill-empty">Belum ${s.belum}</span>
+      </div>
+    </div>`;
+}
+
+// Buka/tutup isi satu temuan (menampilkan daftar sub temuan) - hanya lihat
+function togRekapEntry(headerEl) {
+  const block = headerEl.nextElementSibling;
+  if (!block) return;
+  const open = block.style.display === 'none';
+  block.style.display = open ? 'block' : 'none';
+  const chev = headerEl.querySelector('.rk-chev');
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+  const key = headerEl.dataset ? headerEl.dataset.key : '';
+  if (key) S.riOpen[key] = open;
+}
+
+// Buka/tutup isian satu sub temuan (Kriteria, Sebab, Rekomendasi, dst)
+function togRekapSub(headEl) {
+  const body = headEl.nextElementSibling;
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  const chev = headEl.querySelector('.rk-chev');
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+  const key = headEl.dataset ? headEl.dataset.key : '';
+  if (key) S.riOpen[key] = open;
+}
+
+function rkChevron(open) {
+  return `<span class="rk-chev" style="display:flex;align-items:center;color:#94a3b8;flex-shrink:0;transition:transform .2s;transform:rotate(${open ? 180 : 0}deg);"><i data-lucide="chevron-down" style="width:18px;height:18px;"></i></span>`;
+}
+
+// Satu sub temuan: judulnya diklik -> isiannya keluar
+function rekapSubHtml(sub, idx, total) {
+  const key = 'rs:' + sub._row;
+  const open = !!S.riOpen[key];
+  const st = statusOf(sub);
+  const pics = groupPicNames([sub]).join(', ') || '-';
+
+  return `
+    <div class="ri-sub">
+      <div data-key="${esc(key)}" onclick="togRekapSub(this)" style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+        <div style="min-width:0;flex:1;">
+          <strong style="font-size:14px;color:var(--text-main);overflow-wrap:anywhere;">${subLabel(total, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
+          <div class="ri-sub-meta"><span><i data-lucide="users"></i> ${esc(pics)}</span></div>
+        </div>
+        <span class="status-pill ${st.cls}"><i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}</span>
+        ${rkChevron(open)}
+      </div>
+      <div style="display:${open ? 'block' : 'none'};margin-top:14px;">
+        ${riSubBodyHtml(sub)}
+      </div>
+    </div>`;
+}
+
+// Satu kartu temuan (hanya lihat: tanpa tombol Tambah / Ubah / Hapus)
+//  - klik uraian temuan  -> keluar daftar sub temuan
+//  - klik sub temuan     -> keluar isiannya
+//  - temuan dengan 1 rincian (tanpa sub temuan) -> langsung menampilkan isiannya
+function rekapEntryHtml(g) {
+  const items = g.items;
+  const parent = items[0];
+  const s = rkStats(items);
+  const open = !!S.riOpen['r:' + g.noKey];
+
+  const inner = items.length > 1
+    ? items.map((sub, idx) => rekapSubHtml(sub, idx, items.length)).join('')
+    : riSubHtml(items[0], 0, false, 1, { readOnly: true });
+
+  return `
+    <div class="entry-card">
+      <div class="entry-card-header" data-key="r:${esc(g.noKey)}" onclick="togRekapEntry(this)">
+        <div class="entry-badge-no">${esc(parent.No) || '-'}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
+          <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
+            <span style="font-size:11.5px;font-weight:800;color:${rkBarColor(s.pct)};white-space:nowrap;">Progres ${s.pct}%</span>
+            <div style="flex:1;min-width:90px;max-width:240px;height:6px;border-radius:99px;background:#e2e8f0;overflow:hidden;">
+              <div style="height:100%;width:${s.pct}%;background:${rkBarColor(s.pct)};border-radius:99px;"></div>
+            </div>
+            <span style="font-size:11px;color:#64748b;">${s.selesai} dari ${s.total} selesai</span>
+          </div>
+        </div>
+        ${rkChevron(open)}
+      </div>
+
+      <div class="sub-item-block" style="display:${open ? 'block' : 'none'};">
+        ${inner}
+      </div>
+    </div>`;
+}
+
 function renderRekap(rows) {
   const picOpts = allPicOptions().map(p => `<option value="${esc(p.username)}">${esc(p.nama)}</option>`).join('');
+
+  // kelompokkan per nomor temuan
+  const groups = {};
+  rows.forEach(r => {
+    const k = String(r.No || '0');
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(r);
+  });
+  _rkGroups = Object.keys(groups).map(noKey => {
+    const items = groups[noKey];
+    const picTokens = groupPicTokens(items);
+    const q = [noKey]
+      .concat(items.map(i => (i.Temuan || '') + ' ' + (i.SubTemuan || '')))
+      .concat(picTokens.map(picNama))
+      .join(' ').toLowerCase();
+    return { noKey, items, picTokens, q };
+  });
 
   setBody(`
     <div class="toolbar-wrap">
@@ -23,72 +173,43 @@ function renderRekap(rows) {
       <button class="btn-action-sec" style="margin-left:auto" onclick="exportExcel()"><i data-lucide="download" style="width:16px"></i> Ekspor Excel</button>
     </div>
 
-    <div class="entry-card" style="padding:16px;overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="background:#f8fafc;text-align:left;color:#64748b;font-size:11px;font-weight:800;border-bottom:1px solid #e2e8f0;">
-            <th style="padding:10px;">NO</th>
-            <th style="padding:10px;">PIC</th>
-            <th style="padding:10px;">TEMUAN</th>
-            <th style="padding:10px;">RINCIAN</th>
-            <th style="padding:10px;text-align:right;">AKSI</th>
-          </tr>
-        </thead>
-        <tbody id="rekap-rows"></tbody>
-      </table>
-    </div>
+    <div id="rk-summary" style="margin-bottom:10px;"></div>
+    <div style="font-size:11.5px;color:var(--text-muted);margin:0 4px 14px;">Klik uraian temuan untuk melihat sub temuan, lalu klik sub temuan untuk melihat isiannya.</div>
+    <div id="rekap-list"></div>
   `);
 
-  const cont = document.getElementById('rekap-rows');
-  if (!rows.length) {
-    cont.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">Belum ada data</td></tr>';
-    refreshIcons();
-    return;
-  }
-
-  const groups = {};
-  rows.forEach(r => {
-    const k = String(r.No || '0');
-    if (!groups[k]) groups[k] = [];
-    groups[k].push(r);
-  });
-
-  cont.innerHTML = Object.keys(groups).map(noKey => {
-    const items = groups[noKey];
-    const parent = items[0];
-    const picTokens = groupPicTokens(items);
-    const picNames = picTokens.map(picNama);
-
-    return `
-      <tr class="rrow" data-pic="${esc(picTokens.join(PIC_SEP))}" data-q="${esc(parent.Temuan).toLowerCase()}" style="border-bottom:1px solid #f1f5f9;">
-        <td style="padding:12px 10px;font-weight:800;color:#2563eb;">${esc(parent.No) || '-'}</td>
-        <td style="padding:12px 10px;font-weight:700;">${esc(picNames.join(', ')) || '-'}</td>
-        <td style="padding:12px 10px;">${esc(parent.Temuan) || '—'}</td>
-        <td style="padding:12px 10px;">${items.length} Detail</td>
-        <td style="padding:12px 10px;text-align:right;">
-          ${isPicUser() ? '' : `<button class="btn-action-sec" style="padding:4px 8px;" onclick="openAddSubModal(${items[items.length - 1]._row})">
-            <i data-lucide="plus" style="width:14px;"></i> Sub
-          </button>`}
-        </td>
-      </tr>`;
-  }).join('');
-
-  document.getElementById('flt-count').textContent = `${Object.keys(groups).length} Temuan Utama`;
-  refreshIcons();
+  filterRekap();
 }
 
 function filterRekap() {
-  const pf = document.getElementById('flt-pic').value;
-  const q  = (document.getElementById('flt-q').value || '').toLowerCase();
-  let v = 0;
+  const pfEl = document.getElementById('flt-pic');
+  const qEl  = document.getElementById('flt-q');
+  const list = document.getElementById('rekap-list');
+  if (!list) return;
 
-  document.querySelectorAll('.rrow').forEach(r => {
-    const mp = !pf || hasPic(splitPics(r.dataset.pic), pf);
-    const mq = !q || r.dataset.q.includes(q);
-    r.style.display = (mp && mq) ? '' : 'none';
-    if (mp && mq) v++;
-  });
-  document.getElementById('flt-count').textContent = v + ' Data Ditemukan';
+  const pf = pfEl ? pfEl.value : '';
+  const q  = qEl ? (qEl.value || '').toLowerCase().trim() : '';
+  const visible = _rkGroups.filter(g => (!pf || hasPic(g.picTokens, pf)) && (!q || g.q.includes(q)));
+
+  const flat = [];
+  visible.forEach(g => g.items.forEach(i => flat.push(i)));
+  document.getElementById('rk-summary').innerHTML = rkSummaryHtml(flat);
+
+  if (!visible.length) {
+    list.innerHTML = `
+      <div style="text-align:center;padding:60px;background:#fff;border-radius:var(--r-xl);border:1.5px dashed var(--border-color);">
+        <i data-lucide="folder-open" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:8px;"></i>
+        <h4 style="font-weight:700">${_rkGroups.length ? 'Tidak Ada Data yang Cocok' : 'Belum Ada Data'}</h4>
+        <p style="font-size:12px;color:var(--text-muted)">${_rkGroups.length ? 'Ubah filter PIC atau kata pencarian.' : 'Data tindak lanjut belum diisi.'}</p>
+      </div>`;
+  } else {
+    list.innerHTML = visible.map(rekapEntryHtml).join('');
+  }
+
+  document.getElementById('flt-count').textContent = (!pf && !q)
+    ? `${visible.length} Temuan Utama`
+    : `${visible.length} Data Ditemukan`;
+  refreshIcons();
 }
 
 // ══════════════════ EXPORT TO EXCEL ══════════════════════════════
@@ -174,7 +295,7 @@ async function exportExcel() {
       byNo[no].push(r);
     });
 
-    const sheetRows = [];
+    const sheetRows = []; // 1 entri = 1 baris Excel
     noOrder.forEach(no => {
       const subs = {}, subOrder = [];
       byNo[no].forEach(r => {
@@ -185,6 +306,7 @@ async function exportExcel() {
       subOrder.forEach(k => sheetRows.push({ no, items: subs[k] }));
     });
 
+    // Estimasi tinggi baris supaya teks panjang tidak terpotong
     const estHeight = (text, colIdx, size, bold) => {
       const cpl = Math.max(1, Math.floor(WIDTHS[colIdx] * (11 / size) * (bold ? 0.8 : 0.9)));
       const lines = String(text || '').split('\n')
@@ -221,11 +343,13 @@ async function exportExcel() {
         c.font = { name: FONT, size: st.size, bold: st.bold };
         c.alignment = { horizontal: st.h, vertical: 'middle', wrapText: true };
         c.border = border;
+        // kolom A & B yang akan di-merge lintas baris dihitung terpisah di bawah
         if (multiNo && j < 2) return;
         h = Math.max(h, estHeight(val, j, st.size, st.bold));
       });
       rowHeights.push(h);
 
+      // Kolom K: status (di luar tabel, tanpa border) seperti file Kak Bashar
       const sts = it.map(x => statusOf(x).lbl);
       const k = row.getCell(11);
       k.value = sts.every(s => s === 'Selesai') ? 'Selesai' : (sts.every(s => s === 'Belum') ? 'Belum' : 'Proses');
@@ -233,12 +357,14 @@ async function exportExcel() {
       k.alignment = { vertical: 'middle', wrapText: true };
     });
 
+    // Merge No & Temuan untuk No yang punya lebih dari 1 baris (Sub Temuan berbeda)
     let gs = 0;
     for (let i = 1; i <= sheetRows.length; i++) {
       if (i === sheetRows.length || sheetRows[i].no !== sheetRows[gs].no) {
         if (i - gs > 1) {
           ws.mergeCells(DS + gs, 1, DS + i - 1, 1);
           ws.mergeCells(DS + gs, 2, DS + i - 1, 2);
+          // pastikan total tinggi cukup untuk teks Temuan yang di-merge
           const need = estHeight(ws.getCell(DS + gs, 2).value, 1, COL_STYLE[1].size, true);
           let sum = 0;
           for (let x = gs; x < i; x++) sum += rowHeights[x];

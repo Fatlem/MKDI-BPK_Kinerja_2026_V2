@@ -1,4 +1,12 @@
+/* kmdi/ruang-isian.js - RUANG ISIAN, DETAIL, form tambah/edit (modal), simpan, dan hapus */
+
 if (!S.riOpen) S.riOpen = {};
+
+// ── Penamaan rincian ──────────────────────────────────────────────────
+// Temuan yang hanya punya 1 baris   -> "Rincian Temuan"
+// Temuan yang punya banyak baris    -> "Sub Temuan #1", "Sub Temuan #2", ...
+function subLabel(total, idx) { return total > 1 ? 'Sub Temuan #' + (idx + 1) : 'Rincian Temuan'; }
+function subCountLabel(n)     { return n > 1 ? n + ' Sub Temuan' : '1 Rincian Temuan'; }
 
 function loadRuangIsian(picFilter) {
   document.getElementById('hdr-title').textContent = 'Ruang Isian';
@@ -130,17 +138,23 @@ function riJadwalCard(text) {
   return `<div class="ri-wide">${riCard('purple', 'calendar-days', 'Jadwal', riListHtml(parseList(text), ''))}</div>`;
 }
 
-function riSubHtml(sub, idx, canAdmin) {
+// total = jumlah baris dalam temuan yang sama (menentukan nama "Rincian Temuan" / "Sub Temuan #n")
+// opts.readOnly = true -> tanpa tombol Ubah/Hapus (dipakai di halaman Rekap & Laporan)
+function riSubHtml(sub, idx, canAdmin, total, opts) {
+  opts = opts || {};
   const st = statusOf(sub);
   const pics = groupPicNames([sub]).join(', ') || '-';
-  const secs = parseOutputSections(sub.Output);
+
+  const buttons = opts.readOnly ? '' : `
+          <button class="btn-action-sec ri-btn" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i> Ubah</button>
+          ${canAdmin ? `<button class="btn-action-sec ri-btn ri-btn-del" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>` : ''}`;
 
   return `
     <div class="ri-sub">
       <div class="ri-sub-head">
         <div class="ri-sub-title">
           <div class="ri-sub-titletext">
-            <strong>Sub Temuan #${idx + 1}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
+            <strong>${subLabel(total || 1, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
             <div class="ri-sub-meta">
               <span><i data-lucide="users"></i> ${esc(pics)}</span>
             </div>
@@ -149,19 +163,24 @@ function riSubHtml(sub, idx, canAdmin) {
         <div class="ri-sub-actions">
           <span class="status-pill ${st.cls}">
             <i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}
-          </span>
-          <button class="btn-action-sec ri-btn" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i> Ubah</button>
-          ${canAdmin ? `<button class="btn-action-sec ri-btn ri-btn-del" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>` : ''}
+          </span>${buttons}
         </div>
       </div>
 
+      ${riSubBodyHtml(sub)}
+    </div>`;
+}
+
+// Isi rincian: Kriteria, Sebab, Rekomendasi, Rencana Aksi, Output, Jadwal
+function riSubBodyHtml(sub) {
+  const secs = parseOutputSections(sub.Output);
+  return `
       <div class="ri-grid">
         ${RI_CARDS.map(c => riCard(c.cls, c.icon, c.title, riListHtml(parseList(sub[c.key]), ''))).join('')}
       </div>
 
       ${riOutputCard(secs)}
-      ${riJadwalCard(sub.JadwalPelaksanaan)}
-    </div>`;
+      ${riJadwalCard(sub.JadwalPelaksanaan)}`;
 }
 
 function renderEntryList() {
@@ -189,7 +208,7 @@ function renderEntryList() {
     groups[k].push(r);
   });
 
-  document.getElementById('ri-count').textContent = `${Object.keys(groups).length} Temuan Utama (${rows.length} Sub Temuan)`;
+  document.getElementById('ri-count').textContent = `${Object.keys(groups).length} Temuan Utama (${rows.length} Rincian)`;
   
   let html = '';
   Object.keys(groups).forEach(noKey => {
@@ -202,7 +221,7 @@ function renderEntryList() {
           <div class="entry-badge-no">${esc(parent.No) || '-'}</div>
           <div style="flex:1;">
             <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${items.length} Sub Temuan)</div>
+            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
           </div>
           ${canAdmin ? `<button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
             <i data-lucide="plus-circle" style="width:14px;"></i> Tambah Sub Temuan
@@ -210,7 +229,7 @@ function renderEntryList() {
         </div>
 
         <div class="sub-item-block" style="display:${S.riOpen['t:' + noKey] ? 'block' : 'none'};">
-          ${items.map((sub, idx) => riSubHtml(sub, idx, canAdmin)).join('')}
+          ${items.map((sub, idx) => riSubHtml(sub, idx, canAdmin, items.length)).join('')}
         </div>
       </div>`;
   });
@@ -311,7 +330,7 @@ function renderDetail() {
   setBody(`
     <div class="hero-banner">
       <h2 class="hero-title">Detail Temuan</h2>
-      <p class="hero-sub">${isPicUser() ? 'Lihat kriteria, sebab, dan rekomendasi dari temuan yang ditugaskan kepada Anda' : 'Tambah atau ubah kriteria, sebab, dan rekomendasi untuk setiap sub temuan'}</p>
+      <p class="hero-sub">${isPicUser() ? 'Lihat kriteria, sebab, dan rekomendasi dari temuan yang ditugaskan kepada Anda' : 'Tambah atau ubah kriteria, sebab, dan rekomendasi untuk setiap rincian temuan'}</p>
     </div>
 
     <div class="toolbar-wrap">
@@ -346,13 +365,13 @@ function detCard(f, r, canAdmin) {
     </div>`;
 }
 
-function detRowHtml(r, idx, canAdmin) {
+function detRowHtml(r, idx, canAdmin, total) {
   return `
     <div class="ri-sub">
       <div class="ri-sub-head">
         <div class="ri-sub-title">
           <div class="ri-sub-titletext">
-            <strong>Sub Temuan #${idx + 1}${r.SubTemuan ? ' - ' + esc(r.SubTemuan) : ''}</strong>
+            <strong>${subLabel(total || 1, idx)}${r.SubTemuan ? ' - ' + esc(r.SubTemuan) : ''}</strong>
             <div class="ri-sub-meta"><span><i data-lucide="users"></i> ${esc(groupPicNames([r]).join(', ') || '-')}</span></div>
           </div>
         </div>
@@ -392,7 +411,7 @@ function renderDetailList() {
     if (!groups[k]) groups[k] = [];
     groups[k].push(r);
   });
-  if (cnt) cnt.textContent = `${Object.keys(groups).length} Temuan (${rows.length} Sub Temuan)`;
+  if (cnt) cnt.textContent = `${Object.keys(groups).length} Temuan (${rows.length} Rincian)`;
 
   let html = '';
   Object.keys(groups).forEach(noKey => {
@@ -405,7 +424,7 @@ function renderDetailList() {
           <div class="entry-badge-no">${esc(parent.No) || '-'}</div>
           <div style="flex:1;min-width:0;">
             <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${items.length} Sub Temuan)</div>
+            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
           </div>
           ${canAdmin ? `<button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openDetAdd('${esc(noKey)}', '', 'Kriteria')">
             <i data-lucide="plus-circle" style="width:14px;"></i> Tambah Detail
@@ -413,7 +432,7 @@ function renderDetailList() {
         </div>
 
         <div class="sub-item-block" style="display:${S.riOpen['d:' + noKey] ? 'block' : 'none'};">
-          ${items.map((r, idx) => detRowHtml(r, idx, canAdmin)).join('')}
+          ${items.map((r, idx) => detRowHtml(r, idx, canAdmin, items.length)).join('')}
         </div>
       </div>`;
   });
@@ -451,9 +470,9 @@ function ensureDetModal() {
               <select id="det-temuan" onchange="renderDetRincian()"></select>
             </div>
             <div class="form-field">
-              <label>Tambahkan ke Sub Temuan</label>
+              <label>Tambahkan ke Rincian</label>
               <div id="det-rincian" class="pic-check-list"></div>
-              <div class="field-hint">Isian akan ditulis ke sub temuan yang dicentang.</div>
+              <div class="field-hint">Isian akan ditulis ke rincian yang dicentang.</div>
             </div>
             <div class="form-field">
               <label>Isi Baru</label>
@@ -484,11 +503,12 @@ function renderDetRincian(preset) {
     rows = S.allR.filter(r => String(r.No) === String(no));
   }
   document.getElementById('det-rincian').innerHTML = rows.map(r => {
-    const idxIn = S.allR.filter(x => String(x.No) === String(r.No)).indexOf(r) + 1;
+    const grp = S.allR.filter(x => String(x.No) === String(r.No));
+    const label = subLabel(grp.length, Math.max(0, grp.indexOf(r)));
     return `
     <label class="pic-check-item">
       <input type="checkbox" value="${esc(r._row)}" checked>
-      <span>Sub Temuan #${idxIn}${r.SubTemuan ? ' - ' + esc(riShort(r.SubTemuan, 60)) : ''} &middot; ${esc(groupPicNames([r]).join(', ') || '-')}</span>
+      <span>${label}${r.SubTemuan ? ' - ' + esc(riShort(r.SubTemuan, 60)) : ''} &middot; ${esc(groupPicNames([r]).join(', ') || '-')}</span>
     </label>`;
   }).join('');
 }
@@ -598,7 +618,7 @@ async function saveDetail() {
   if (!items.length) { showToast('Tulis isi yang akan ditambahkan', 'err'); return; }
 
   const ids = Array.from(document.querySelectorAll('#det-rincian input[type="checkbox"]:checked')).map(i => String(i.value));
-  if (!ids.length) { showToast('Pilih minimal 1 sub temuan', 'err'); return; }
+  if (!ids.length) { showToast('Pilih minimal 1 rincian', 'err'); return; }
   const rows = S.allR.filter(r => ids.includes(String(r._row)));
 
   setBusy(true);
@@ -628,10 +648,10 @@ async function saveDetail() {
   }
   closeDetModal();
   if (ok) {
-    showToast(field + ' ditambahkan ke ' + ok + ' sub temuan', 'ok');
+    showToast(field + ' ditambahkan ke ' + ok + ' rincian', 'ok');
     refreshCurrentPage();
   } else {
-    showToast('Isi tersebut sudah ada di sub temuan yang dipilih', 'inf');
+    showToast('Isi tersebut sudah ada di rincian yang dipilih', 'inf');
   }
 }
 
@@ -723,7 +743,7 @@ function openModal(pic, row) {
   document.getElementById('m-is-sub').value = 'false';
 
   document.getElementById('modal-title').textContent = row ? 'Edit Tindak Lanjut' : 'Tambah Temuan Baru';
-  document.getElementById('modal-sub').textContent   = row ? 'Perbarui data sub temuan tindak lanjut' : 'Lengkapi isian data temuan BPK berikut';
+  document.getElementById('modal-sub').textContent   = row ? 'Perbarui data tindak lanjut' : 'Lengkapi isian data temuan BPK berikut';
 
   const temuanInp = document.getElementById('m-temuan');
   temuanInp.readOnly = false;
