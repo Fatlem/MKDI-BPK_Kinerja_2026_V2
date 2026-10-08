@@ -337,6 +337,7 @@ a { text-decoration: none; color: inherit; }
 .stat-icon-wrap.purple { background: #f5f3ff; color: #7c3aed; }
 .stat-icon-wrap.green { background: #ecfdf5; color: #059669; }
 .stat-icon-wrap.orange { background: #fffbeb; color: #d97706; }
+.stat-icon-wrap.mono { background: #f1f5f9; color: #334155; }
 
 .stat-trend { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: #f1f5f9; color: #64748b; }
 .stat-trend.up { background: #dcfce7; color: #15803d; }
@@ -867,4 +868,193 @@ a { text-decoration: none; color: inherit; }
 @media (max-width: 900px) {
   .det-grid { grid-template-columns: minmax(0, 1fr); }
   .det-grid > :nth-child(3):last-child { grid-column: auto; }
+}
+
+/* ============================================================
+   DASHBOARD v2 — New classes matching Figma prototype
+   ============================================================ */
+
+/* --- Stat Cards (db-stat-card) --- */
+.db-stat-card {
+  background: var(--card-bg);
+  border-radius: var(--r-2xl);
+  padding: 26px 28px 22px;
+  border: 1.5px solid var(--border-color);
+  border-left: 4px solid #2563eb;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+  min-height: 140px;
+}
+.db-stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+
+.db-stat-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.db-stat-icon-wrap {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.db-stat-card:hover .db-stat-icon-wrap { background: #2563eb; color: #fff; }
+.db-stat-icon-wrap i { width: 22px; height: 22px; }
+
+.db-stat-val {
+  font-size: 32px; font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.db-stat-lbl {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.db-stat-badge {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+.db-stat-badge.up {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+.db-stat-badge.neutral {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+/* --- PIC Grid (db-pic-grid) --- */
+.db-pic-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+/* --- PIC Card (db-pic-card) --- */
+.db-pic-card {
+  background: #fff;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-xl);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.db-pic-card:hover { border-color: #2563eb; box-shadow: var(--shadow-md); }
+
+.db-pic-card-body { flex: 1; }
+
+.db-pic-icon-wrap {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.db-pic-card:hover .db-pic-icon-wrap { background: #eff6ff; color: #2563eb; }
+
+.db-pic-name {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.4;
+  margin-bottom: 0;
+  /* clamp to 3 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.db-pic-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.db-pic-tl-lbl {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-muted);
+}
+
+.db-pic-bar-track {
+  width: 100%;
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 5px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.db-pic-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* --- Responsive overrides --- */
+@media (max-width: 1280px) {
+  .db-pic-grid { grid-template-columns: repeat(4, 1fr) !important; }
+}
+@media (max-width: 1024px) {
+  .db-pic-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .db-stat-card { padding: 20px 22px 18px; min-height: 120px; }
+  .db-stat-val { font-size: 28px; }
+}
+@media (max-width: 768px) {
+  .db-pic-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .db-stat-val { font-size: 26px; }
+  .db-stat-card { min-height: 110px; }
+}
+@media (max-width: 480px) {
+  .db-pic-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ── Bar chart row hover ── */
+.db-bar-row { user-select: none; }
+.db-bar-row:hover .db-bar-fill { filter: brightness(1.12); }
+
+/* ── Donut legend row hover ── */
+.db-legend-row { user-select: none; }
+
+/* ── Bar tooltip ── */
+.db-bar-tooltip {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  animation: db-tooltip-in 0.12s ease;
+}
+@keyframes db-tooltip-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

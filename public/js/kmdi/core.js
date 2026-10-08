@@ -9,7 +9,7 @@ const S = {
 
 let chartBar = null, chartDonut = null;
 
-const PIC_COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#be185d', '#65a30d'];
+const PIC_COLORS = ['#334155', '#475569', '#64748b', '#94a3b8', '#1e293b', '#374151', '#0f172a', '#52525b'];
 function picColor(i) { return PIC_COLORS[i % PIC_COLORS.length]; }
 
 async function apiFetch(url, method = 'GET', data = null) {
@@ -116,10 +116,7 @@ function showToast(msg, type = 'inf') {
 }
 
 const PIC_SEP = ', ';
-const PIC_EXTRA = [
-  { username: 'Deputi 4',                      nama: 'Deputi Bidang Koordinasi Sumber Daya Maritim' },
-  { username: 'Staf Ahli Bidang Konektivitas', nama: 'Staf Ahli Bidang Konektivitas' },
-];
+const PIC_EXTRA = [];  // D4 & SABK now in DB via seeder
 
 function splitPics(s) {
   return String(s == null ? '' : s).split(/\s*[,;\n]\s*/).map(x => x.trim()).filter(Boolean);
