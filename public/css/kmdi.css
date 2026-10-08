@@ -878,9 +878,8 @@ a { text-decoration: none; color: inherit; }
 .db-stat-card {
   background: var(--card-bg);
   border-radius: var(--r-2xl);
-  padding: 26px 28px 22px;
+  padding: 22px 20px 18px;
   border: 1.5px solid var(--border-color);
-  border-left: 4px solid #2563eb;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -912,7 +911,7 @@ a { text-decoration: none; color: inherit; }
 .db-stat-icon-wrap i { width: 22px; height: 22px; }
 
 .db-stat-val {
-  font-size: 32px; font-weight: 800;
+  font-size: 22px; font-weight: 800;
   color: var(--text-main);
   letter-spacing: -1px;
   line-height: 1;
@@ -1028,11 +1027,11 @@ a { text-decoration: none; color: inherit; }
 @media (max-width: 1024px) {
   .db-pic-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .db-stat-card { padding: 20px 22px 18px; min-height: 120px; }
-  .db-stat-val { font-size: 28px; }
+  .db-stat-val { font-size: 22px; }
 }
 @media (max-width: 768px) {
   .db-pic-grid { grid-template-columns: repeat(2, 1fr) !important; }
-  .db-stat-val { font-size: 26px; }
+  .db-stat-val { font-size: 22px; }
   .db-stat-card { min-height: 110px; }
 }
 @media (max-width: 480px) {
