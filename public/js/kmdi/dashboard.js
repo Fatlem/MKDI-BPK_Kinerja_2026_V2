@@ -126,7 +126,7 @@ function _picIconSvg(i) {
 // Mapping nama PIC (lowercase substring) → singkatan untuk bar chart label
 const PIC_LABEL_MAP = [
   { key: 'manajemen kinerja',   label: 'MKDI'  },
-  { key: 'hukum',               label: 'HK'    },
+  { key: 'hukum',               label: 'HKS'    },
   { key: 'sumber daya manusia', label: 'SDMO'  },
   { key: 'umum',                label: 'UHM'   },
   { key: 'keuangan',            label: 'KBMN'  },
@@ -359,6 +359,7 @@ function renderDashboard(d) {
   const donutPctEl  = document.getElementById('db-donut-pct');
   const donutLblEl  = document.getElementById('db-donut-lbl');
   const donutRing   = document.getElementById('db-donut-ring');
+  const donutTooltip = document.createElement('div');
 
   // Warna solid per status untuk highlight
   const statusColors = {
