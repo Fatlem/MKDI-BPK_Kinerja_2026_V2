@@ -21,6 +21,7 @@ $apiRoutes = function () {
     Route::middleware('auth.kmdi')->group(function () {
         Route::get('/users/list',     [UserController::class,  'listForLogin']);
         Route::get('/pic',            [PicController::class,   'index']);
+        Route::post('/pic',           [PicController::class,   'store']);   // BARU: tambah PIC ke tabel pic
         Route::get('/temuan',         [TemuanController::class, 'index']);
         Route::get('/temuan/next-no', [TemuanController::class, 'nextNo']);
         Route::post('/temuan',        [TemuanController::class, 'store']);
