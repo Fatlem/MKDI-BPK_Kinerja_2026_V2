@@ -138,20 +138,25 @@ const PIC_LABEL_MAP = [
 ];
 
 function _picShortLabel(p) {
-  const nama = String(p.nama || p.username || '').toLowerCase();
+  const nama = String(p.nama || p.username || '').trim();
+  const low  = nama.toLowerCase();
   for (const m of PIC_LABEL_MAP) {
-    if (nama.includes(m.key)) return m.label;
+    if (low.includes(m.key)) return m.label;
   }
-  // fallback: first word uppercase, max 6 chars
-  const words = (p.username || p.nama || '').split(' ');
-  return words[0].substring(0, 6).toUpperCase();
+  // PIC baru: satu kata -> 5 huruf pertama, banyak kata -> singkatan huruf awal
+  const words = nama.split(/\s+/).filter(Boolean);
+  if (!words.length) return '-';
+  if (words.length === 1) return words[0].substring(0, 5).toUpperCase();
+  const skip = new Set(['dan', 'bidang', 'atau', 'di', 'ke', 'yang', 'untuk']);
+  const ac = words.filter(w => !skip.has(w.toLowerCase())).map(w => w[0]).join('').toUpperCase();
+  return (ac || words[0]).substring(0, 5);
 }
 
 function renderDashboard(d) {
   if (!d) return;
   const isPic = isPicUser();
   let picGrid = d.picStats || [];
-  if (isPic) picGrid = picGrid.filter(p => p.username === S.user.username);
+  if (isPic) picGrid = picGrid.filter(p => picKeyOf(p.username) === picKeyOf(S.user.username) || picKeyOf(p.username) === picKeyOf(S.user.nama));
 
   const picMengisiPct = d.totalPic > 0 ? Math.round((d.picMengisi / d.totalPic) * 100) : 0;
 

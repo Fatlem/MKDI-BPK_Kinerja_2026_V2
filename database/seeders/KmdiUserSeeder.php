@@ -14,6 +14,9 @@ class KmdiUserSeeder extends Seeder
 
         $users = [
             ['admin',     'Administrator',                                               'admin'],
+            // Auditor Inspektorat: tiap akun hanya melihat temuan yang dia buat sendiri
+            ['Auditor 1', 'Auditor Inspektorat 1',                                       'auditor'],
+            ['Auditor 2', 'Auditor Inspektorat 2',                                       'auditor'],
             ['Biro MKDI', 'Biro Manajemen Kinerja Data dan Informasi',                   'pic'],
             ['Biro HKS',  'Biro Hukum dan Kerjasama',                                    'pic'],
             ['Biro SDMO', 'Biro Sumber Daya Manusia dan Organisasi',                     'pic'],
@@ -23,6 +26,7 @@ class KmdiUserSeeder extends Seeder
             ['Deputi 2',  'Deputi Bidang Koordinasi Usaha Pangan dan Pertanian',         'pic'],
             ['Deputi 3',  'Deputi Bidang Koordinasi Keterjangkauan dan Keamanan Pangan', 'pic'],
             ['Deputi 4',  'Deputi Bidang Koordinasi Sumber Daya Maritim',                'pic'],
+            ['SABK',      'Staf Ahli Bidang Konektivitas',                               'pic'],
         ];
 
         foreach ($users as [$username, $nama, $role]) {

@@ -16,3 +16,4 @@
 
 <!-- Custom Master Stylesheet -->
 <link rel="stylesheet" href="{{ asset('css/kmdi.css') }}">
+<link rel="stylesheet" href="{{ asset('css/bukti.css') }}?v={{ @filemtime(public_path('css/bukti.css')) }}">

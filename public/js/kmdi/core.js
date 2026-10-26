@@ -36,6 +36,11 @@ async function apiFetch(url, method = 'GET', data = null) {
     const msg = (json && json.message) ? String(json.message).slice(0, 220) : ('Server error ' + res.status);
     throw new Error(msg);
   }
+
+  // Tambahan: PIC yang muncul di data temuan otomatis masuk daftar PIC
+  if (method === 'GET' && url.split('?')[0] === '/api/temuan' && Array.isArray(json)) {
+    syncPicList(json);
+  }
   return json;
 }
 
@@ -155,11 +160,44 @@ function groupPicTokens(items) {
 }
 function groupPicNames(items) { return groupPicTokens(items).map(picNama); }
 
+// Masukkan PIC yang ada di data temuan tapi belum ada di daftar PIC (misalnya yang diketik manual)
+function syncPicList(rows) {
+  if (!Array.isArray(S.picList)) S.picList = [];
+  (rows || []).forEach(r => {
+    splitPics(r.PIC).forEach(token => {
+      const k = _picNormKey(token);
+      const known = allPicOptions().some(p => _picNormKey(p.username) === k || _picNormKey(p.nama) === k);
+      if (!known) S.picList.push({ username: token, nama: token });
+    });
+  });
+}
+
 const ADMIN_ONLY_FIELDS = ['m-no', 'm-temuan', 'm-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi'];
 
 function roleOf(u) { return String((u && u.role) || '').trim().toLowerCase(); }
 function isPicUser() { return roleOf(S.user) === 'pic'; }
 function isAdminUser() { return roleOf(S.user) === 'admin'; }
+function isAuditorUser() { return roleOf(S.user) === 'auditor'; }
+// Sisi Inspektorat (admin atau auditor) = lawan dari akun PIC/biro
+function isStaffUser() { return isAdminUser() || isAuditorUser(); }
+
+// Sumber audit temuan
+const SUMBER_LABEL = { bpk: 'BPK RI', inspektorat: 'Inspektorat' };
+function sumberLabel(r) { return (r && (r.SumberLabel || SUMBER_LABEL[r.Sumber])) || ''; }
+
+// Status tindak lanjut (alur kerja biro -> auditor), dikirim server di r.TLStatus
+const TL_STATUS = {
+  belum:         { cls: 'bk-st-kosong',        icon: 'minus-circle',   lbl: 'Belum Ada Bukti' },
+  menunggu:      { cls: 'bk-st-menunggu',      icon: 'clock',          lbl: 'Menunggu Verifikasi' },
+  pending:       { cls: 'bk-st-pending',       icon: 'pause-circle',   lbl: 'Pending (Ditahan Auditor)' },
+  ditolak:       { cls: 'bk-st-ditolak',       icon: 'alert-triangle', lbl: 'Ditolak - Perlu Perbaikan' },
+  terverifikasi: { cls: 'bk-st-terverifikasi', icon: 'badge-check',    lbl: 'Terverifikasi - Menunggu BATL' },
+  batl:          { cls: 'bk-st-batl',          icon: 'file-check-2',   lbl: 'Selesai - BATL Terbit' }
+};
+function tlPill(key) {
+  const t = TL_STATUS[key] || TL_STATUS.belum;
+  return `<span class="bk-pill ${t.cls}"><i data-lucide="${t.icon}"></i> ${t.lbl}</span>`;
+}
 
 function isMyRow(r) {
   const u = S.user || {};
@@ -182,12 +220,19 @@ function statusOf(r) {
   const rec = String(r.RencanaAksi || '').trim();
   const jad = String(r.JadwalPelaksanaan || '').trim();
 
+  // Alur kerja: selesai hanya jika auditor sudah menerbitkan BATL
+  if (r.TLStatus === 'batl')
+    return { cls: 'pill-ok',   lbl: 'Selesai', icon: 'check-circle' };
+  // Sudah ada bukti yang dikirim (menunggu / pending / ditolak / terverifikasi) = dalam proses
+  if (r.TLStatus && r.TLStatus !== 'belum')
+    return { cls: 'pill-prog', lbl: 'Proses',  icon: 'clock' };
+
+  // Data lama (sebelum ada alur bukti & BATL) yang masih memakai tag [Selesai]/[Proses]/[Belum]
   if (out.includes('[selesai]')) return { cls: 'pill-ok',    lbl: 'Selesai', icon: 'check-circle' };
   if (out.includes('[proses]'))  return { cls: 'pill-prog',  lbl: 'Proses',  icon: 'clock' };
   if (out.includes('[belum]'))   return { cls: 'pill-empty', lbl: 'Belum',   icon: 'minus-circle' };
 
-  if (out !== '')                return { cls: 'pill-ok',    lbl: 'Selesai', icon: 'check-circle' };
-  if (rec !== '' || jad !== '')  return { cls: 'pill-prog',  lbl: 'Proses',  icon: 'clock' };
+  if (rec !== '' || jad !== '' || out !== '') return { cls: 'pill-prog', lbl: 'Proses', icon: 'clock' };
   return { cls: 'pill-empty', lbl: 'Belum', icon: 'minus-circle' };
 }
 

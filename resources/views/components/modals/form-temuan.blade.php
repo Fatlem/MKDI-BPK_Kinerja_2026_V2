@@ -3,7 +3,7 @@
     <div class="modal-header-area">
       <div>
         <div id="modal-title" class="modal-title-text">Tambah Tindak Lanjut</div>
-        <div id="modal-sub" style="font-size:12px;color:var(--text-muted)">Isi data tindak lanjut hasil pemeriksaan MKDI</div>
+        <div id="modal-sub" style="font-size:12px;color:var(--text-muted)">Isi data temuan hasil audit</div>
       </div>
       <button class="modal-close-btn" onclick="closeModal()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
     </div>
@@ -14,12 +14,21 @@
       <input type="hidden" id="m-is-sub">
 
       <div id="m-role-note" class="role-note" style="display:none;">
-        Kolom No sampai PIC diisi oleh admin (Inspektorat) dan tidak dapat diubah. Silakan isi <b>Rencana Aksi</b>, <b>Jadwal Pelaksanaan</b>, dan <b>Output</b>.
+        Kolom Kode sampai PIC diisi oleh auditor (Inspektorat) dan tidak dapat diubah. Silakan isi <b>Rencana Aksi</b>, <b>Jadwal Pelaksanaan</b>, dan <b>Output</b>.
+      </div>
+
+      <div class="form-field" id="m-sumber-wrap">
+        <label>Sumber Audit</label>
+        <select id="m-sumber" onchange="onSumberChange()" style="font-weight:700;">
+          <option value="inspektorat">Inspektorat</option>
+          <option value="bpk">BPK RI</option>
+        </select>
+        <div class="field-hint">Menentukan kode temuan: BPK RI = LHP-BPK-xxx, Inspektorat = LHP-INS-xxx.</div>
       </div>
 
       <div class="form-field">
-        <label>No Temuan</label>
-        <input id="m-no" type="text" placeholder="Contoh: 1">
+        <label>Kode Temuan (LHP)</label>
+        <input id="m-no" type="text" placeholder="Dibuat otomatis" readonly>
       </div>
 
       <div class="form-field">
@@ -30,15 +39,6 @@
           <button type="button" class="btn-action-sec" onclick="addManualPic()"><i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah</button>
         </div>
         <div class="field-hint">Centang lebih dari satu jika PIC-nya banyak, atau ketik manual jika tidak ada di daftar.</div>
-      </div>
-
-      <div class="form-field">
-        <label>Status Progress</label>
-        <select id="m-status-select" style="font-weight:700;">
-          <option value="proses">🟡 Dalam Proses</option>
-          <option value="selesai">🟢 Selesai</option>
-          <option value="belum">🔴 Belum Ditindaklanjuti</option>
-        </select>
       </div>
 
       <div class="form-field">

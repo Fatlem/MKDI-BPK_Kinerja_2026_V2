@@ -30,11 +30,6 @@
   <x-modals.confirm-delete />
   <div id="toast" class="toast-msg"></div>
 
-  <script src="{{ asset('js/kmdi/core.js') }}"></script>
-  <script src="{{ asset('js/kmdi/auth.js') }}"></script>
-  <script src="{{ asset('js/kmdi/dashboard.js') }}"></script>
-  <script src="{{ asset('js/kmdi/ruang-isian.js') }}"></script>
-  <script src="{{ asset('js/kmdi/rekap.js') }}"></script>
-  <script src="{{ asset('js/kmdi/router.js') }}?v={{ @filemtime(public_path('js/kmdi/router.js')) }}"></script>
+  @include('layouts.scripts')
 </body>
 </html>

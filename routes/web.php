@@ -6,6 +6,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TemuanController;
 use App\Http\Controllers\PicController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\BuktiController;
+use App\Http\Controllers\BatlController;
 
 Route::view('/',              'app');
 Route::view('/dashboard',     'app');
@@ -27,6 +29,18 @@ $apiRoutes = function () {
         Route::post('/temuan',        [TemuanController::class, 'store']);
         Route::put('/temuan/{id}',    [TemuanController::class, 'update']);
         Route::delete('/temuan/{id}', [TemuanController::class, 'destroy']);
+
+        // Bukti tindak lanjut (eviden)
+        Route::get('/bukti',                 [BuktiController::class, 'index']);
+        Route::post('/bukti',                [BuktiController::class, 'store']);
+        Route::get('/bukti/{id}/file',       [BuktiController::class, 'file']);
+        Route::put('/bukti/{id}/verifikasi', [BuktiController::class, 'verifikasi']);
+        Route::delete('/bukti/{id}',         [BuktiController::class, 'destroy']);
+
+        // Berita Acara Tindak Lanjut (BATL) - diterbitkan auditor
+        Route::post('/batl',                 [BatlController::class,  'store']);
+        Route::get('/batl/{id}/file',        [BatlController::class,  'file']);
+        Route::delete('/batl/{id}',          [BatlController::class,  'destroy']);
     });
 };
 

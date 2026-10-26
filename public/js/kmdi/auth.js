@@ -90,7 +90,7 @@ function enterApp() {
   const initial = (S.user.nama || S.user.username || '?').charAt(0).toUpperCase();
   document.getElementById('sb-av').textContent      = initial;
   document.getElementById('sb-uname').textContent   = S.user.nama || S.user.username;
-  document.getElementById('sb-urole').textContent   = isAdminUser() ? 'ADMINISTRATOR' : 'PIC UNIT';
+  document.getElementById('sb-urole').textContent   = isAdminUser() ? 'ADMINISTRATOR' : (isAuditorUser() ? 'AUDITOR INSPEKTORAT' : 'PIC UNIT');
   document.getElementById('hdr-avatar').textContent = initial;
 
   apiFetch('/api/pic')
@@ -107,6 +107,8 @@ function enterApp() {
 
 const LOGIN_USERS_FALLBACK = [
   { username: 'admin',     nama: 'Administrator',                                              role: 'admin' },
+  { username: 'Auditor 1', nama: 'Auditor Inspektorat 1',                                      role: 'auditor' },
+  { username: 'Auditor 2', nama: 'Auditor Inspektorat 2',                                      role: 'auditor' },
   { username: 'Biro MKDI', nama: 'Biro Manajemen Kinerja Data dan Informasi',                  role: 'pic' },
   { username: 'Biro HKS',  nama: 'Biro Hukum dan Kerjasama',                                   role: 'pic' },
   { username: 'Biro SDMO', nama: 'Biro Sumber Daya Manusia dan Organisasi',                    role: 'pic' },
@@ -147,6 +149,7 @@ function renderUserCombo() {
 
   list.innerHTML = _comboItems.map((u, i) => {
     const admin = roleOf(u) === 'admin';
+    const auditor = roleOf(u) === 'auditor';
     return `
       <div class="combo-item${i === _comboIdx ? ' active' : ''}" role="option" data-user="${esc(u.username)}">
         <div class="combo-avatar">${esc((u.username || '?').charAt(0).toUpperCase())}</div>
@@ -154,7 +157,7 @@ function renderUserCombo() {
           <div class="cu-name">${esc(u.username)}</div>
           <div class="cu-sub">${esc(u.nama || '')}</div>
         </div>
-        <span class="cu-badge${admin ? ' admin' : ''}">${admin ? 'Admin' : 'PIC'}</span>
+        <span class="cu-badge${(admin || auditor) ? ' admin' : ''}">${admin ? 'Admin' : (auditor ? 'Auditor' : 'PIC')}</span>
       </div>`;
   }).join('') || '<div class="combo-empty">Tidak ada di daftar. Anda tetap bisa mengetik manual.</div>';
 }

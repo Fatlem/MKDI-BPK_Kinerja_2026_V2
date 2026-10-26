@@ -5,6 +5,11 @@ if (!S.riOpen) S.riOpen = {};
 // ── Penamaan rincian ──────────────────────────────────────────────────
 // Temuan yang hanya punya 1 baris   -> "Rincian Temuan"
 // Temuan yang punya banyak baris    -> "Sub Temuan #1", "Sub Temuan #2", ...
+function sumberBadge(r) {
+  const l = sumberLabel(r);
+  return l ? `<span class="sumber-badge sumber-${esc(r.Sumber || 'bpk')}">${esc(l)}</span>` : '';
+}
+
 function subLabel(total, idx) { return total > 1 ? 'Sub Temuan #' + (idx + 1) : 'Rincian Temuan'; }
 function subCountLabel(n)     { return n > 1 ? n + ' Sub Temuan' : '1 Rincian Temuan'; }
 
@@ -31,7 +36,7 @@ function renderRuangIsian(rows) {
   setBody(`
     <div class="hero-banner">
       <h2 class="hero-title">Ruang Isian Tindak Lanjut</h2>
-      <p class="hero-sub">${isPicUser() ? 'Isi Rencana Aksi, Jadwal Pelaksanaan, dan Output untuk temuan yang ditugaskan kepada Anda' : 'Kelola administrasi dan dokumen tindak lanjut hasil pemeriksaan BPK RI'}</p>
+      <p class="hero-sub">${isPicUser() ? 'Isi Rencana Aksi, Jadwal Pelaksanaan, dan Output untuk temuan yang ditugaskan kepada Anda' : 'Kelola temuan hasil audit (Inspektorat / BPK RI), verifikasi bukti tindak lanjut, dan terbitkan BATL'}</p>
     </div>
 
     <div class="toolbar-wrap">
@@ -145,6 +150,11 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
   const st = statusOf(sub);
   const pics = groupPicNames([sub]).join(', ') || '-';
 
+  // Bukti tindak lanjut (bukti.js): tampil juga di mode baca-saja supaya bisa dilihat dari Rekap
+  const buktiBtn = typeof openBukti === 'function'
+    ? `<button class="btn-action-sec ri-btn ri-btn-bukti" onclick="openBukti(${sub._row})"><i data-lucide="paperclip" style="width:13px;"></i> Bukti${sub.BuktiCount ? ` <span class="bk-count">${sub.BuktiCount}</span>` : ''}</button>`
+    : '';
+
   const buttons = opts.readOnly ? '' : `
           <button class="btn-action-sec ri-btn" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i> Ubah</button>
           ${canAdmin ? `<button class="btn-action-sec ri-btn ri-btn-del" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>` : ''}`;
@@ -163,7 +173,7 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
         <div class="ri-sub-actions">
           <span class="status-pill ${st.cls}">
             <i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}
-          </span>${buttons}
+          </span>${tlPill(sub.TLStatus || 'belum')}${buktiBtn}${buttons}
         </div>
       </div>
 
@@ -218,9 +228,9 @@ function renderEntryList() {
     html += `
       <div class="entry-card">
         <div class="entry-card-header" data-key="t:${esc(noKey)}" onclick="togEntry(this)">
-          <div class="entry-badge-no">${esc(parent.No) || '-'}</div>
+          <div class="entry-badge-no entry-badge-code">${esc(parent.No) || '-'}</div>
           <div style="flex:1;">
-            <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
+            <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${sumberBadge(parent)} ${esc(parent.Temuan) || '—'}</div>
             <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
           </div>
           ${canAdmin ? `<button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
@@ -421,7 +431,7 @@ function renderDetailList() {
     html += `
       <div class="entry-card">
         <div class="entry-card-header" data-key="d:${esc(noKey)}" onclick="togEntry(this)">
-          <div class="entry-badge-no">${esc(parent.No) || '-'}</div>
+          <div class="entry-badge-no entry-badge-code">${esc(parent.No) || '-'}</div>
           <div style="flex:1;min-width:0;">
             <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
             <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
@@ -713,6 +723,11 @@ function applyModalRole() {
     el.classList.toggle('field-locked', pic);
   });
 
+  const noEl = document.getElementById('m-no');
+  if (noEl) noEl.readOnly = true;                                   // kode LHP selalu otomatis
+  const sw = document.getElementById('m-sumber-wrap');
+  if (sw) sw.style.display = pic ? 'none' : '';
+
   const list = document.getElementById('m-pic');
   if (list) {
     list.classList.toggle('field-locked', pic);
@@ -737,13 +752,32 @@ function getSelectedPics() {
   return Array.from(document.querySelectorAll('#m-pic input[type="checkbox"]:checked')).map(i => i.value);
 }
 
+// Pilihan sumber audit di form. locked = true saat ubah / tambah sub (ikut induknya)
+function setSumberField(val, locked) {
+  const sel = document.getElementById('m-sumber');
+  if (!sel) return;
+  sel.value = val;
+  sel.disabled = !!locked;
+}
+
+// Kode LHP otomatis mengikuti sumber (LHP-BPK-001 / LHP-INS-001)
+function onSumberChange() {
+  const sel = document.getElementById('m-sumber');
+  const no  = document.getElementById('m-no');
+  if (!sel || !no || document.getElementById('m-row').value || document.getElementById('m-is-sub').value === 'true') return;
+  no.value = '...';
+  apiFetch('/api/temuan/next-no?sumber=' + encodeURIComponent(sel.value))
+    .then(n => { no.value = n; })
+    .catch(() => { no.value = ''; showToast('Gagal mengambil kode temuan', 'err'); });
+}
+
 function openModal(pic, row) {
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = '';
   document.getElementById('m-is-sub').value = 'false';
 
   document.getElementById('modal-title').textContent = row ? 'Edit Tindak Lanjut' : 'Tambah Temuan Baru';
-  document.getElementById('modal-sub').textContent   = row ? 'Perbarui data tindak lanjut' : 'Lengkapi isian data temuan BPK berikut';
+  document.getElementById('modal-sub').textContent   = row ? 'Perbarui data tindak lanjut' : 'Lengkapi isian data temuan hasil audit berikut';
 
   const temuanInp = document.getElementById('m-temuan');
   temuanInp.readOnly = false;
@@ -752,7 +786,6 @@ function openModal(pic, row) {
   ['m-no', 'm-temuan', 'm-subtemuan', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('m-status-select').value = 'proses';
 
   const r = row ? S.allR.find(x => String(x._row) === String(row)) : null;
   renderPicChecklist(r ? splitPics(r.PIC) : (pic ? splitPics(pic) : []));
@@ -768,15 +801,11 @@ function openModal(pic, row) {
       document.getElementById('m-rencanaaksi').value  = r.RencanaAksi || '';
       document.getElementById('m-jadwal').value       = r.JadwalPelaksanaan || '';
       document.getElementById('m-output').value       = cleanOutput(r.Output);
-
-      const st = statusOf(r);
-      document.getElementById('m-status-select').value = st.lbl === 'Selesai' ? 'selesai' : (st.lbl === 'Proses' ? 'proses' : 'belum');
+      setSumberField(r.Sumber || 'bpk', true);       // sumber tidak bisa diubah setelah dibuat
     }
   } else {
-    document.getElementById('m-no').value = '...';
-    apiFetch('/api/temuan/next-no').then(n => {
-      document.getElementById('m-no').value = n;
-    });
+    setSumberField('inspektorat', false);
+    onSumberChange();
   }
 }
 
@@ -792,6 +821,7 @@ function openAddSubModal(row) {
   document.getElementById('modal-sub').textContent   = 'Menambahkan sub temuan untuk Temuan No. ' + r.No;
 
   document.getElementById('m-no').value = r.No || '';
+  setSumberField(r.Sumber || 'bpk', true);
   const temuanInp = document.getElementById('m-temuan');
   temuanInp.value = r.Temuan || '';
   temuanInp.readOnly = true;
@@ -799,7 +829,6 @@ function openAddSubModal(row) {
 
   renderPicChecklist(splitPics(r.PIC));
   applyModalRole();
-  document.getElementById('m-status-select').value = 'proses';
 
   ['m-subtemuan', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
     document.getElementById(id).value = '';
@@ -814,19 +843,20 @@ function closeModalBg(e) { if (e.target === document.getElementById('modal-bg'))
 
 function saveTemuan() {
   const isSub = document.getElementById('m-is-sub').value === 'true';
-  const sel   = document.getElementById('m-status-select').value;
   let raw     = cleanOutput(document.getElementById('m-output').value);
 
   // Kriteria, Sebab, Rekomendasi diisi di halaman Detail: saat ubah, nilai lama dipertahankan
   const origRow = document.getElementById('m-row').value ? S.allR.find(x => String(x._row) === String(document.getElementById('m-row').value)) : null;
   const keep = k => (origRow && origRow[k] != null ? origRow[k] : '');
 
-  if (sel === 'selesai') raw = raw ? raw + ' [Selesai]' : 'Selesai [Selesai]';
-  else if (sel === 'proses') raw = raw ? raw + ' [Proses]' : '[Proses]';
-  else raw = raw ? raw + ' [Belum]' : '[Belum]';
+  // Status kini mengikuti alur bukti & BATL, bukan pilihan manual.
+  // Data lama yang sudah bertag [Selesai]/[Proses]/[Belum] tetap dipertahankan supaya tampilannya tidak berubah.
+  const oldTag = origRow ? (String(origRow.Output || '').match(STATUS_TAG_RE) || []).pop() : '';
+  if (oldTag) raw = (raw ? raw + ' ' : '') + oldTag.trim();
 
   const fd = {
     No: document.getElementById('m-no').value,
+    Sumber: (document.getElementById('m-sumber') || {}).value || 'bpk',
     PIC: getSelectedPics().join(PIC_SEP),
     Temuan: document.getElementById('m-temuan').value.trim(),
     SubTemuan: document.getElementById('m-subtemuan').value.trim(),

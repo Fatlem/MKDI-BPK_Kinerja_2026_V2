@@ -393,7 +393,10 @@ class ImportTemuanSheet extends Command
 
     private static function cleanNo(string $v): string
     {
-        return preg_match('/^\d+(\.0+)?$/', $v) ? (string) (int) $v : $v;
+        // Sheet BPK memakai nomor urut biasa; di aplikasi kodenya LHP-BPK-001, LHP-BPK-002, ...
+        return preg_match('/^\d+(\.0+)?$/', $v)
+            ? 'LHP-BPK-' . str_pad((string) (int) $v, 3, '0', STR_PAD_LEFT)
+            : $v;
     }
 
     private static function norm(?string $s): string
