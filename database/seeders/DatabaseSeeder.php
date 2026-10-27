@@ -18,10 +18,11 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'test@example.com',
         // ]);
 
-        // Seeder KMDI
+        // Seeder MKDI
         $this->call([
-            KmdiUserSeeder::class,
+            BpkUserSeeder::class,
             PicSeeder::class,
+            BpkTemuanSeeder::class,   // data asli temuan BPK (dari Excel)
         ]);
     }
 }

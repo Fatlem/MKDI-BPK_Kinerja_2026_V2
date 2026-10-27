@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ChecksKmdiAccess;
+use App\Http\Controllers\Concerns\ChecksMkdiAccess;
 use App\Models\BuktiTindakLanjut;
 use App\Models\Temuan;
 use Illuminate\Http\Request;
@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 class BuktiController extends Controller
 {
-    use ChecksKmdiAccess;
+    use ChecksMkdiAccess;
 
     /** 10 MB dalam KB (aturan "max" Laravel memakai KB) */
     private const MAX_KB = 10240;

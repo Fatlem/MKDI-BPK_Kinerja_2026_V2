@@ -1,6 +1,6 @@
 @php
     // Urutan penting: router.js membungkus navigate()/doLogout(), jadi harus dimuat paling akhir.
-    $kmdiScripts = [
+    $mkdiScripts = [
         'core',
         'auth',
         'dashboard',
@@ -10,6 +10,6 @@
         'router',
     ];
 @endphp
-@foreach ($kmdiScripts as $kmdiFile)
-    <script src="{{ asset('js/kmdi/' . $kmdiFile . '.js') }}?v={{ @filemtime(public_path('js/kmdi/' . $kmdiFile . '.js')) }}"></script>
+@foreach ($mkdiScripts as $mkdiFile)
+    <script src="{{ asset('js/mkdi/' . $mkdiFile . '.js') }}?v={{ @filemtime(public_path('js/mkdi/' . $mkdiFile . '.js')) }}"></script>
 @endforeach

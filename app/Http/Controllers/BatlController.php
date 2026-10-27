@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\ChecksKmdiAccess;
+use App\Http\Controllers\Concerns\ChecksMkdiAccess;
 use App\Models\Batl;
 use App\Models\BuktiTindakLanjut;
 use App\Models\Temuan;
@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
  */
 class BatlController extends Controller
 {
-    use ChecksKmdiAccess;
+    use ChecksMkdiAccess;
 
     private const MAX_KB = 10240;
     private const EXT    = 'pdf,png,jpg,jpeg,doc,docx';

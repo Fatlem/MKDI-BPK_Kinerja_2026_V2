@@ -20,7 +20,7 @@ $apiRoutes = function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me',      [AuthController::class, 'me']);
 
-    Route::middleware('auth.kmdi')->group(function () {
+    Route::middleware('auth.mkdi')->group(function () {
         Route::get('/users/list',     [UserController::class,  'listForLogin']);
         Route::get('/pic',            [PicController::class,   'index']);
         Route::post('/pic',           [PicController::class,   'store']);   // BARU: tambah PIC ke tabel pic

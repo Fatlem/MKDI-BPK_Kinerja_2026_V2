@@ -9,7 +9,7 @@ class CheckAuth
 {
     public function handle(Request $request, Closure $next)
     {
-        if (! session()->has('kmdi_user')) {
+        if (! session()->has('mkdi_user')) {
             return response()->json(['success' => false, 'message' => 'Sesi berakhir. Silakan login kembali.'], 401);
         }
 

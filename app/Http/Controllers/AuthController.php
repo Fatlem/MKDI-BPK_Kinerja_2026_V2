@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\KmdiUser;
+use App\Models\MkdiUser;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -17,7 +17,7 @@ class AuthController extends Controller
             return response()->json(['success' => false, 'message' => 'Username dan password wajib diisi.']);
         }
 
-        $user = KmdiUser::whereRaw('LOWER(username) = ?', [strtolower($username)])->first();
+        $user = MkdiUser::whereRaw('LOWER(username) = ?', [strtolower($username)])->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
             return response()->json(['success' => false, 'message' => 'Username atau password salah.']);
@@ -29,14 +29,14 @@ class AuthController extends Controller
             'role'     => $user->role,
         ];
 
-        session(['kmdi_user' => $userData]);
+        session(['mkdi_user' => $userData]);
 
         return response()->json(['success' => true, 'user' => $userData]);
     }
 
     public function me()
     {
-        $user = session('kmdi_user');
+        $user = session('mkdi_user');
 
         return response()->json(
             $user ? ['success' => true, 'user' => $user] : ['success' => false]
@@ -45,7 +45,7 @@ class AuthController extends Controller
 
     public function logout()
     {
-        session()->forget('kmdi_user');
+        session()->forget('mkdi_user');
         return response()->json(['success' => true]);
     }
 }

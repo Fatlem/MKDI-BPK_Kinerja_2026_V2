@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Concerns\ChecksKmdiAccess;
+use App\Http\Controllers\Concerns\ChecksMkdiAccess;
 use App\Models\Temuan;
 use App\Models\Pic;
-use App\Models\KmdiUser;
+use App\Models\MkdiUser;
 use Illuminate\Support\Facades\DB;
 
 class TemuanController extends Controller
 {
-    use ChecksKmdiAccess;
+    use ChecksMkdiAccess;
 
     // ── GET /api/temuan ───────────────────────────────────────────
     public function index()
@@ -259,7 +259,7 @@ class TemuanController extends Controller
         foreach (Pic::pluck('nama') as $n) {
             $known[$key($n)] = true;
         }
-        foreach (KmdiUser::get(['username', 'nama']) as $u) {
+        foreach (MkdiUser::get(['username', 'nama']) as $u) {
             $known[$key($u->username)] = true;
             $known[$key($u->nama)]     = true;
         }

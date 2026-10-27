@@ -31,7 +31,7 @@ class PicController extends Controller
     public function store(Request $request)
     {
         // Sama seperti TemuanController: akun PIC tidak boleh menambah data master
-        $role = strtolower((string) (((array) session('kmdi_user', []))['role'] ?? ''));
+        $role = strtolower((string) (((array) session('mkdi_user', []))['role'] ?? ''));
         if ($role === 'pic') {
             return response()->json(['success' => false, 'message' => 'Akun PIC tidak dapat menambah PIC.'], 403);
         }
