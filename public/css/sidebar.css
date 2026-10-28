@@ -1,0 +1,106 @@
+/* =========================================================
+   SIDEBAR TERANG (modern) — dimuat SETELAH mkdi.css
+   Hanya menimpa tampilan sidebar; halaman lain tidak berubah.
+   ========================================================= */
+.app-layout { --sidebar-w: 260px; }
+
+.sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #f3f6fd 100%);
+  border-right: 1px solid #e5eaf3;
+  transition: transform .3s cubic-bezier(.4,0,.2,1), width .25s ease;
+}
+.main-wrapper { transition: margin-left .25s ease; }
+
+/* Header / brand */
+.sidebar-header { border-bottom: 1px solid #edf1f8; padding: 20px 18px; min-height: 76px; }
+.sidebar-brand-name { color: #0f172a; }
+.sidebar-brand-sub  { color: #2563eb; }
+.sidebar-logo { box-shadow: 0 4px 12px rgba(37,99,235,.28); }
+.sidebar-brand-text { min-width: 0; white-space: nowrap; overflow: hidden; }
+
+/* Navigasi */
+.sidebar-nav { padding: 14px 12px; overflow-y: auto; overflow-x: hidden; }
+
+.nav-section-title {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px;
+  text-transform: uppercase; padding: 8px 12px; margin-bottom: 4px;
+  cursor: pointer; border-radius: 8px; user-select: none; transition: color .2s;
+}
+.nav-section-title:hover { color: #1e3a8a; }
+.nav-section-chevron { width: 16px !important; height: 16px !important; transition: transform .2s; }
+.nav-section.collapsed .nav-section-chevron { transform: rotate(-90deg); }
+.nav-section.collapsed .nav-section-body { display: none; }
+
+.nav-item {
+  color: #475569; font-weight: 500; gap: 14px; padding: 10px 12px; margin-bottom: 3px;
+  border-radius: 12px; white-space: nowrap;
+}
+.nav-item:hover { color: #1e3a8a; background: #edf2fc; }
+.nav-item.active {
+  background: #e3eaf8; color: #1e3a8a; font-weight: 600; box-shadow: none;
+}
+.nav-item i { width: 20px; height: 20px; }
+
+/* Submenu */
+.nav-subitem { color: #64748b; font-weight: 500; border-left: 1.5px solid #e2e8f0; }
+.nav-subitem:hover { color: #1e3a8a; background: #edf2fc; }
+.nav-subitem.active { color: #1e3a8a; font-weight: 600; background: #eaf0fc; border-left-color: #2563eb; }
+.nav-dot { background: #cbd5e1; }
+.nav-subitem.active .nav-dot { background: #2563eb; }
+
+/* Footer */
+.sidebar-footer { border-top: 1px solid #e5eaf3; padding: 12px; }
+.user-profile-card {
+  background: #fff; border: 1px solid #e5eaf3; border-radius: 12px; margin-bottom: 6px;
+}
+.user-name { color: #0f172a; }
+.user-role { color: #64748b; }
+.nav-logout { margin-bottom: 0; }
+.nav-logout:hover { color: #dc2626; background: #fef2f2; }
+.sidebar-copyright { color: #94a3b8; padding-top: 8px; white-space: nowrap; overflow: hidden; }
+
+/* Tombol tab di tepi kanan sidebar */
+.sb-edge-toggle {
+  position: absolute; top: 50%; right: -22px; transform: translateY(-50%);
+  width: 22px; height: 84px; display: flex; align-items: center; justify-content: center;
+  background: #fff; color: #64748b; border: 1px solid #e5eaf3; border-left: none;
+  border-radius: 0 14px 14px 0; box-shadow: 4px 0 12px rgba(15,23,42,.06);
+  cursor: pointer; transition: color .2s, background .2s;
+}
+.sb-edge-toggle:hover { color: #1e3a8a; background: #f3f6fd; }
+.sb-edge-toggle i { transition: transform .25s; }
+
+/* Overlay mobile lebih lembut untuk tema terang */
+.sidebar-overlay { background: rgba(15,23,42,.45); }
+
+/* ================= DESKTOP: mode ciut (hanya ikon) ================= */
+@media (min-width: 769px) {
+  .app-layout.sb-collapsed { --sidebar-w: 78px; }
+  .app-layout.sb-collapsed .sb-edge-toggle i { transform: rotate(180deg); }
+
+  .app-layout.sb-collapsed .sidebar-header { padding: 20px 0; justify-content: center; }
+  .app-layout.sb-collapsed .sidebar-brand-text,
+  .app-layout.sb-collapsed .nav-label,
+  .app-layout.sb-collapsed .nav-chevron,
+  .app-layout.sb-collapsed .nav-section-chevron,
+  .app-layout.sb-collapsed .nav-section-title span,
+  .app-layout.sb-collapsed .nav-sub-wrap,
+  .app-layout.sb-collapsed .user-info,
+  .app-layout.sb-collapsed .sidebar-copyright { display: none !important; }
+
+  .app-layout.sb-collapsed .nav-section-body { display: block !important; }
+  .app-layout.sb-collapsed .nav-section-title {
+    height: 1px; padding: 0; margin: 4px 14px 12px; background: #e2e8f0; border-radius: 0; pointer-events: none;
+  }
+  .app-layout.sb-collapsed .sidebar-nav { padding: 14px 10px; }
+  .app-layout.sb-collapsed .nav-item { justify-content: center; padding: 11px 0; }
+  .app-layout.sb-collapsed .sidebar-footer { padding: 12px 10px; }
+  .app-layout.sb-collapsed .user-profile-card { justify-content: center; padding: 8px 0; background: transparent; border-color: transparent; }
+}
+
+/* ================= MOBILE ================= */
+@media (max-width: 768px) {
+  .sb-edge-toggle { display: none; }
+  .sidebar.open { box-shadow: 0 0 40px rgba(15,23,42,.25); }
+}

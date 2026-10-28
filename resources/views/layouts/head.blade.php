@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>BPK Kinerja 2026 - Dashboard Monitoring MKDI</title>
-<meta name="theme-color" content="#0a0f24">
+<meta name="theme-color" content="#ffffff">
 
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,3 +17,21 @@
 <!-- Custom Master Stylesheet -->
 <link rel="stylesheet" href="{{ asset('css/mkdi.css') }}">
 <link rel="stylesheet" href="{{ asset('css/bukti.css') }}?v={{ @filemtime(public_path('css/bukti.css')) }}">
+
+<!-- Tailwind CSS (preflight dimatikan supaya halaman lain yang pakai mkdi.css tidak berubah) -->
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    corePlugins: { preflight: false },
+    plugins: [
+      function ({ addVariant }) {
+        // mini:  -> sidebar mode ciut (desktop saja)
+        addVariant('mini', '@media (min-width: 769px) { .sb-collapsed & }');
+        // act:   -> elemen yang diberi class .active oleh router.js
+        addVariant('act', '&.active');
+        // opened: -> elemen yang diberi class .open oleh router.js
+        addVariant('opened', '&.open');
+      }
+    ]
+  };
+</script>

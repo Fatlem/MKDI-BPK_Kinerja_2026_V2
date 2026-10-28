@@ -193,6 +193,86 @@ function riSubBodyHtml(sub) {
       ${riJadwalCard(sub.JadwalPelaksanaan)}`;
 }
 
+// ══════════════════ TABEL TEMUAN (dipakai Ruang Isian & Detail) ═══════════════
+// Satu baris = satu temuan utama. Klik baris -> baris di bawahnya terbuka (daftar sub temuan / detail).
+function riPicChips(pics) {
+  if (!pics.length) return '<span class="text-[11px] text-slate-400">-</span>';
+  const cls = 'inline-flex max-w-[260px] items-center truncate rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600';
+  const shown = pics.slice(0, 3).map(n => `<span class="${cls}" title="${esc(n)}">${esc(n)}</span>`).join('');
+  const more = pics.length > 3
+    ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600" title="${esc(pics.slice(3).join(', '))}">+${pics.length - 3} lainnya</span>`
+    : '';
+  return `<div class="flex flex-wrap gap-1.5">${shown}${more}</div>`;
+}
+
+// cfg: { prefix:'t'|'d', canAdmin:bool, action:(noKey, items)=>html, inner:(items)=>html }
+function riTableHtml(groups, cfg) {
+  const showAct = !!cfg.canAdmin;
+  const cols = showAct ? 6 : 5;
+  const th = 'px-3 py-3 text-left';
+
+  const body = Object.keys(groups).map(noKey => {
+    const items = groups[noKey];
+    const parent = items[0];
+    const key = cfg.prefix + ':' + noKey;
+    const open = !!S.riOpen[key];
+
+    return `
+      <tr data-key="${esc(key)}" onclick="togTblRow(this)"
+        class="cursor-pointer align-top transition-colors hover:bg-blue-50/50 ${open ? 'bg-blue-50/50' : ''}">
+        <td class="border-b border-slate-100 py-4 pl-4 pr-1">
+          <span class="rk-chev flex items-center text-slate-400" style="transition:transform .2s;transform:rotate(${open ? 180 : 0}deg);">
+            <i data-lucide="chevron-down" style="width:18px;height:18px;"></i>
+          </span>
+        </td>
+        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">
+          <span class="rounded-md bg-blue-50 px-2.5 py-1 text-[12px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+        </td>
+        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">${sumberBadge(parent) || '<span class="text-slate-400">-</span>'}</td>
+        <td class="border-b border-slate-100 px-3 py-4">
+          <div class="whitespace-pre-line break-words text-[13.5px] font-semibold leading-snug text-slate-900">${esc(parent.Temuan) || '—'}</div>
+          <div class="mt-1 text-[11.5px] text-slate-500">${subCountLabel(items.length)}</div>
+        </td>
+        <td class="border-b border-slate-100 px-3 py-4">${riPicChips(groupPicNames(items))}</td>
+        ${showAct ? `<td class="whitespace-nowrap border-b border-slate-100 px-4 py-4 text-right">${cfg.action(noKey, items)}</td>` : ''}
+      </tr>
+      <tr style="display:${open ? 'table-row' : 'none'};">
+        <td colspan="${cols}" class="border-b border-slate-200 bg-slate-50 p-4 max-[768px]:p-3">${cfg.inner(items)}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[820px] border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <th class="w-10 py-3 pl-4 pr-1"></th>
+              <th class="${th} w-[150px]">Nomor</th>
+              <th class="${th} w-[110px]">Sumber</th>
+              <th class="${th}">Temuan</th>
+              <th class="${th} w-[300px]">PIC</th>
+              ${showAct ? '<th class="w-[190px] px-4 py-3 text-right">Aksi</th>' : ''}
+            </tr>
+          </thead>
+          <tbody class="[&>tr:last-child>td]:border-b-0">${body}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function togTblRow(tr) {
+  const detail = tr.nextElementSibling;
+  if (!detail) return;
+  const open = detail.style.display === 'none';
+  detail.style.display = open ? 'table-row' : 'none';
+  tr.classList.toggle('bg-blue-50/50', open);
+  const chev = tr.querySelector('.rk-chev');
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+  const key = tr.dataset ? tr.dataset.key : '';
+  if (key) S.riOpen[key] = open;
+}
+
 function renderEntryList() {
   const rows = S.riFilter ? S.allR.filter(r => hasPic(splitPics(r.PIC), S.riFilter)) : S.allR;
   const list = document.getElementById('entry-list');
@@ -220,31 +300,14 @@ function renderEntryList() {
 
   document.getElementById('ri-count').textContent = `${Object.keys(groups).length} Temuan Utama (${rows.length} Rincian)`;
   
-  let html = '';
-  Object.keys(groups).forEach(noKey => {
-    const items = groups[noKey];
-    const parent = items[0];
-
-    html += `
-      <div class="entry-card">
-        <div class="entry-card-header" data-key="t:${esc(noKey)}" onclick="togEntry(this)">
-          <div class="entry-badge-no entry-badge-code">${esc(parent.No) || '-'}</div>
-          <div style="flex:1;">
-            <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${sumberBadge(parent)} ${esc(parent.Temuan) || '—'}</div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
-          </div>
-          ${canAdmin ? `<button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
-            <i data-lucide="plus-circle" style="width:14px;"></i> Tambah Sub Temuan
-          </button>` : ''}
-        </div>
-
-        <div class="sub-item-block" style="display:${S.riOpen['t:' + noKey] ? 'block' : 'none'};">
-          ${items.map((sub, idx) => riSubHtml(sub, idx, canAdmin, items.length)).join('')}
-        </div>
-      </div>`;
+  list.innerHTML = riTableHtml(groups, {
+    prefix: 't',
+    canAdmin,
+    action: (noKey, items) => `<button class="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
+        <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Tambah Sub Temuan
+      </button>`,
+    inner: items => items.map((sub, idx) => riSubHtml(sub, idx, canAdmin, items.length)).join('')
   });
-
-  list.innerHTML = html;
   refreshIcons();
 }
 
@@ -423,31 +486,14 @@ function renderDetailList() {
   });
   if (cnt) cnt.textContent = `${Object.keys(groups).length} Temuan (${rows.length} Rincian)`;
 
-  let html = '';
-  Object.keys(groups).forEach(noKey => {
-    const items = groups[noKey];
-    const parent = items[0];
-
-    html += `
-      <div class="entry-card">
-        <div class="entry-card-header" data-key="d:${esc(noKey)}" onclick="togEntry(this)">
-          <div class="entry-badge-no entry-badge-code">${esc(parent.No) || '-'}</div>
-          <div style="flex:1;min-width:0;">
-            <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
-          </div>
-          ${canAdmin ? `<button class="btn-action-sec" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation(); openDetAdd('${esc(noKey)}', '', 'Kriteria')">
-            <i data-lucide="plus-circle" style="width:14px;"></i> Tambah Detail
-          </button>` : ''}
-        </div>
-
-        <div class="sub-item-block" style="display:${S.riOpen['d:' + noKey] ? 'block' : 'none'};">
-          ${items.map((r, idx) => detRowHtml(r, idx, canAdmin, items.length)).join('')}
-        </div>
-      </div>`;
+  list.innerHTML = riTableHtml(groups, {
+    prefix: 'd',
+    canAdmin,
+    action: (noKey) => `<button class="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700" onclick="event.stopPropagation(); openDetAdd('${esc(noKey)}', '', 'Kriteria')">
+        <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Tambah Detail
+      </button>`,
+    inner: items => items.map((r, idx) => detRowHtml(r, idx, canAdmin, items.length)).join('')
   });
-
-  list.innerHTML = html;
   refreshIcons();
 }
 

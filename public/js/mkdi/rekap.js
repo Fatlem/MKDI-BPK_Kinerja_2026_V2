@@ -36,22 +36,27 @@ function rkBarColor(pct) { return pct >= 100 ? '#10b981' : '#2563eb'; }
 function rkSummaryHtml(rows) {
   if (!rows.length) return '';
   const s = rkStats(rows);
+  const tile = (n, lbl, bg, fg) => `
+    <div class="min-w-[88px] rounded-xl ${bg} px-4 py-2.5 text-center">
+      <div class="text-xl font-extrabold leading-none ${fg}">${n}</div>
+      <div class="mt-1 text-[11px] font-semibold ${fg} opacity-80">${lbl}</div>
+    </div>`;
   return `
-    <div class="entry-card" style="padding:16px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:220px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;font-weight:800;margin-bottom:8px;">
-          <span>Progres Keseluruhan</span>
-          <span style="color:${rkBarColor(s.pct)};font-size:15px;">${s.pct}%</span>
+    <div class="mb-4 grid grid-cols-[1fr_auto] items-center gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm max-[900px]:grid-cols-1 max-[900px]:gap-4">
+      <div class="min-w-0">
+        <div class="mb-2.5 flex items-baseline justify-between">
+          <span class="text-[13px] font-bold text-slate-800">Progres Keseluruhan</span>
+          <span class="text-lg font-extrabold" style="color:${rkBarColor(s.pct)};">${s.pct}%</span>
         </div>
-        <div style="height:8px;border-radius:99px;background:#e2e8f0;overflow:hidden;">
-          <div style="height:100%;width:${s.pct}%;background:${rkBarColor(s.pct)};border-radius:99px;"></div>
+        <div class="h-2 overflow-hidden rounded-full bg-slate-200">
+          <div class="h-full rounded-full transition-[width] duration-500" style="width:${s.pct}%;background:${rkBarColor(s.pct)};"></div>
         </div>
-        <div style="font-size:11.5px;color:#64748b;margin-top:6px;">${s.selesai} dari ${s.total} rincian selesai</div>
+        <p class="mt-2 text-xs text-slate-500">${s.selesai} dari ${s.total} rincian selesai</p>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <span class="status-pill pill-ok">Selesai ${s.selesai}</span>
-        <span class="status-pill pill-prog">Proses ${s.proses}</span>
-        <span class="status-pill pill-empty">Belum ${s.belum}</span>
+      <div class="flex gap-2.5 max-[900px]:[&>div]:flex-1">
+        ${tile(s.selesai, 'Selesai', 'bg-emerald-50', 'text-emerald-700')}
+        ${tile(s.proses, 'Proses', 'bg-amber-50', 'text-amber-700')}
+        ${tile(s.belum, 'Belum', 'bg-slate-100', 'text-slate-600')}
       </div>
     </div>`;
 }
@@ -93,12 +98,15 @@ function rekapSubHtml(sub, idx, total) {
 
   return `
     <div class="ri-sub">
-      <div data-key="${esc(key)}" onclick="togRekapSub(this)" style="display:flex;align-items:center;gap:12px;cursor:pointer;">
-        <div style="min-width:0;flex:1;">
-          <strong style="font-size:14px;color:var(--text-main);overflow-wrap:anywhere;">${subLabel(total, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
-          <div class="ri-sub-meta"><span><i data-lucide="users"></i> ${esc(pics)}</span></div>
+      <div data-key="${esc(key)}" onclick="togRekapSub(this)" class="flex cursor-pointer items-center gap-3">
+        <div class="min-w-0 flex-1">
+          <strong class="break-words text-sm font-semibold text-slate-900">${subLabel(total, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
+          <div class="mt-1 flex items-start gap-1.5 text-[11.5px] text-slate-500">
+            <i data-lucide="users" class="mt-px size-3.5 shrink-0"></i>
+            <span class="break-words">${esc(pics)}</span>
+          </div>
         </div>
-        <span class="status-pill ${st.cls}"><i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}</span>
+        <span class="status-pill ${st.cls} shrink-0"><i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}</span>
         ${rkChevron(open)}
       </div>
       <div style="display:${open ? 'block' : 'none'};margin-top:14px;">
@@ -121,25 +129,44 @@ function rekapEntryHtml(g) {
     ? items.map((sub, idx) => rekapSubHtml(sub, idx, items.length)).join('')
     : riSubHtml(items[0], 0, false, 1, { readOnly: true });
 
+  // PIC ditampilkan sebagai chip (maks 3, sisanya "+N lainnya")
+  const pics = groupPicNames(items);
+  const chipCls = 'inline-flex max-w-[280px] items-center truncate rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600 max-[768px]:max-w-full';
+  const chips = pics.length
+    ? pics.slice(0, 3).map(n => `<span class="${chipCls}" title="${esc(n)}">${esc(n)}</span>`).join('') +
+      (pics.length > 3
+        ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600" title="${esc(pics.slice(3).join(', '))}">+${pics.length - 3} lainnya</span>`
+        : '')
+    : '<span class="text-[11px] text-slate-400">-</span>';
+
   return `
-    <div class="entry-card">
-      <div class="entry-card-header" data-key="r:${esc(g.noKey)}" onclick="togRekapEntry(this)">
-        <div class="entry-badge-no">${esc(parent.No) || '-'}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="entry-title-text" style="font-weight:700;font-size:14px;color:#0f172a;">${esc(parent.Temuan) || '—'}</div>
-          <div style="font-size:11.5px;color:#64748b;margin-top:2px;">PIC: <strong>${esc(groupPicNames(items).join(', ') || '-')}</strong> (${subCountLabel(items.length)})</div>
-          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
-            <span style="font-size:11.5px;font-weight:800;color:${rkBarColor(s.pct)};white-space:nowrap;">Progres ${s.pct}%</span>
-            <div style="flex:1;min-width:90px;max-width:240px;height:6px;border-radius:99px;background:#e2e8f0;overflow:hidden;">
-              <div style="height:100%;width:${s.pct}%;background:${rkBarColor(s.pct)};border-radius:99px;"></div>
+    <div class="mb-3.5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md">
+      <div data-key="r:${esc(g.noKey)}" onclick="togRekapEntry(this)" class="flex cursor-pointer items-start gap-4 p-5 max-[768px]:p-4">
+        <div class="min-w-0 flex-1">
+          <div class="mb-2 flex flex-wrap items-center gap-2">
+            <span class="whitespace-nowrap rounded-md bg-blue-50 px-2.5 py-1 text-[11.5px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+            <span class="whitespace-nowrap rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500">${subCountLabel(items.length)}</span>
+          </div>
+
+          <h3 class="whitespace-pre-line break-words text-[15px] font-semibold leading-snug text-slate-900">${esc(parent.Temuan) || '—'}</h3>
+
+          <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <span class="mr-0.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-400">PIC</span>
+            ${chips}
+          </div>
+
+          <div class="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span class="whitespace-nowrap text-xs font-bold" style="color:${rkBarColor(s.pct)};">Progres ${s.pct}%</span>
+            <div class="h-1.5 min-w-[90px] max-w-[260px] flex-1 overflow-hidden rounded-full bg-slate-200">
+              <div class="h-full rounded-full" style="width:${s.pct}%;background:${rkBarColor(s.pct)};"></div>
             </div>
-            <span style="font-size:11px;color:#64748b;">${s.selesai} dari ${s.total} selesai</span>
+            <span class="text-[11.5px] text-slate-500">${s.selesai} dari ${s.total} selesai</span>
           </div>
         </div>
         ${rkChevron(open)}
       </div>
 
-      <div class="sub-item-block" style="display:${open ? 'block' : 'none'};">
+      <div class="border-t border-slate-200 bg-slate-50 p-4 max-[768px]:p-3" style="display:${open ? 'block' : 'none'};">
         ${inner}
       </div>
     </div>`;
@@ -165,16 +192,37 @@ function renderRekap(rows) {
     return { noKey, items, picTokens, q };
   });
 
+  const fieldCls = 'h-11 w-full rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10';
+
   setBody(`
-    <div class="toolbar-wrap">
-      <select class="select-custom" id="flt-pic" style="width:240px;" onchange="filterRekap()"><option value="">Semua PIC</option>${picOpts}</select>
-      <input class="input-search" id="flt-q" placeholder="Cari data temuan..." oninput="filterRekap()" style="width:240px">
-      <span style="font-size:12px;color:var(--text-muted)" id="flt-count"></span>
-      <button class="btn-action-sec" style="margin-left:auto" onclick="exportExcel()"><i data-lucide="download" style="width:16px"></i> Ekspor Excel</button>
+    <div class="mb-5 flex flex-wrap items-center gap-3">
+      <div class="relative w-60 max-[768px]:w-full">
+        <i data-lucide="filter" class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
+        <select id="flt-pic" onchange="filterRekap()" class="${fieldCls} cursor-pointer appearance-none pl-10 pr-9">
+          <option value="">Semua PIC</option>${picOpts}
+        </select>
+        <i data-lucide="chevron-down" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
+      </div>
+
+      <div class="relative w-72 max-[768px]:w-full">
+        <i data-lucide="search" class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
+        <input id="flt-q" oninput="filterRekap()" placeholder="Cari data temuan..." class="${fieldCls} pl-10 pr-3.5">
+      </div>
+
+      <span id="flt-count" class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"></span>
+
+      <button id="rk-export-btn" onclick="exportExcel()"
+        class="ml-auto inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700 max-[768px]:ml-0 max-[768px]:w-full max-[768px]:justify-center">
+        <i data-lucide="download" class="size-4"></i> Ekspor Excel
+      </button>
     </div>
 
-    <div id="rk-summary" style="margin-bottom:10px;"></div>
-    <div style="font-size:11.5px;color:var(--text-muted);margin:0 4px 14px;">Klik uraian temuan untuk melihat sub temuan, lalu klik sub temuan untuk melihat isiannya.</div>
+    <div id="rk-summary"></div>
+
+    <p class="mb-3.5 flex items-center gap-1.5 px-1 text-xs text-slate-500">
+      <i data-lucide="info" class="size-3.5 shrink-0"></i>
+      Klik uraian temuan untuk melihat sub temuan, lalu klik sub temuan untuk melihat isiannya.
+    </p>
     <div id="rekap-list"></div>
   `);
 
@@ -197,10 +245,12 @@ function filterRekap() {
 
   if (!visible.length) {
     list.innerHTML = `
-      <div style="text-align:center;padding:60px;background:#fff;border-radius:var(--r-xl);border:1.5px dashed var(--border-color);">
-        <i data-lucide="folder-open" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:8px;"></i>
-        <h4 style="font-weight:700">${_rkGroups.length ? 'Tidak Ada Data yang Cocok' : 'Belum Ada Data'}</h4>
-        <p style="font-size:12px;color:var(--text-muted)">${_rkGroups.length ? 'Ubah filter PIC atau kata pencarian.' : 'Data tindak lanjut belum diisi.'}</p>
+      <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+        <div class="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+          <i data-lucide="folder-open" class="size-7"></i>
+        </div>
+        <h4 class="text-sm font-bold text-slate-800">${_rkGroups.length ? 'Tidak Ada Data yang Cocok' : 'Belum Ada Data'}</h4>
+        <p class="mt-1 text-xs text-slate-500">${_rkGroups.length ? 'Ubah filter PIC atau kata pencarian.' : 'Data tindak lanjut belum diisi.'}</p>
       </div>`;
   } else {
     list.innerHTML = visible.map(rekapEntryHtml).join('');
@@ -221,7 +271,7 @@ async function exportExcel() {
     showToast('Tidak ada data untuk diekspor', 'inf');
     return;
   }
-  const btn = document.querySelector('.toolbar-wrap .btn-action-sec');
+  const btn = document.getElementById('rk-export-btn');
   const orig = btn ? btn.innerHTML : null;
   if (btn) {
     btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:16px"></i> Menyiapkan...';

@@ -11,12 +11,12 @@
   @include('auth.login')
 
   <div id="app-container" style="display:none;">
-    <div class="app-layout">
+    <div class="app-layout group/sb [--sidebar-w:260px] min-[769px]:[&.sb-collapsed]:[--sidebar-w:78px]">
       <div id="sb-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
 
       @include('layouts.sidebar')
 
-      <div class="main-wrapper">
+      <div class="main-wrapper transition-[margin-left] duration-300">
         @include('layouts.header')
 
         <div id="page-body" class="page-content"></div>

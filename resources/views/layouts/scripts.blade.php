@@ -8,6 +8,7 @@
         'bukti',        // formulir unggah bukti tindak lanjut (butuh fungsi dari ruang-isian.js)
         'rekap',
         'router',
+        'sidebar',      // mode ciut sidebar; harus setelah router.js
     ];
 @endphp
 @foreach ($mkdiScripts as $mkdiFile)
