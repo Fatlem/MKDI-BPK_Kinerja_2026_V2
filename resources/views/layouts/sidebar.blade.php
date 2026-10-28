@@ -14,16 +14,15 @@
     <i data-lucide="chevron-left" class="size-4 transition-transform mini:rotate-180"></i>
   </button>
 
-  {{-- Brand --}}
-  <div class="flex min-h-[76px] items-center gap-3 border-b border-slate-100 px-[18px] py-5 mini:justify-center mini:px-0">
-    <div class="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-[0_4px_12px_rgba(37,99,235,.28)]">
-      <i data-lucide="clipboard-check" class="size-[22px]"></i>
-    </div>
-    <div class="min-w-0 overflow-hidden whitespace-nowrap mini:hidden">
-      <div class="text-sm font-extrabold tracking-tight text-slate-900">BPK Kinerja 2026</div>
-      <div class="text-[9.5px] font-bold uppercase tracking-widest text-blue-600">Dashboard Monitoring</div>
-    </div>
-  </div>
+  {{-- Brand: logo Kemenko Pangan (lengkap saat lebar, lambang saja saat sidebar ciut) --}}
+  <div class="flex min-h-[76px] items-center border-b border-slate-100 px-[18px] py-4 mini:justify-center mini:px-0">
+    <img src="{{ asset('images/logoheader.png') }}?v=1"
+        alt="Kementerian Koordinator Bidang Pangan Republik Indonesia"
+        class="block h-auto w-full max-w-[214px] mini:hidden">
+    <img src="{{ asset('images/logo.png') }}?v=1"
+        alt="Kemenko Pangan"
+        class="hidden size-[42px] object-contain mini:block">
+</div>
 
   {{-- Menu --}}
   <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3.5 mini:px-2.5">

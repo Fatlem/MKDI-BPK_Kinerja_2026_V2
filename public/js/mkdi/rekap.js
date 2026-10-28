@@ -94,7 +94,8 @@ function rekapSubHtml(sub, idx, total) {
   const key = 'rs:' + sub._row;
   const open = !!S.riOpen[key];
   const st = statusOf(sub);
-  const pics = groupPicNames([sub]).join(', ') || '-';
+  const picsFull = groupPicNames([sub]).join(', ') || '-';
+  const pics = groupPicShort([sub]).join(', ') || '-';
 
   return `
     <div class="ri-sub">
@@ -103,7 +104,7 @@ function rekapSubHtml(sub, idx, total) {
           <strong class="break-words text-sm font-semibold text-slate-900">${subLabel(total, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
           <div class="mt-1 flex items-start gap-1.5 text-[11.5px] text-slate-500">
             <i data-lucide="users" class="mt-px size-3.5 shrink-0"></i>
-            <span class="break-words">${esc(pics)}</span>
+            <span class="break-words" title="${esc(picsFull)}">${esc(pics)}</span>
           </div>
         </div>
         <span class="status-pill ${st.cls} shrink-0"><i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}</span>
@@ -129,15 +130,9 @@ function rekapEntryHtml(g) {
     ? items.map((sub, idx) => rekapSubHtml(sub, idx, items.length)).join('')
     : riSubHtml(items[0], 0, false, 1, { readOnly: true });
 
-  // PIC ditampilkan sebagai chip (maks 3, sisanya "+N lainnya")
+  // PIC ditampilkan sebagai chip singkat (sisanya jadi ikon "lainnya")
   const pics = groupPicNames(items);
-  const chipCls = 'inline-flex max-w-[280px] items-center truncate rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600 max-[768px]:max-w-full';
-  const chips = pics.length
-    ? pics.slice(0, 3).map(n => `<span class="${chipCls}" title="${esc(n)}">${esc(n)}</span>`).join('') +
-      (pics.length > 3
-        ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600" title="${esc(pics.slice(3).join(', '))}">+${pics.length - 3} lainnya</span>`
-        : '')
-    : '<span class="text-[11px] text-slate-400">-</span>';
+  const chips = riPicChips(pics);
 
   return `
     <div class="mb-3.5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md">

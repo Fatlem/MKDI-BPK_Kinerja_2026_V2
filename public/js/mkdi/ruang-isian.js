@@ -148,7 +148,8 @@ function riJadwalCard(text) {
 function riSubHtml(sub, idx, canAdmin, total, opts) {
   opts = opts || {};
   const st = statusOf(sub);
-  const pics = groupPicNames([sub]).join(', ') || '-';
+  const picsFull = groupPicNames([sub]).join(', ') || '-';
+  const pics = groupPicShort([sub]).join(', ') || '-';
 
   // Bukti tindak lanjut (bukti.js): tampil juga di mode baca-saja supaya bisa dilihat dari Rekap
   const buktiBtn = typeof openBukti === 'function'
@@ -166,7 +167,7 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
           <div class="ri-sub-titletext">
             <strong>${subLabel(total || 1, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
             <div class="ri-sub-meta">
-              <span><i data-lucide="users"></i> ${esc(pics)}</span>
+              <span title="${esc(picsFull)}"><i data-lucide="users"></i> ${esc(pics)}</span>
             </div>
           </div>
         </div>
@@ -195,15 +196,50 @@ function riSubBodyHtml(sub) {
 
 // ══════════════════ TABEL TEMUAN (dipakai Ruang Isian & Detail) ═══════════════
 // Satu baris = satu temuan utama. Klik baris -> baris di bawahnya terbuka (daftar sub temuan / detail).
+const RI_PIC_MAX = 3; // jumlah chip yang tampil langsung; sisanya masuk ikon "lainnya"
+const RI_ICON_USERS = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+
+// pics = daftar nama LENGKAP. Chip menampilkan nama singkat (hover = nama lengkap).
+// Kalau lebih dari RI_PIC_MAX, sisanya diganti ikon SVG kecil + jumlah; klik untuk melihat daftar lengkap.
 function riPicChips(pics) {
   if (!pics.length) return '<span class="text-[11px] text-slate-400">-</span>';
-  const cls = 'inline-flex max-w-[260px] items-center truncate rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600';
-  const shown = pics.slice(0, 3).map(n => `<span class="${cls}" title="${esc(n)}">${esc(n)}</span>`).join('');
-  const more = pics.length > 3
-    ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600" title="${esc(pics.slice(3).join(', '))}">+${pics.length - 3} lainnya</span>`
+  const cls = 'inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600';
+  const shown = pics.slice(0, RI_PIC_MAX).map(n => `<span class="${cls}" title="${esc(n)}">${esc(picShort(n))}</span>`).join('');
+  const rest = pics.slice(RI_PIC_MAX);
+  const more = rest.length
+    ? `<button type="button" class="pic-more" aria-label="${rest.length} PIC lainnya" title="${esc(rest.join(', '))}" data-pics="${esc(pics.join('|'))}" onclick="picMoreToggle(event,this)">${RI_ICON_USERS}<span>+${rest.length}</span></button>`
     : '';
-  return `<div class="flex flex-wrap gap-1.5">${shown}${more}</div>`;
+  return `<div class="flex flex-wrap items-center gap-1.5">${shown}${more}</div>`;
 }
+
+// Popover daftar lengkap PIC (position:fixed supaya tidak terpotong overflow tabel)
+function picMoreClose() {
+  const el = document.getElementById('pic-pop');
+  if (el) el.remove();
+}
+function picMoreToggle(ev, btn) {
+  ev.stopPropagation();           // jangan ikut membuka/menutup baris tabel
+  const open = document.getElementById('pic-pop');
+  if (open) { const same = open._btn === btn; picMoreClose(); if (same) return; }
+  const names = String(btn.dataset.pics || '').split('|').filter(Boolean);
+  const pop = document.createElement('div');
+  pop.id = 'pic-pop';
+  pop._btn = btn;
+  pop.onclick = e => e.stopPropagation();
+  pop.innerHTML = `<div class="pic-pop-title">Semua PIC (${names.length})</div>` +
+    names.map(n => `<div class="pic-pop-item"><b>${esc(picShort(n))}</b><span>${esc(n)}</span></div>`).join('');
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+  let top = r.bottom + 6;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+}
+document.addEventListener('click', picMoreClose);
+window.addEventListener('scroll', picMoreClose, true);
+window.addEventListener('resize', picMoreClose);
 
 // cfg: { prefix:'t'|'d', canAdmin:bool, action:(noKey, items)=>html, inner:(items)=>html }
 function riTableHtml(groups, cfg) {
@@ -445,7 +481,7 @@ function detRowHtml(r, idx, canAdmin, total) {
         <div class="ri-sub-title">
           <div class="ri-sub-titletext">
             <strong>${subLabel(total || 1, idx)}${r.SubTemuan ? ' - ' + esc(r.SubTemuan) : ''}</strong>
-            <div class="ri-sub-meta"><span><i data-lucide="users"></i> ${esc(groupPicNames([r]).join(', ') || '-')}</span></div>
+            <div class="ri-sub-meta"><span title="${esc(groupPicNames([r]).join(', ') || '-')}"><i data-lucide="users"></i> ${esc(groupPicShort([r]).join(', ') || '-')}</span></div>
           </div>
         </div>
         ${canAdmin ? `<div class="ri-sub-actions">

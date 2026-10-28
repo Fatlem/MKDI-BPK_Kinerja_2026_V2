@@ -160,6 +160,36 @@ function groupPicTokens(items) {
 }
 function groupPicNames(items) { return groupPicTokens(items).map(picNama); }
 
+// ── Nama PIC singkat (untuk tampilan tabel/chip supaya tidak numpuk) ───────────
+// Tambah / ubah singkatan di sini. Kunci = nama lengkap huruf kecil.
+// PIC yang tidak ada di daftar ini disingkat otomatis (Biro/Deputi + inisial kata).
+const PIC_SHORT = {
+  'biro manajemen kinerja data dan informasi':                    'Biro MKDI',
+  'biro hukum dan kerjasama':                                     'Biro HK',
+  'biro sumber daya manusia dan organisasi':                      'Biro SDMO',
+  'biro umum dan hubungan masyarakat':                            'Biro UHM',
+  'biro keuangan dan bmn':                                        'Biro KBMN',
+  'deputi bidang koordinasi tata niaga dan distribusi pangan':    'Deputi TNDP',
+  'deputi bidang koordinasi usaha pangan dan pertanian':          'Deputi UPP',
+  'deputi bidang koordinasi keterjangkauan dan keamanan pangan':  'Deputi KKP',
+  'deputi bidang koordinasi sumber daya maritim':                 'Deputi SDM',
+  'staf ahli bidang konektivitas':                                'Sahli Konektivitas'
+};
+
+function picShort(nama) {
+  const n = String(nama == null ? '' : nama).trim().replace(/\s+/g, ' ');
+  if (!n) return n;
+  const hit = PIC_SHORT[n.toLowerCase()];
+  if (hit) return hit;
+  if (n.length <= 16) return n;
+  const m = n.match(/^(Biro|Deputi|Staf Ahli|Asisten Deputi|Sekretariat|Pusat)\b\s*(?:Bidang\s+)?(?:Koordinasi\s+)?(.*)$/i);
+  if (!m || !m[2]) return n;
+  const words = m[2].split(' ').filter(w => !/^(dan|&|serta|atau|dalam|untuk|pada|di)$/i.test(w));
+  if (words.length < 2) return n;
+  return m[1] + ' ' + words.map(w => (/^[A-Z0-9]{2,5}$/.test(w) ? w : w[0].toUpperCase())).join('');
+}
+function groupPicShort(items) { return groupPicNames(items).map(picShort); }
+
 // Masukkan PIC yang ada di data temuan tapi belum ada di daftar PIC (misalnya yang diketik manual)
 function syncPicList(rows) {
   if (!Array.isArray(S.picList)) S.picList = [];
