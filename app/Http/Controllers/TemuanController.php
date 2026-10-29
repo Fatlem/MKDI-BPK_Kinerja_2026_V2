@@ -14,11 +14,18 @@ class TemuanController extends Controller
     use ChecksMkdiAccess;
 
     // ── GET /api/temuan ───────────────────────────────────────────
-    public function index()
+    public function index(Request $request)
     {
-        $rows = Temuan::with(['bukti:id,temuan_id,status', 'batl'])
-            ->withCount('bukti')
-            ->orderBy('sort_order')->orderBy('id')->get();
+        $query = Temuan::with(['bukti:id,temuan_id,status', 'batl'])
+            ->withCount('bukti');
+
+        // Filter berdasarkan Sumber jika dikirimkan dari frontend / pencarian
+        if ($request->filled('sumber')) {
+            $sumber = $this->cleanSumber($request->query('sumber'));
+            $query->where('sumber', $sumber);
+        }
+
+        $rows = $query->orderBy('sort_order')->orderBy('id')->get();
 
         // Propagasi No & Temuan dari parent ke sub-baris (sama seperti GAS getAllTemuan)
         $lastNo     = '';
@@ -56,12 +63,11 @@ class TemuanController extends Controller
         });
 
         // Akun PIC hanya menerima temuan yang ditugaskan kepadanya
-        // (dilakukan SETELAH propagasi di atas supaya No & Temuan sub-baris tetap terisi)
         if ($this->isPic()) {
             $data = $data->filter(fn ($r) => $this->ownsRow($r['PIC']));
         }
 
-        // Auditor hanya melihat temuan yang dia buat (tidak bisa melihat progres auditor lain)
+        // Auditor hanya melihat temuan yang dia buat
         if ($this->isAuditor()) {
             $data = $data->filter(fn ($r) => $this->ownsTemuan($r['CreatedBy']));
         }
@@ -79,7 +85,6 @@ class TemuanController extends Controller
     // ── POST /api/temuan ──────────────────────────────────────────
     public function store(Request $request)
     {
-        // Menambah temuan / sub temuan = tugas auditor Inspektorat (atau admin)
         if (! $this->isStaff()) {
             return $this->forbidden('Hanya auditor yang dapat menambah temuan.');
         }
@@ -99,13 +104,10 @@ class TemuanController extends Controller
             }
         }
 
-        // Sub temuan mewarisi sumber & pemilik dari induknya
         $sumber    = $isSub ? ($parent->sumber ?: Temuan::SUMBER_BPK) : $this->cleanSumber($fd['Sumber'] ?? null);
         $createdBy = $isSub ? $parent->created_by : $this->username();
-
         $sortOrder = $this->resolveSort($isSub ? $parentId : null);
 
-        // Kode LHP dibuat server (anti-duplikat walau dua auditor menambah bersamaan)
         $temuan = DB::transaction(function () use ($isSub, $fd, $sumber, $createdBy, $parentId, $sortOrder) {
             return Temuan::create([
                 'no'                  => $isSub ? null : $this->generateKode($sumber),
@@ -125,7 +127,6 @@ class TemuanController extends Controller
             ]);
         });
 
-        // PIC yang diketik manual otomatis masuk tabel `pic`
         $this->syncPics($fd['PIC'] ?? '');
 
         return response()->json(['success' => true, 'row' => $temuan->id, 'no' => $temuan->no]);
@@ -141,8 +142,6 @@ class TemuanController extends Controller
 
         $fd = $request->all();
 
-        // Akun PIC: hanya boleh mengisi Rencana Aksi, Jadwal, Output
-        // dan hanya pada baris yang PIC-nya dia. Kolom lain (A–G) tidak disentuh.
         if ($this->isPic()) {
             if (! $this->ownsRow($temuan->pic)) {
                 return $this->forbidden('Temuan ini tidak ditugaskan kepada akun Anda.');
@@ -168,7 +167,6 @@ class TemuanController extends Controller
             return $this->forbidden('Temuan ini bukan milik akun Anda.');
         }
 
-        // Kode LHP (No) dan sumber tidak diubah lewat edit: kode dipakai sebagai kunci pengelompokan
         $temuan->update([
             'temuan'              => $fd['Temuan']            ?? $temuan->temuan,
             'sub_temuan'          => $fd['SubTemuan']         ?? null,
@@ -181,7 +179,6 @@ class TemuanController extends Controller
             'output'              => $fd['Output']            ?? null,
         ]);
 
-        // PIC yang diketik manual otomatis masuk tabel `pic`
         $this->syncPics($fd['PIC'] ?? '');
 
         return response()->json(['success' => true]);
@@ -199,7 +196,7 @@ class TemuanController extends Controller
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
         if (! $this->canManageTemuan($temuan)) {
-            return $this->forbidden('Temuan ini bukan milik akun Anda.');
+            return $this->forbidden('Temuan meupakan bukan milik akun Anda.');
         }
 
         $temuan->delete();
@@ -213,10 +210,6 @@ class TemuanController extends Controller
         return array_key_exists($v, Temuan::KODE_PREFIX) ? $v : Temuan::SUMBER_BPK;
     }
 
-    /**
-     * Kode LHP berikutnya per sumber: LHP-BPK-001 / LHP-INS-001.
-     * Urutan global per sumber (bukan per auditor) supaya kode tidak pernah kembar.
-     */
     private function generateKode(string $sumber): string
     {
         $prefix = Temuan::KODE_PREFIX[$sumber];
@@ -229,10 +222,6 @@ class TemuanController extends Controller
         return $prefix . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Hitung sort_order agar sub-baris muncul tepat setelah parent-nya.
-     * Tanpa parentId → append di akhir.
-     */
     private function resolveSort(?int $parentId): int
     {
         if (! $parentId) {
@@ -242,16 +231,11 @@ class TemuanController extends Controller
         $parent     = Temuan::find($parentId);
         $baseOrder  = $parent?->sort_order ?? 0;
 
-        // Geser baris-baris di bawah parent agar ada ruang
         Temuan::where('sort_order', '>', $baseOrder)->increment('sort_order', 10);
 
         return $baseOrder + 5;
     }
 
-    /**
-     * Pastikan setiap nama PIC pada temuan ada di tabel `pic`.
-     * Nama yang sudah ada (di tabel pic, atau sebagai username/nama akun) dilewati, tidak diduplikasi.
-     */
     private function syncPics(?string $picField): void
     {
         $key = fn ($s) => mb_strtolower(preg_replace('/[^\p{L}\p{N}]/u', '', (string) $s));

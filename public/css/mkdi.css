@@ -1060,3 +1060,42 @@ a { text-decoration: none; color: inherit; }
   .flt-chip select option:checked       { background: #e3ebfb; color: #1e3a8a; font-weight: 700; }
   .flt-chip select option::checkmark    { display: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   PENYESUAIAN IKON POLOS MONOKROM & PENCARIAN SUB
+   ════════════════════════════════════════════════════════════════ */
+
+/* Kelas Ikon Monokrom Netral */
+.icon-plain,
+i.icon-plain,
+svg.icon-plain,
+.flt-ico.icon-plain {
+  color: #475569 !important; /* Warna monokrom netral (slate-600) */
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Penyesuaian Input Cari di Toolbar Filter */
+.flt-search-input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+  width: 160px;
+}
+
+.flt-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .flt-search-input {
+    width: 100%;
+    font-size: 16px;
+  }
+}

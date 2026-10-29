@@ -1,10 +1,8 @@
-/* mkdi/ruang-isian.js - RUANG ISIAN, DETAIL, form tambah/edit (modal), simpan, dan hapus */
+/* mkdi/ruang-isian.js - RUANG ISIAN, DETAIL, form tambah/edit (modal), simpan, dan filter */
 
 if (!S.riOpen) S.riOpen = {};
 
 // ── Penamaan rincian ──────────────────────────────────────────────────
-// Temuan yang hanya punya 1 baris   -> "Rincian Temuan"
-// Temuan yang punya banyak baris    -> "Sub Temuan #1", "Sub Temuan #2", ...
 function sumberBadge(r) {
   const l = sumberLabel(r);
   return l ? `<span class="sumber-badge sumber-${esc(r.Sumber || 'bpk')}">${esc(l)}</span>` : '';
@@ -15,7 +13,7 @@ function subCountLabel(n)     { return n > 1 ? n + ' Sub Temuan' : '1 Rincian Te
 
 function loadRuangIsian(picFilter) {
   document.getElementById('hdr-title').textContent = 'Ruang Isian';
-  document.getElementById('hdr-sub').textContent   = isPicUser() ? 'Isi tindak lanjut untuk temuan yang ditugaskan kepada Anda' : 'Tambah, ubah, atau hapus data tindak lanjut';
+  document.getElementById('hdr-sub').textContent   = isPicUser() ? 'Isi tindak lanjut untuk temuan yang ditugaskan kepada Anda' : 'Tambah atau ubah data tindak lanjut';
   setBody(loadingHtml());
   refreshIcons();
 
@@ -28,44 +26,48 @@ function loadRuangIsian(picFilter) {
     .catch(() => showToast('Gagal memuat data dari server', 'err'));
 }
 
-// ══════ Filter chip Sumber / Tahun / Unit PIC (dipakai halaman Temuan & Detail) ══════
+// ══════ Filter chip Sumber / Unit PIC / Kata Kunci (Filter Tahun Dihapus) ══════
 function riFilterChips(prefix, handler, picOpts) {
-  const tahun = [...new Set((S.allR || []).map(r => r.Tahun).filter(Boolean))].sort().reverse();
-  if (S.riTahun && !tahun.includes(S.riTahun)) S.riTahun = '';
   const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${S.riSumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
-  const optTahun  = tahun.map(t => `<option value="${esc(t)}" ${S.riTahun === t ? 'selected' : ''}>${esc(t)}</option>`).join('');
   return `
+    <div class="flt-chip">
+      <i data-lucide="search" class="flt-ico icon-plain"></i>
+      <input type="text" id="${prefix}-flt-q" value="${esc(S.riQ || '')}" placeholder="Cari sumber / temuan..." class="flt-search-input" onkeyup="if(event.key==='Enter') ${handler}()">
+    </div>
     <label class="flt-chip">
-      <i data-lucide="shield" class="flt-ico flt-violet"></i><span class="flt-lbl">Sumber:</span>
+      <i data-lucide="shield" class="flt-ico icon-plain"></i><span class="flt-lbl">Sumber:</span>
       <select id="${prefix}-flt-sumber" onchange="${handler}()"><option value="">Semua Sumber</option>${optSumber}</select>
     </label>
-    <label class="flt-chip">
-      <i data-lucide="calendar" class="flt-ico flt-green"></i><span class="flt-lbl">Tahun:</span>
-      <select id="${prefix}-flt-tahun" onchange="${handler}()"><option value="">Semua Tahun</option>${optTahun}</select>
-    </label>
     <label class="flt-chip flt-chip-pic">
-      <i data-lucide="building-2" class="flt-ico flt-orange"></i><span class="flt-lbl">Unit PIC:</span>
+      <i data-lucide="building-2" class="flt-ico icon-plain"></i><span class="flt-lbl">Unit PIC:</span>
       <select id="${prefix}-flt-pic" onchange="${handler}()" ${isPicUser() ? 'disabled' : ''}><option value="">Semua PIC</option>${picOpts}</select>
     </label>`;
 }
 
 function riApplyFilters(rows) {
-  return (rows || []).filter(r =>
-    (!S.riFilter || hasPic(splitPics(r.PIC), S.riFilter)) &&
-    (!S.riSumber || (r.Sumber || 'bpk') === S.riSumber) &&
-    (!S.riTahun  || String(r.Tahun || '') === S.riTahun));
+  const q = (S.riQ || '').toLowerCase().trim();
+  return (rows || []).filter(r => {
+    const matchPic    = !S.riFilter || hasPic(splitPics(r.PIC), S.riFilter);
+    const matchSumber = !S.riSumber || (r.Sumber || 'bpk') === S.riSumber;
+    
+    // Pencarian Teks pada Sumber & Uraian Temuan
+    const txtSumber   = String(r.SumberLabel || r.Sumber || '').toLowerCase();
+    const txtTemuan   = String(r.Temuan || '').toLowerCase();
+    const txtSub      = String(r.SubTemuan || '').toLowerCase();
+    const matchQ      = !q || txtSumber.includes(q) || txtTemuan.includes(q) || txtSub.includes(q);
+
+    return matchPic && matchSumber && matchQ;
+  });
 }
 
 function riReadFilters(prefix) {
   const v = id => (document.getElementById(`${prefix}-flt-${id}`) || {}).value || '';
   S.riFilter = v('pic');
   S.riSumber = v('sumber');
-  S.riTahun  = v('tahun');
+  S.riQ      = v('q');
 }
 
 function renderRuangIsian(rows) {
-  const selesai = rows.filter(r => statusOf(r).lbl === 'Selesai').length;
-  const progress = rows.length ? Math.round((selesai / rows.length) * 100) : 0;
   const picOpts = allPicOptions().map(p => `<option value="${esc(p.username)}" ${S.riFilter === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
 
   setBody(`
@@ -76,7 +78,7 @@ function renderRuangIsian(rows) {
 
     <div class="toolbar-wrap">
       ${isPicUser() ? '' : '<button class="btn-action-pri" onclick="openModal()"><i data-lucide="plus" style="width:16px;"></i> Tambah Temuan Baru</button>'}
-            ${riFilterChips('ri', 'filterRuangIsian', picOpts)}
+      ${riFilterChips('ri', 'filterRuangIsian', picOpts)}
       <span style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="ri-count"></span>
     </div>
 
@@ -91,7 +93,7 @@ function filterRuangIsian() {
   renderEntryList();
 }
 
-// ══════════════════ TAMPILAN RINCIAN (DESAIN BARU) ═══════════════
+// ══════════════════ TAMPILAN RINCIAN ═══════════════════
 const RI_CARDS = [
   { key: 'Kriteria',    title: 'Kriteria',     icon: 'target',         cls: 'blue'   },
   { key: 'Sebab',       title: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
@@ -99,8 +101,6 @@ const RI_CARDS = [
   { key: 'RencanaAksi', title: 'Rencana Aksi', icon: 'file-text',      cls: 'orange' }
 ];
 
-// Pecah teks bernomor ("1. ... 2. ...") menjadi daftar item.
-// Kalau teks tidak bernomor, tampil sebagai satu paragraf utuh.
 function parseList(text) {
   const t = String(text == null ? '' : text).replace(/\r/g, '').trim();
   if (!t || t === '-') return { items: [], numbered: false };
@@ -124,7 +124,6 @@ function parseList(text) {
   return { items: items.map(i => i.text), numbered: true };
 }
 
-// Pecah Output menjadi bagian berhuruf ("a. ...", "b. ...") yang masing-masing berisi daftar bernomor
 function parseOutputSections(text) {
   const t = String(cleanOutput(text) || '').replace(/\r/g, '').trim();
   if (!t || t === '-') return [];
@@ -144,7 +143,6 @@ function parseOutputSections(text) {
   return secs.map(s => ({ letter: s.letter, head: s.head, list: parseList(s.body.join('\n')) }));
 }
 
-// mode: '' (bulat berwarna) | 'cols' (2 kolom) | 'plain' (nomor biasa)
 function riListHtml(p, mode) {
   if (!p.items.length) return '';
   if (!p.numbered) return `<div class="ri-para">${esc(p.items[0])}</div>`;
@@ -157,7 +155,7 @@ function riListHtml(p, mode) {
 function riCard(cls, icon, title, bodyHtml) {
   return `
     <div class="ri-card ri-${cls}">
-      <div class="ri-card-head"><i data-lucide="${icon}"></i><span>${title}</span></div>
+      <div class="ri-card-head"><i data-lucide="${icon}" class="icon-plain"></i><span>${title}</span></div>
       <div class="ri-card-body">${bodyHtml || '<div class="ri-empty">Belum diisi</div>'}</div>
     </div>`;
 }
@@ -175,22 +173,19 @@ function riJadwalCard(text) {
   return `<div class="ri-wide">${riCard('purple', 'calendar-days', 'Jadwal', riListHtml(parseList(text), ''))}</div>`;
 }
 
-// total = jumlah baris dalam temuan yang sama (menentukan nama "Rincian Temuan" / "Sub Temuan #n")
-// opts.readOnly = true -> tanpa tombol Ubah/Hapus (dipakai di halaman Rekap & Laporan)
+// Tombol Hapus ditiadakan
 function riSubHtml(sub, idx, canAdmin, total, opts) {
   opts = opts || {};
   const st = statusOf(sub);
   const picsFull = groupPicNames([sub]).join(', ') || '-';
   const pics = groupPicShort([sub]).join(', ') || '-';
 
-  // Bukti tindak lanjut (bukti.js): tampil juga di mode baca-saja supaya bisa dilihat dari Rekap
   const buktiBtn = typeof openBukti === 'function'
-    ? `<button class="btn-action-sec ri-btn ri-btn-bukti" onclick="openBukti(${sub._row})"><i data-lucide="paperclip" style="width:13px;"></i> Bukti${sub.BuktiCount ? ` <span class="bk-count">${sub.BuktiCount}</span>` : ''}</button>`
+    ? `<button class="btn-action-sec ri-btn ri-btn-bukti" onclick="openBukti(${sub._row})"><i data-lucide="paperclip" style="width:13px;" class="icon-plain"></i> Bukti${sub.BuktiCount ? ` <span class="bk-count">${sub.BuktiCount}</span>` : ''}</button>`
     : '';
 
   const buttons = opts.readOnly ? '' : `
-          <button class="btn-action-sec ri-btn" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;"></i> Ubah</button>
-          ${canAdmin ? `<button class="btn-action-sec ri-btn ri-btn-del" onclick="confirmDel(${sub._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>` : ''}`;
+          <button class="btn-action-sec ri-btn" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;" class="icon-plain"></i> Ubah</button>`;
 
   return `
     <div class="ri-sub">
@@ -199,13 +194,13 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
           <div class="ri-sub-titletext">
             <strong>${subLabel(total || 1, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
             <div class="ri-sub-meta">
-              <span title="${esc(picsFull)}"><i data-lucide="users"></i> ${esc(pics)}</span>
+              <span title="${esc(picsFull)}"><i data-lucide="users" class="icon-plain"></i> ${esc(pics)}</span>
             </div>
           </div>
         </div>
         <div class="ri-sub-actions">
           <span class="status-pill ${st.cls}">
-            <i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}
+            <i data-lucide="${st.icon}" style="width:12px;" class="icon-plain"></i> ${st.lbl.toUpperCase()}
           </span>${tlPill(sub.TLStatus || 'belum')}${buktiBtn}${buttons}
         </div>
       </div>
@@ -214,7 +209,6 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
     </div>`;
 }
 
-// Isi rincian: Kriteria, Sebab, Rekomendasi, Rencana Aksi, Output, Jadwal
 function riSubBodyHtml(sub) {
   const secs = parseOutputSections(sub.Output);
   return `
@@ -226,13 +220,10 @@ function riSubBodyHtml(sub) {
       ${riJadwalCard(sub.JadwalPelaksanaan)}`;
 }
 
-// ══════════════════ TABEL TEMUAN (dipakai Ruang Isian & Detail) ═══════════════
-// Satu baris = satu temuan utama. Klik baris -> baris di bawahnya terbuka (daftar sub temuan / detail).
-const RI_PIC_MAX = 3; // jumlah chip yang tampil langsung; sisanya masuk ikon "lainnya"
-const RI_ICON_USERS = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+// ══════════════════ TABEL TEMUAN ═══════════════════
+const RI_PIC_MAX = 3;
+const RI_ICON_USERS = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon-plain"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
 
-// pics = daftar nama LENGKAP. Chip menampilkan nama singkat (hover = nama lengkap).
-// Kalau lebih dari RI_PIC_MAX, sisanya diganti ikon SVG kecil + jumlah; klik untuk melihat daftar lengkap.
 function riPicChips(pics) {
   if (!pics.length) return '<span class="text-[11px] text-slate-400">-</span>';
   const cls = 'inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600';
@@ -244,13 +235,13 @@ function riPicChips(pics) {
   return `<div class="flex flex-wrap items-center gap-1.5">${shown}${more}</div>`;
 }
 
-// Popover daftar lengkap PIC (position:fixed supaya tidak terpotong overflow tabel)
 function picMoreClose() {
   const el = document.getElementById('pic-pop');
   if (el) el.remove();
 }
+
 function picMoreToggle(ev, btn) {
-  ev.stopPropagation();           // jangan ikut membuka/menutup baris tabel
+  ev.stopPropagation();
   const open = document.getElementById('pic-pop');
   if (open) { const same = open._btn === btn; picMoreClose(); if (same) return; }
   const names = String(btn.dataset.pics || '').split('|').filter(Boolean);
@@ -269,11 +260,11 @@ function picMoreToggle(ev, btn) {
   pop.style.left = left + 'px';
   pop.style.top = top + 'px';
 }
+
 document.addEventListener('click', picMoreClose);
 window.addEventListener('scroll', picMoreClose, true);
 window.addEventListener('resize', picMoreClose);
 
-// cfg: { prefix:'t'|'d', canAdmin:bool, action:(noKey, items)=>html, inner:(items)=>html }
 function riTableHtml(groups, cfg) {
   const showAct = !!cfg.canAdmin;
   const cols = showAct ? 6 : 5;
@@ -287,14 +278,14 @@ function riTableHtml(groups, cfg) {
 
     return `
       <tr data-key="${esc(key)}" onclick="togTblRow(this)"
-        class="cursor-pointer align-top transition-colors hover:bg-blue-50/50 ${open ? 'bg-blue-50/50' : ''}">
+        class="cursor-pointer align-top transition-colors hover:bg-slate-50 ${open ? 'bg-slate-50' : ''}">
         <td class="border-b border-slate-100 py-4 pl-4 pr-1">
           <span class="rk-chev flex items-center text-slate-400" style="transition:transform .2s;transform:rotate(${open ? 180 : 0}deg);">
-            <i data-lucide="chevron-down" style="width:18px;height:18px;"></i>
+            <i data-lucide="chevron-down" style="width:18px;height:18px;" class="icon-plain"></i>
           </span>
         </td>
         <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">
-          <span class="rounded-md bg-blue-50 px-2.5 py-1 text-[12px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+          <span class="rounded-md bg-slate-100 px-2.5 py-1 text-[12px] font-bold tracking-wide text-slate-700">${esc(parent.No) || '-'}</span>
         </td>
         <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">${sumberBadge(parent) || '<span class="text-slate-400">-</span>'}</td>
         <td class="border-b border-slate-100 px-3 py-4">
@@ -334,7 +325,7 @@ function togTblRow(tr) {
   if (!detail) return;
   const open = detail.style.display === 'none';
   detail.style.display = open ? 'table-row' : 'none';
-  tr.classList.toggle('bg-blue-50/50', open);
+  tr.classList.toggle('bg-slate-50', open);
   const chev = tr.querySelector('.rk-chev');
   if (chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
   const key = tr.dataset ? tr.dataset.key : '';
@@ -342,16 +333,16 @@ function togTblRow(tr) {
 }
 
 function renderEntryList() {
-  const rows = S.riFilter ? S.allR.filter(r => hasPic(splitPics(r.PIC), S.riFilter)) : S.allR;
+  const filteredRows = riApplyFilters(S.allR);
   const list = document.getElementById('entry-list');
   const canAdmin = !isPicUser();
   
-  if (!rows.length) {
+  if (!filteredRows.length) {
     list.innerHTML = `
       <div style="text-align:center;padding:60px;background:#fff;border-radius:var(--r-xl);border:1.5px dashed var(--border-color);">
-        <i data-lucide="folder-open" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:8px;"></i>
-        <h4 style="font-weight:700">Belum Ada Data</h4>
-        <p style="font-size:12px;color:var(--text-muted)">Klik tombol "+ Tambah Temuan Baru" untuk membuat data baru.</p>
+        <i data-lucide="folder-open" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:8px;" class="icon-plain"></i>
+        <h4 style="font-weight:700">Data Tidak Ditemukan</h4>
+        <p style="font-size:12px;color:var(--text-muted)">Coba ubah kata kunci pencarian atau filter sumber.</p>
       </div>`;
     const cnt = document.getElementById('ri-count');
     if (cnt) cnt.textContent = '';
@@ -360,95 +351,31 @@ function renderEntryList() {
   }
 
   const groups = {};
-  rows.forEach(r => {
+  filteredRows.forEach(r => {
     const k = String(r.No || '0');
     if (!groups[k]) groups[k] = [];
     groups[k].push(r);
   });
 
-  document.getElementById('ri-count').textContent = `${Object.keys(groups).length} Temuan Utama (${rows.length} Rincian)`;
+  document.getElementById('ri-count').textContent = `${Object.keys(groups).length} Temuan Utama (${filteredRows.length} Rincian)`;
   
   list.innerHTML = riTableHtml(groups, {
     prefix: 't',
     canAdmin,
-    action: (noKey, items) => `<button class="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
-        <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Tambah Sub Temuan
+    action: (noKey, items) => `<button class="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
+        <i data-lucide="plus-circle" style="width:14px;height:14px;" class="icon-plain"></i> Tambah Sub Temuan
       </button>`,
     inner: items => items.map((sub, idx) => riSubHtml(sub, idx, canAdmin, items.length)).join('')
   });
   refreshIcons();
 }
 
-function togEntry(headerEl) {
-  const subBlock = headerEl.nextElementSibling;
-  if (!subBlock) return;
-  const open = subBlock.style.display === 'none';
-  subBlock.style.display = open ? 'block' : 'none';
-  const key = headerEl.dataset ? headerEl.dataset.key : '';
-  if (key) S.riOpen[key] = open;
-}
-
-
 // ══════════════════ HALAMAN DETAIL ═══════════════════════════════
-// Kriteria, Sebab, dan Rekomendasi diisi di halaman ini (bukan di form Temuan/Sub Temuan).
-// Semuanya ditulis ke baris temuan yang sama di tabel temuan.
 const DET_FIELDS = [
   { key: 'Kriteria',    label: 'Kriteria',    icon: 'target',         cls: 'blue'   },
-  { key: 'Sebab',       label: 'Sebab',       icon: 'lightbulb',      cls: 'green'  },
+  { key: 'Sebab',       label: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
   { key: 'Rekomendasi', label: 'Rekomendasi', icon: 'clipboard-list', cls: 'purple' }
 ];
-let _det = { mode: 'add', rowId: null };
-let _detPreset = null;
-
-function riShort(s, n) {
-  const t = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
-  return t.length > n ? t.slice(0, n - 1).trim() + '…' : t;
-}
-
-function riNormK(s) {
-  return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase();
-}
-
-// Butir baru dari teks isian: bernomor -> ambil butirnya, kalau tidak -> satu butir per baris
-function parseNewItems(text) {
-  const t = String(text == null ? '' : text).replace(/\r/g, '').trim();
-  if (!t) return [];
-  const p = parseList(t);
-  if (p.numbered) return p.items;
-  return t.split('\n').map(x => x.trim()).filter(Boolean);
-}
-
-// Tambahkan butir baru sebagai nomor berikutnya. Teks lama tidak diubah, butir yang sudah ada dilewati.
-function appendItems(oldText, newItems) {
-  let old = String(oldText == null ? '' : oldText).replace(/\r/g, '').trim();
-  if (old === '-') old = '';
-  const p = parseList(old);
-  const have = new Set(p.items.map(t => riNormK(t)));
-  let out = old;
-  let n = p.items.length;
-  if (old && !p.numbered) out = '1. ' + old;
-  let added = 0;
-  newItems.forEach(it => {
-    const k = riNormK(it);
-    if (!k || have.has(k)) return;
-    have.add(k);
-    n += 1;
-    added += 1;
-    out += (out ? '\n\n' : '') + n + '. ' + it;
-  });
-  return { text: out, added };
-}
-
-// Susun data kirim dari satu baris, dengan beberapa kolom diganti
-function rowToPayload(r, override) {
-  const v = x => (x == null ? '' : x);
-  return Object.assign({
-    No: v(r.No), PIC: v(r.PIC), Temuan: v(r.Temuan), SubTemuan: v(r.SubTemuan),
-    Kriteria: v(r.Kriteria), Sebab: v(r.Sebab), Rekomendasi: v(r.Rekomendasi),
-    RencanaAksi: v(r.RencanaAksi), JadwalPelaksanaan: v(r.JadwalPelaksanaan),
-    Output: v(r.Output), isSubAdd: false, parentRow: ''
-  }, override || {});
-}
 
 function loadDetail(picFilter) {
   document.getElementById('hdr-title').textContent = 'Detail';
@@ -476,7 +403,7 @@ function renderDetail() {
 
     <div class="toolbar-wrap">
       ${isPicUser() ? '' : '<button class="btn-action-pri" onclick="openDetAdd(\'\', \'\', \'Kriteria\')"><i data-lucide="plus" style="width:16px;"></i> Tambah Detail</button>'}
-            ${riFilterChips('det', 'filterDetail', picOpts)}
+      ${riFilterChips('det', 'filterDetail', picOpts)}
       <span style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="det-count"></span>
     </div>
 
@@ -494,11 +421,11 @@ function filterDetail() {
 function detCard(f, r, canAdmin) {
   const body = riListHtml(parseList(r[f.key]), '') || '<div class="ri-empty">Belum diisi</div>';
   const add = canAdmin
-    ? `<button class="ri-card-add" title="Tambah ${f.label}" onclick="openDetAdd('', '${esc(r._row)}', '${f.key}')"><i data-lucide="plus" style="width:14px;height:14px;"></i></button>`
+    ? `<button class="ri-card-add" title="Tambah ${f.label}" onclick="openDetAdd('', '${esc(r._row)}', '${f.key}')"><i data-lucide="plus" style="width:14px;height:14px;" class="icon-plain"></i></button>`
     : '';
   return `
     <div class="ri-card ri-${f.cls}">
-      <div class="ri-card-head"><i data-lucide="${f.icon}"></i><span>${f.label}</span>${add}</div>
+      <div class="ri-card-head"><i data-lucide="${f.icon}" class="icon-plain"></i><span>${f.label}</span>${add}</div>
       <div class="ri-card-body">${body}</div>
     </div>`;
 }
@@ -510,12 +437,11 @@ function detRowHtml(r, idx, canAdmin, total) {
         <div class="ri-sub-title">
           <div class="ri-sub-titletext">
             <strong>${subLabel(total || 1, idx)}${r.SubTemuan ? ' - ' + esc(r.SubTemuan) : ''}</strong>
-            <div class="ri-sub-meta"><span title="${esc(groupPicNames([r]).join(', ') || '-')}"><i data-lucide="users"></i> ${esc(groupPicShort([r]).join(', ') || '-')}</span></div>
+            <div class="ri-sub-meta"><span title="${esc(groupPicNames([r]).join(', ') || '-')}"><i data-lucide="users" class="icon-plain"></i> ${esc(groupPicShort([r]).join(', ') || '-')}</span></div>
           </div>
         </div>
         ${canAdmin ? `<div class="ri-sub-actions">
-          <button class="btn-action-sec ri-btn" onclick="openDetEdit('${esc(r._row)}')"><i data-lucide="edit-3" style="width:13px;"></i> Ubah</button>
-          <button class="btn-action-sec ri-btn ri-btn-del" onclick="confirmDel(${r._row})"><i data-lucide="trash-2" style="width:13px;"></i></button>
+          <button class="btn-action-sec ri-btn" onclick="openDetEdit('${esc(r._row)}')"><i data-lucide="edit-3" style="width:13px;" class="icon-plain"></i> Ubah</button>
         </div>` : ''}
       </div>
       <div class="det-grid">
@@ -534,9 +460,9 @@ function renderDetailList() {
   if (!rows.length) {
     list.innerHTML = `
       <div style="text-align:center;padding:60px;background:#fff;border-radius:var(--r-xl);border:1.5px dashed var(--border-color);">
-        <i data-lucide="file-text" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:8px;"></i>
-        <h4 style="font-weight:700">Belum Ada Data</h4>
-        <p style="font-size:12px;color:var(--text-muted)">Tambahkan temuan di halaman Temuan / Sub Temuan terlebih dahulu.</p>
+        <i data-lucide="file-text" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:8px;" class="icon-plain"></i>
+        <h4 style="font-weight:700">Data Tidak Ditemukan</h4>
+        <p style="font-size:12px;color:var(--text-muted)">Coba sesuaikan pencarian atau tambahkan temuan baru.</p>
       </div>`;
     if (cnt) cnt.textContent = '';
     refreshIcons();
@@ -554,15 +480,15 @@ function renderDetailList() {
   list.innerHTML = riTableHtml(groups, {
     prefix: 'd',
     canAdmin,
-    action: (noKey) => `<button class="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700" onclick="event.stopPropagation(); openDetAdd('${esc(noKey)}', '', 'Kriteria')">
-        <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Tambah Detail
+    action: (noKey) => `<button class="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400" onclick="event.stopPropagation(); openDetAdd('${esc(noKey)}', '', 'Kriteria')">
+        <i data-lucide="plus-circle" style="width:14px;height:14px;" class="icon-plain"></i> Tambah Detail
       </button>`,
     inner: items => items.map((r, idx) => detRowHtml(r, idx, canAdmin, items.length)).join('')
   });
   refreshIcons();
 }
 
-// ── Modal Detail (dibuat sekali lewat JS) ──────────────────────────
+// ── Modal Detail ──────────────────────────
 function ensureDetModal() {
   if (document.getElementById('det-bg')) return;
   document.body.insertAdjacentHTML('beforeend', `
@@ -573,7 +499,7 @@ function ensureDetModal() {
             <div id="det-title" class="modal-title-text">Tambah Detail</div>
             <div id="det-sub" style="font-size:12px;color:var(--text-muted)"></div>
           </div>
-          <button class="modal-close-btn" onclick="closeDetModal()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+          <button class="modal-close-btn" onclick="closeDetModal()"><i data-lucide="x" style="width:18px;height:18px;" class="icon-plain"></i></button>
         </div>
 
         <div class="modal-body-area">
@@ -598,7 +524,6 @@ function ensureDetModal() {
             <div class="form-field">
               <label>Isi Baru</label>
               <textarea id="det-text" placeholder="Tulis isi baru. Satu butir per baris jika lebih dari satu."></textarea>
-              <div class="field-hint">Ditambahkan sebagai nomor berikutnya. Isi yang sudah ada tidak diubah.</div>
             </div>
           </div>
 
@@ -611,7 +536,7 @@ function ensureDetModal() {
 
         <div class="modal-footer-area">
           <button class="btn-action-sec" onclick="closeDetModal()">Batal</button>
-          <button id="det-save" class="btn-action-pri" onclick="saveDetail()"><i data-lucide="save" style="width:16px;height:16px;"></i> Simpan</button>
+          <button id="det-save" class="btn-action-pri" onclick="saveDetail()"><i data-lucide="save" style="width:16px;height:16px;" class="icon-plain"></i> Simpan</button>
         </div>
       </div>
     </div>`);
@@ -634,7 +559,6 @@ function renderDetRincian(preset) {
   }).join('');
 }
 
-// no: nomor temuan (tambah ke semua rincian temuan itu) | rowId: satu rincian | keduanya kosong: pilih sendiri
 function openDetAdd(no, rowId, field) {
   if (isPicUser()) return;
   ensureDetModal();
@@ -704,14 +628,13 @@ function closeDetModalBg(e) {
 
 async function saveDetail() {
   const btn = document.getElementById('det-save');
-  const btnHtml = '<i data-lucide="save" style="width:16px;height:16px;"></i> Simpan';
+  const btnHtml = '<i data-lucide="save" style="width:16px;height:16px;" class="icon-plain"></i> Simpan';
   const setBusy = busy => {
     btn.disabled = busy;
     btn.innerHTML = busy ? '<i data-lucide="loader-2" class="spin" style="width:16px;"></i> Menyimpan...' : btnHtml;
     refreshIcons();
   };
 
-  // ── Mode ubah: ganti isi tiga kolom untuk satu rincian ──
   if (_det.mode === 'edit') {
     const r = S.allR.find(x => String(x._row) === String(_det.rowId));
     if (!r) { showToast('Data tidak ditemukan', 'err'); return; }
@@ -733,7 +656,6 @@ async function saveDetail() {
     return;
   }
 
-  // ── Mode tambah: tambahkan butir baru ke jenis yang dipilih ──
   const field = document.getElementById('det-field').value;
   const items = parseNewItems(document.getElementById('det-text').value);
   if (!items.length) { showToast('Tulis isi yang akan ditambahkan', 'err'); return; }
@@ -776,9 +698,7 @@ async function saveDetail() {
   }
 }
 
-
 // ══════════════════ MODAL & CRUD API ═════════════════════════════
-// Daftar centang PIC (bisa pilih lebih dari satu)
 function renderPicChecklist(selected) {
   const box = document.getElementById('m-pic');
   if (!box) return;
@@ -786,7 +706,6 @@ function renderPicChecklist(selected) {
   if (manual) manual.value = '';
   const opts = allPicOptions().slice();
   const selKeys = new Set((selected || []).map(picKeyOf));
-  // PIC lama yang tidak ada di daftar tetap ditampilkan supaya tidak hilang saat edit
   (selected || []).forEach(t => {
     const k = picKeyOf(t);
     if (!opts.some(o => _picNormKey(o.username) === k)) opts.push({ username: t, nama: t });
@@ -798,7 +717,6 @@ function renderPicChecklist(selected) {
     </label>`).join('');
 }
 
-// Tambah PIC yang diketik manual (boleh beberapa, pisahkan dengan koma)
 function addManualPic() {
   const inp = document.getElementById('m-pic-manual');
   const box = document.getElementById('m-pic');
@@ -823,19 +741,18 @@ function addManualPic() {
   inp.focus();
 }
 
-// Kunci kolom milik admin (A–G) kalau yang login adalah PIC
 function applyModalRole() {
   const pic = isPicUser();
   ADMIN_ONLY_FIELDS.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (!pic && id === 'm-temuan') { el.classList.remove('field-locked'); return; } // diatur oleh pemanggil
+    if (!pic && id === 'm-temuan') { el.classList.remove('field-locked'); return; }
     el.readOnly = pic;
     el.classList.toggle('field-locked', pic);
   });
 
   const noEl = document.getElementById('m-no');
-  if (noEl) noEl.readOnly = true;                                   // kode LHP selalu otomatis
+  if (noEl) noEl.readOnly = true;
   const sw = document.getElementById('m-sumber-wrap');
   if (sw) sw.style.display = pic ? 'none' : '';
 
@@ -849,7 +766,6 @@ function applyModalRole() {
   const note = document.getElementById('m-role-note');
   if (note) note.style.display = pic ? 'block' : 'none';
 
-  // Rencana Aksi, Jadwal, Output = tugas PIC. Form admin berhenti sampai Sub Temuan.
   const picFields = document.getElementById('m-pic-fields');
   if (picFields) picFields.style.display = pic ? '' : 'none';
 
@@ -863,7 +779,6 @@ function getSelectedPics() {
   return Array.from(document.querySelectorAll('#m-pic input[type="checkbox"]:checked')).map(i => i.value);
 }
 
-// Pilihan sumber audit di form. locked = true saat ubah / tambah sub (ikut induknya)
 function setSumberField(val, locked) {
   const sel = document.getElementById('m-sumber');
   if (!sel) return;
@@ -871,7 +786,6 @@ function setSumberField(val, locked) {
   sel.disabled = !!locked;
 }
 
-// Kode LHP otomatis mengikuti sumber (LHP-BPK-001 / LHP-INS-001)
 function onSumberChange() {
   const sel = document.getElementById('m-sumber');
   const no  = document.getElementById('m-no');
@@ -912,7 +826,7 @@ function openModal(pic, row) {
       document.getElementById('m-rencanaaksi').value  = r.RencanaAksi || '';
       document.getElementById('m-jadwal').value       = r.JadwalPelaksanaan || '';
       document.getElementById('m-output').value       = cleanOutput(r.Output);
-      setSumberField(r.Sumber || 'bpk', true);       // sumber tidak bisa diubah setelah dibuat
+      setSumberField(r.Sumber || 'bpk', true);
     }
   } else {
     setSumberField('inspektorat', false);
@@ -956,12 +870,9 @@ function saveTemuan() {
   const isSub = document.getElementById('m-is-sub').value === 'true';
   let raw     = cleanOutput(document.getElementById('m-output').value);
 
-  // Kriteria, Sebab, Rekomendasi diisi di halaman Detail: saat ubah, nilai lama dipertahankan
   const origRow = document.getElementById('m-row').value ? S.allR.find(x => String(x._row) === String(document.getElementById('m-row').value)) : null;
   const keep = k => (origRow && origRow[k] != null ? origRow[k] : '');
 
-  // Status kini mengikuti alur bukti & BATL, bukan pilihan manual.
-  // Data lama yang sudah bertag [Selesai]/[Proses]/[Belum] tetap dipertahankan supaya tampilannya tidak berubah.
   const oldTag = origRow ? (String(origRow.Output || '').match(STATUS_TAG_RE) || []).pop() : '';
   if (oldTag) raw = (raw ? raw + ' ' : '') + oldTag.trim();
 
@@ -982,7 +893,6 @@ function saveTemuan() {
   };
 
   if (isPicUser()) {
-    // Akun PIC: kolom A–G selalu diambil dari data asli, hanya H–J + status yang boleh berubah
     const rowId = document.getElementById('m-row').value;
     const orig = rowId ? S.allR.find(x => String(x._row) === String(rowId)) : null;
     if (!orig) { showToast('Akun PIC hanya dapat mengisi temuan yang ditugaskan kepadanya', 'err'); return; }
@@ -1035,34 +945,4 @@ function refreshCurrentPage() {
   else if (S.page === 'ruang-isian-detail') loadDetail(S.riFilter || '');
   else if (S.page === 'rekap') loadRekap();
   else loadDashboard();
-}
-
-// ══════════════════ DELETE HANDLING ══════════════════════════════
-let _delRow = null;
-
-function confirmDel(row) {
-  _delRow = row;
-  document.getElementById('conf-bg').classList.add('open');
-}
-
-function closeConf() {
-  document.getElementById('conf-bg').classList.remove('open');
-  _delRow = null;
-}
-
-function executeDelete() {
-  if (!_delRow) return;
-  const row = _delRow;
-  closeConf();
-
-  apiFetch('/api/temuan/' + row, 'DELETE')
-    .then(res => {
-      if (res && res.success) {
-        showToast('Data berhasil dihapus', 'ok');
-        refreshCurrentPage();
-      } else {
-        showToast((res && res.message) ? res.message : 'Gagal menghapus data', 'err');
-      }
-    })
-    .catch(e => showToast('Error: ' + e.message, 'err'));
 }
