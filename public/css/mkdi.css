@@ -1099,3 +1099,17 @@ svg.icon-plain,
     font-size: 16px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   REKAP & LAPORAN: warna ikon dikembalikan
+   .icon-plain memakai !important sehingga warna ikon kartu & pill status
+   hilang. Di sini dikembalikan khusus untuk halaman Rekap (#rekap-list);
+   halaman Ruang Isian tidak berubah.
+   ════════════════════════════════════════════════════════════════ */
+#rekap-list .ri-blue   .ri-card-head svg.icon-plain { color: #2563eb !important; }
+#rekap-list .ri-green  .ri-card-head svg.icon-plain { color: #16a34a !important; }
+#rekap-list .ri-purple .ri-card-head svg.icon-plain { color: #7c3aed !important; }
+#rekap-list .ri-orange .ri-card-head svg.icon-plain { color: #d97706 !important; }
+#rekap-list .ri-sky    .ri-card-head svg.icon-plain { color: #0284c7 !important; }
+#rekap-list .status-pill svg.icon-plain { color: currentColor !important; }
+#rekap-list .ri-sub-meta svg.icon-plain { color: #3b82f6 !important; }

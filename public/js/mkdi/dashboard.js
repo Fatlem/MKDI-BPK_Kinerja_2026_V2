@@ -46,7 +46,48 @@ function loadDashboard() {
 }
 
 
+// ── Filter dashboard: Sumber / Tahun / Unit PIC (satu-satunya filter tahun di dashboard) ──
+if (!S.dbF) S.dbF = { sumber: '', tahun: '', pic: '' };
+
+function dbFilteredRows(rows) {
+  const f = S.dbF;
+  return (rows || []).filter(r =>
+    (!f.sumber || (r.Sumber || 'bpk') === f.sumber) &&
+    (!f.tahun  || String(r.Tahun || '') === f.tahun) &&
+    (!f.pic    || hasPic(splitPics(r.PIC), f.pic))
+  );
+}
+
+function dbApplyFilter() {
+  const v = id => (document.getElementById('db-flt-' + id) || {}).value || '';
+  S.dbF = { sumber: v('sumber'), tahun: v('tahun'), pic: v('pic') };
+  calculateAndRenderDashboard(S.allR || []);
+}
+
+function dbFilterBarHtml() {
+  const f = S.dbF;
+  const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${f.sumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
+  const optTahun  = tahunOptions(S.allR).map(y => `<option value="${esc(y)}" ${f.tahun === y ? 'selected' : ''}>${esc(y)}</option>`).join('');
+  const optPic    = allPicOptions().map(p => `<option value="${esc(p.username)}" ${f.pic === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
+  return `
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:24px;">
+      <label class="flt-chip">
+        <i data-lucide="shield" class="flt-ico flt-violet"></i><span class="flt-lbl">Sumber:</span>
+        <select id="db-flt-sumber" onchange="dbApplyFilter()"><option value="">Semua Sumber</option>${optSumber}</select>
+      </label>
+      <label class="flt-chip">
+        <i data-lucide="calendar" class="flt-ico flt-green"></i><span class="flt-lbl">Tahun:</span>
+        <select id="db-flt-tahun" onchange="dbApplyFilter()"><option value="">Semua Tahun</option>${optTahun}</select>
+      </label>
+      <label class="flt-chip flt-chip-pic">
+        <i data-lucide="building-2" class="flt-ico flt-orange"></i><span class="flt-lbl">Unit PIC:</span>
+        <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''}><option value="">Semua PIC</option>${optPic}</select>
+      </label>
+    </div>`;
+}
+
 function calculateAndRenderDashboard(rows) {
+  rows = dbFilteredRows(rows);
   const picList = S.picList || [];
   const uniqueNos = new Set();
   let totalSelesai = 0, totalProses = 0, totalBelum = 0;
@@ -286,9 +327,6 @@ function renderDashboard(d) {
               <div style="font-size:12px;color:#64748b;">Distribusi penyelesaian berdasarkan unit kerja</div>
             </div>
           </div>
-          <select class="select-custom" style="padding:6px 10px;font-size:14px;">
-            <option>Tahun 2026</option>
-          </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px;">
           ${barRows || '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:20px 0;">Belum ada data</div>'}
@@ -339,6 +377,9 @@ function renderDashboard(d) {
       </div>
 
     </div>
+
+    <!-- Filter: Sumber / Tahun / Unit PIC -->
+    ${dbFilterBarHtml()}
 
     <!-- PIC Section Header -->
     <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">

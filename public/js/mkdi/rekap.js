@@ -169,6 +169,7 @@ function rekapEntryHtml(g) {
 
 function renderRekap(rows) {
   const picOpts = allPicOptions().map(p => `<option value="${esc(p.username)}">${esc(p.nama)}</option>`).join('');
+  const tahunOpts = tahunOptions(rows).map(y => `<option value="${esc(y)}">${esc(y)}</option>`).join('');
 
   // kelompokkan per nomor temuan
   const groups = {};
@@ -192,9 +193,17 @@ function renderRekap(rows) {
   setBody(`
     <div class="mb-5 flex flex-wrap items-center gap-3">
       <div class="relative w-60 max-[768px]:w-full">
-        <i data-lucide="filter" class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
+        <i data-lucide="building-2" class="rk-ico pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-amber-500"></i>
         <select id="flt-pic" onchange="filterRekap()" class="${fieldCls} cursor-pointer appearance-none pl-10 pr-9">
           <option value="">Semua PIC</option>${picOpts}
+        </select>
+        <i data-lucide="chevron-down" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
+      </div>
+
+      <div class="relative w-44 max-[768px]:w-full">
+        <i data-lucide="calendar" class="rk-ico pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-emerald-500"></i>
+        <select id="flt-tahun" onchange="filterRekap()" class="${fieldCls} cursor-pointer appearance-none pl-10 pr-9">
+          <option value="">Semua Tahun</option>${tahunOpts}
         </select>
         <i data-lucide="chevron-down" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
       </div>
@@ -224,6 +233,12 @@ function renderRekap(rows) {
   filterRekap();
 }
 
+// Tahun yang dipilih di toolbar Rekap ('' = semua tahun)
+function rkSelectedTahun() {
+  const el = document.getElementById('flt-tahun');
+  return el ? el.value : '';
+}
+
 function filterRekap() {
   const pfEl = document.getElementById('flt-pic');
   const qEl  = document.getElementById('flt-q');
@@ -231,8 +246,12 @@ function filterRekap() {
   if (!list) return;
 
   const pf = pfEl ? pfEl.value : '';
+  const tf = rkSelectedTahun();
   const q  = qEl ? (qEl.value || '').toLowerCase().trim() : '';
-  const visible = _rkGroups.filter(g => (!pf || hasPic(g.picTokens, pf)) && (!q || g.q.includes(q)));
+  const visible = _rkGroups.filter(g =>
+    (!pf || hasPic(g.picTokens, pf)) &&
+    (!tf || g.items.some(i => String(i.Tahun || '') === tf)) &&
+    (!q || g.q.includes(q)));
 
   const flat = [];
   visible.forEach(g => g.items.forEach(i => flat.push(i)));
@@ -245,13 +264,13 @@ function filterRekap() {
           <i data-lucide="folder-open" class="size-7"></i>
         </div>
         <h4 class="text-sm font-bold text-slate-800">${_rkGroups.length ? 'Tidak Ada Data yang Cocok' : 'Belum Ada Data'}</h4>
-        <p class="mt-1 text-xs text-slate-500">${_rkGroups.length ? 'Ubah filter PIC atau kata pencarian.' : 'Data tindak lanjut belum diisi.'}</p>
+        <p class="mt-1 text-xs text-slate-500">${_rkGroups.length ? 'Ubah filter PIC, tahun, atau kata pencarian.' : 'Data tindak lanjut belum diisi.'}</p>
       </div>`;
   } else {
     list.innerHTML = visible.map(rekapEntryHtml).join('');
   }
 
-  document.getElementById('flt-count').textContent = (!pf && !q)
+  document.getElementById('flt-count').textContent = (!pf && !q && !tf)
     ? `${visible.length} Temuan Utama`
     : `${visible.length} Data Ditemukan`;
   refreshIcons();
@@ -262,8 +281,11 @@ function filterRekap() {
 // Calibri, judul 16 bold, header 14 bold, freeze di A6, merge kolom No & Temuan,
 // kolom K = status (tanpa border).
 async function exportExcel() {
-  if (!S.allR.length) {
-    showToast('Tidak ada data untuk diekspor', 'inf');
+  // Ekspor mengikuti tahun yang dipilih (tahun lama maupun tahun baru); kosong = semua tahun
+  const tahun = rkSelectedTahun();
+  const exportRows = tahun ? S.allR.filter(r => String(r.Tahun || '') === tahun) : S.allR;
+  if (!exportRows.length) {
+    showToast(tahun ? `Belum ada data untuk tahun ${tahun}` : 'Tidak ada data untuk diekspor', 'inf');
     return;
   }
   const btn = document.getElementById('rk-export-btn');
@@ -334,7 +356,7 @@ async function exportExcel() {
     };
 
     const noOrder = [], byNo = {};
-    S.allR.forEach(r => {
+    exportRows.forEach(r => {
       const no = String(r.No == null ? '' : r.No).trim();
       if (!byNo[no]) { byNo[no] = []; noOrder.push(no); }
       byNo[no].push(r);
@@ -425,7 +447,7 @@ async function exportExcel() {
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const now = new Date();
-    const fname = `BPK_Kinerja_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.xlsx`;
+    const fname = `BPK_Kinerja_${tahun ? 'Tahun' + tahun : 'SemuaTahun'}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.xlsx`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

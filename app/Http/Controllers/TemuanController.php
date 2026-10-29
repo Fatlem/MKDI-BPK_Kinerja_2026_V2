@@ -31,7 +31,18 @@ class TemuanController extends Controller
         $lastNo     = '';
         $lastTemuan = '';
 
-        $data = $rows->map(function ($r) use (&$lastNo, &$lastTemuan) {
+        // Tahun sub temuan mengikuti temuan induknya (bukan tanggal sub dibuat),
+        // supaya satu temuan tidak terpecah ke beberapa tahun.
+        $byId = $rows->keyBy('id');
+        $tahunOf = function ($r) use ($byId) {
+            $guard = 0;
+            while ($r->parent_id && isset($byId[$r->parent_id]) && $guard++ < 20) {
+                $r = $byId[$r->parent_id];
+            }
+            return $r->created_at?->format('Y') ?? '';
+        };
+
+        $data = $rows->map(function ($r) use (&$lastNo, &$lastTemuan, $tahunOf) {
             $rawNo     = $r->no     ?? '';
             $rawTemuan = $r->temuan ?? '';
 
@@ -54,7 +65,7 @@ class TemuanController extends Controller
                 'BuktiCount'         => (int) $r->bukti_count,
                 'Sumber'             => $r->sumber ?: Temuan::SUMBER_BPK,
                 'SumberLabel'        => Temuan::SUMBER_LABEL[$r->sumber ?: Temuan::SUMBER_BPK] ?? '',
-                'Tahun'              => $r->created_at?->format('Y') ?? '',
+                'Tahun'              => $tahunOf($r),
                 'CreatedBy'          => $r->created_by ?? '',
                 'TLStatus'           => $r->tlStatus(),
                 'BatlNomor'          => $r->batl?->nomor ?? '',

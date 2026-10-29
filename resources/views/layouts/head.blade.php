@@ -15,7 +15,7 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 
 <!-- Custom Master Stylesheet -->
-<link rel="stylesheet" href="{{ asset('css/mkdi.css') }}">
+<link rel="stylesheet" href="{{ asset('css/mkdi.css') }}?v={{ @filemtime(public_path('css/mkdi.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/bukti.css') }}?v={{ @filemtime(public_path('css/bukti.css')) }}">
 
 <!-- Tailwind CSS (preflight dimatikan supaya halaman lain yang pakai mkdi.css tidak berubah) -->

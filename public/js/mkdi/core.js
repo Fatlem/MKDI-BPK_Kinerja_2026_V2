@@ -238,6 +238,14 @@ function isMyRow(r) {
 
 function scopeRows(rows) { return isPicUser() ? (rows || []).filter(isMyRow) : (rows || []); }
 
+// Daftar tahun untuk filter/ekspor: semua tahun yang ada di data + tahun berjalan
+// (jadi tahun baru otomatis muncul), diurutkan dari yang terbaru.
+function tahunOptions(rows) {
+  const set = new Set((rows || []).map(r => String(r.Tahun || '')).filter(Boolean));
+  set.add(String(new Date().getFullYear()));
+  return Array.from(set).sort((a, b) => Number(b) - Number(a));
+}
+
 function _picNormKey(s) { return String(s || '').trim().toLowerCase(); }
 
 const STATUS_TAG_RE = /\s*\[(selesai|proses|belum)\]/gi;
