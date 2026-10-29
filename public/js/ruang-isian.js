@@ -17,6 +17,13 @@ function sumberBadge(r) {
 function subLabel(total, idx) { return total > 1 ? 'Sub Temuan #' + (idx + 1) : 'Rincian Temuan'; }
 function subCountLabel(n)     { return n > 1 ? n + ' Sub Temuan' : '1 Rincian Temuan'; }
 
+// Potong teks panjang untuk label/dropdown (dipakai detail.js & bukti.js)
+function riShort(text, max) {
+  const t = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+  max = max || 60;
+  return t.length > max ? t.slice(0, max - 1).trimEnd() + '…' : t;
+}
+
 // ═══ BERSAMA: filter (Sumber / Unit PIC / cari) ════════════════════════
 
 // ══════ Filter chip Sumber / Unit PIC / Kata Kunci (Filter Tahun Dihapus) ══════
@@ -156,6 +163,10 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
   const buttons = opts.readOnly ? '' : `
           <button class="btn-action-sec ri-btn" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="edit-3" style="width:13px;" class="icon-plain"></i> Ubah</button>`;
 
+  // Tombol Hapus: hanya admin. Baris utama (bukan sub) = menghapus seluruh temuan beserta sub temuannya.
+  const delBtn = (opts.readOnly || !isAdminUser()) ? '' : `
+          <button class="btn-action-sec ri-btn ri-btn-del" onclick="openDelete(${sub._row}, ${sub.isSubRow ? 'false' : 'true'}, ${Math.max((total || 1) - 1, 0)})"><i data-lucide="trash-2" style="width:13px;" class="icon-plain"></i> Hapus</button>`;
+
   return `
     <div class="ri-sub">
       <div class="ri-sub-head">
@@ -170,7 +181,7 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
         <div class="ri-sub-actions">
           <span class="status-pill ${st.cls}">
             <i data-lucide="${st.icon}" style="width:12px;" class="icon-plain"></i> ${st.lbl.toUpperCase()}
-          </span>${tlPill(sub.TLStatus || 'belum')}${buktiBtn}${buttons}
+          </span>${tlPill(sub.TLStatus || 'belum')}${buktiBtn}${buttons}${delBtn}
         </div>
       </div>
 
@@ -639,13 +650,26 @@ function saveTemuan() {
 
 // ═══ TEMUAN: HAPUS ═════════════════════════════════════════════════════
 
-// Tombol Hapus sengaja belum dipasang di tampilan (lihat riSubHtml). Fungsi di bawah sudah siap:
-// panggil openDelete(idBaris) dari tombol mana pun nanti. executeDelete juga dipasang di
+// Tombol Hapus dipasang di riSubHtml (khusus admin). Hanya admin yang boleh menghapus (dicek juga di server). executeDelete juga dipasang di
 // core.js pada tombol "Ya, Hapus", sebelumnya fungsi ini belum ada sehingga memunculkan error di console.
 let _delRow = null;
 
-function openDelete(row) {
+function openDelete(row, isParent, subCount) {
+  if (!isAdminUser()) return;
   _delRow = row;
+  const t = document.getElementById('conf-title');
+  const p = document.getElementById('conf-text');
+  if (t && p) {
+    if (isParent) {
+      t.textContent = 'Hapus Temuan Ini?';
+      p.textContent = subCount > 0
+        ? 'Temuan beserta ' + subCount + ' sub temuan di dalamnya, termasuk bukti tindak lanjut, akan dihapus permanen.'
+        : 'Temuan beserta bukti tindak lanjutnya akan dihapus permanen.';
+    } else {
+      t.textContent = 'Hapus Sub Temuan Ini?';
+      p.textContent = 'Sub temuan beserta bukti tindak lanjutnya akan dihapus permanen.';
+    }
+  }
   document.getElementById('conf-bg')?.classList.add('open');
   refreshIcons();
 }
@@ -658,6 +682,8 @@ function closeConf() {
 function executeDelete() {
   if (!_delRow) return;
   const id = _delRow;
+  const btn = document.getElementById('btn-conf-ok');
+  if (btn) btn.disabled = true;
   apiFetch('/api/temuan/' + id, 'DELETE')
     .then(res => {
       if (res && res.success) {
@@ -668,5 +694,6 @@ function executeDelete() {
         showToast((res && res.message) ? res.message : 'Gagal menghapus data', 'err');
       }
     })
-    .catch(e => showToast('Error: ' + e.message, 'err'));
+    .catch(e => showToast('Error: ' + e.message, 'err'))
+    .finally(() => { if (btn) btn.disabled = false; });
 }

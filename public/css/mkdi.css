@@ -701,7 +701,11 @@ a { text-decoration: none; color: inherit; }
 .ri-sub-meta svg, .ri-sub-meta i { width: 13px; height: 13px; flex-shrink: 0; }
 .ri-sub-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .ri-btn { padding: 6px 12px; font-size: 12px; }
-.ri-btn-del { color: #ef4444; padding: 6px 9px; }
+/* Tombol Hapus (admin): .icon-plain memaksa ikon abu-abu (!important), jadi ikon diberi aturan sendiri */
+.ri-btn-del { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
+.ri-btn-del:hover { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+.ri-btn-del svg.icon-plain,
+.ri-btn-del i.icon-plain { color: currentColor !important; }
 
 .ri-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
 .ri-wide { margin-bottom: 14px; }

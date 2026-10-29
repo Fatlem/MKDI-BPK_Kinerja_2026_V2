@@ -123,6 +123,56 @@ function renderDetailList() {
 
 // ═══ DETAIL: TAMBAH & UBAH ═════════════════════════════════════════════
 
+// ── State modal ───────────────────────────
+let _det = { mode: 'add', rowId: null };   // mode modal: 'add' | 'edit'
+let _detPreset = null;                     // rincian yang sudah ditentukan saat modal dibuka
+
+// ── Helper simpan ─────────────────────────
+
+// Payload PUT /api/temuan/{id}. Backend menimpa SEMUA kolom (yang tidak dikirim jadi NULL),
+// jadi semua field rincian harus ikut dikirim, lalu field yang diubah ditimpa lewat `over`.
+function rowToPayload(r, over) {
+  const p = {
+    SubTemuan:         r.SubTemuan         == null ? '' : r.SubTemuan,
+    Kriteria:          r.Kriteria          == null ? '' : r.Kriteria,
+    Sebab:             r.Sebab             == null ? '' : r.Sebab,
+    Rekomendasi:       r.Rekomendasi       == null ? '' : r.Rekomendasi,
+    PIC:               r.PIC               == null ? '' : r.PIC,
+    RencanaAksi:       r.RencanaAksi       == null ? '' : r.RencanaAksi,
+    JadwalPelaksanaan: r.JadwalPelaksanaan == null ? '' : r.JadwalPelaksanaan,
+    Output:            r.Output            == null ? '' : r.Output
+  };
+  // Sub temuan mewarisi teks Temuan dari induk saat ditampilkan; jangan disalin ke baris sub.
+  if (!r.isSubRow) p.Temuan = r.Temuan == null ? '' : r.Temuan;
+  return Object.assign(p, over || {});
+}
+
+// Teks isian baru -> daftar butir. Satu butir per baris; penomoran/bullet di awal baris dibuang.
+function parseNewItems(text) {
+  return String(text == null ? '' : text)
+    .replace(/\r/g, '')
+    .split('\n')
+    .map(line => line.replace(/^\s*(?:\d{1,2}\s*[.)]|[-*•])\s+/, '').trim())
+    .filter(Boolean);
+}
+
+// Tambahkan butir baru ke isian yang sudah ada, nomori ulang "1. ...\n2. ...".
+// Butir yang sudah ada (abaikan huruf besar/kecil & spasi) dilewati. Return { text, added }.
+function appendItems(existing, items) {
+  const norm = s => String(s).replace(/\s+/g, ' ').trim().toLowerCase();
+  const list = parseList(existing).items.slice();
+  const seen = new Set(list.map(norm));
+  let added = 0;
+  (items || []).forEach(it => {
+    const k = norm(it);
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    list.push(String(it).trim());
+    added++;
+  });
+  return { text: list.map((t, i) => (i + 1) + '. ' + t).join('\n'), added: added };
+}
+
 // ── Modal Detail ──────────────────────────
 // Modal detail sekarang ada di resources/views/components/modals/detail.blade.php
 function ensureDetModal() { /* HTML sudah ada di halaman */ }

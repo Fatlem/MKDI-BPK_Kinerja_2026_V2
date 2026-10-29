@@ -196,21 +196,26 @@ class TemuanController extends Controller
     }
 
     // ── DELETE /api/temuan/{id} ───────────────────────────────────
+    // Hanya admin. Menghapus baris utama ikut menghapus seluruh sub temuannya
+    // (FK parent_id = set null, kalau tidak dihapus di sini sub temuan jadi yatim).
     public function destroy(int $id)
     {
-        if ($this->isPic()) {
-            return $this->forbidden('Akun PIC tidak dapat menghapus data.');
+        if (! $this->isAdmin()) {
+            return $this->forbidden('Hanya admin yang dapat menghapus data.');
         }
 
         $temuan = Temuan::find($id);
         if (! $temuan) {
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
-        if (! $this->canManageTemuan($temuan)) {
-            return $this->forbidden('Temuan meupakan bukan milik akun Anda.');
-        }
 
-        $temuan->delete();
+        DB::transaction(function () use ($temuan) {
+            if ($temuan->parent_id === null) {
+                Temuan::where('parent_id', $temuan->id)->get()->each(fn ($sub) => $sub->delete());
+            }
+            $temuan->delete();
+        });
+
         return response()->json(['success' => true]);
     }
 
