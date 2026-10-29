@@ -117,6 +117,8 @@ const PIC_ICONS = [
   `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v16"/><path d="m19 13 2-1a9 9 0 0 1-18 0l2 1"/><path d="M9 11h6"/><circle cx="12" cy="4" r="2"/></svg>`,
   // 9: SABK - git-commit-horizontal
   `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><line x1="3" x2="9" y1="12" y2="12"/><line x1="15" x2="21" y1="12" y2="12"/></svg>`,
+  // 10: Inspektorat - eye
+   `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 11 2 2 4-4"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
 ];
 
 function _picIconSvg(i) {
@@ -135,6 +137,7 @@ const PIC_LABEL_MAP = [
   { key: 'keterjangkauan',      label: 'D3'    },
   { key: 'maritim',             label: 'D4'    },
   { key: 'konektivitas',        label: 'SABK'  },
+  { key: 'inspektorat',         label: 'Itjen'   },
 ];
 
 function _picShortLabel(p) {

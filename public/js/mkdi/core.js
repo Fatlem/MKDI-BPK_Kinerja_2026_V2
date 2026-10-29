@@ -173,7 +173,8 @@ const PIC_SHORT = {
   'deputi bidang koordinasi usaha pangan dan pertanian':          'Deputi UPP',
   'deputi bidang koordinasi keterjangkauan dan keamanan pangan':  'Deputi KKP',
   'deputi bidang koordinasi sumber daya maritim':                 'Deputi SDM',
-  'staf ahli bidang konektivitas':                                'Sahli Konektivitas'
+  'staf ahli bidang konektivitas':                                'Sahli Konektivitas',
+  'inspektorat':                                                   'Itjen',
 };
 
 function picShort(nama) {
