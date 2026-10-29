@@ -1002,3 +1002,9 @@ a { text-decoration: none; color: inherit; }
 #pic-pop .pic-pop-item:hover { background: #f8fafc; }
 #pic-pop .pic-pop-item b { font-size: 12px; color: #1e293b; }
 #pic-pop .pic-pop-item span { font-size: 11px; color: #64748b; }
+
+
+/* ── Donut status interaktif (dashboard) ── */
+.db-donut-seg { cursor: pointer; transition: stroke-width .18s ease, opacity .18s ease; }
+.db-donut-seg.active { stroke-width: 32; }
+.db-donut-svg.has-hover .db-donut-seg:not(.active) { opacity: .35; }

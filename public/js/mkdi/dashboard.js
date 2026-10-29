@@ -194,17 +194,37 @@ function renderDashboard(d) {
       </div>`;
   }).join('');
 
-  // CSS doughnut — build conic-gradient from status data
+   // Donut interaktif (SVG) — satu sumber warna untuk donut, legenda, dan tooltip
   const { selesai, proses, belum } = d.status;
   const totalStatus = selesai + proses + belum || 1;
-  const pctSelesai  = (selesai / totalStatus) * 360;
-  const pctProses   = (proses  / totalStatus) * 360;
   const progressPct = Math.round((selesai / totalStatus) * 100);
-  const conicGrad   = `conic-gradient(
-    #0f172a 0deg ${pctSelesai}deg,
-    #1e3a8a ${pctSelesai}deg ${pctSelesai + pctProses}deg,
-    #e2e8f0 ${pctSelesai + pctProses}deg 360deg
-  )`;
+  // Warna angka tengah menyesuaikan persen: 100% hijau, 1–99% oranye, 0% merah, tanpa data abu-abu
+  const progressColor = (selesai + proses + belum) === 0 ? '#94a3b8'
+                      : progressPct >= 100 ? '#10b981'
+                      : progressPct > 0    ? '#f59e0b'
+                      : '#ff1744';
+  const DONUT = [
+    { key: 'selesai', label: 'Selesai', value: selesai, color: '#10b981' },
+    { key: 'proses',  label: 'Proses',  value: proses,  color: '#f59e0b' },
+    { key: 'belum',   label: 'Belum',   value: belum,   color: '#ff1744' },
+  ];
+  const _donutR = 75, _donutC = 2 * Math.PI * _donutR;
+  const _donutOn = DONUT.filter(x => x.value > 0);
+  const _donutGap = _donutOn.length > 1 ? 3 : 0;   // celah putih antar segmen
+  let _donutAcc = 0;
+  const donutSegs = _donutOn.length
+    ? DONUT.map(x => {
+        if (!x.value) return '';
+        const len  = (x.value / totalStatus) * _donutC;
+        const dash = Math.max(len - _donutGap, 0.5);
+        const el = `<circle class="db-donut-seg" data-status="${x.key}" cx="90" cy="90" r="${_donutR}" fill="none"
+            stroke="${x.color}" stroke-width="28" stroke-dasharray="${dash} ${_donutC - dash}"
+            stroke-dashoffset="${-_donutAcc}" transform="rotate(-90 90 90)"/>`;
+        _donutAcc += len;
+        return el;
+      }).join('')
+    : `<circle cx="90" cy="90" r="${_donutR}" fill="none" stroke="#e2e8f0" stroke-width="28"/>`;
+
 
   // PIC cards HTML
   const picCardsHtml = picGrid.length
@@ -286,30 +306,33 @@ function renderDashboard(d) {
             <div style="font-size:12px;color:#64748b;">Persentase keseluruhan status</div>
           </div>
         </div>
+
         <!-- Donut visual -->
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 0 12px;">
-          <div id="db-donut-ring" style="width:180px;height:180px;border-radius:50%;background:${conicGrad};display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;transition:transform 0.2s,background 0.3s;">
-            <div style="width:122px;height:122px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-              <span id="db-donut-pct" style="font-size:26px;font-weight:800;color:#0f172a;line-height:1;transition:color 0.2s;">${progressPct}%</span>
-              <span id="db-donut-lbl" style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">Progress Selesai</span>
+          <div id="db-donut-ring" style="width:260px;max-width:100%;aspect-ratio:1/1;position:relative;">
+            <svg id="db-donut-svg" class="db-donut-svg" viewBox="0 0 180 180" style="display:block;width:100%;height:100%;overflow:visible;">${donutSegs}</svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+              <span id="db-donut-pct" style="font-size:38px;font-weight:800;color:${progressColor};line-height:1;transition:color 0.2s;">${progressPct}%</span>
+              <span id="db-donut-lbl" style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">Progress Selesai</span>
             </div>
           </div>
-        </div>
+         </div>
+
         <!-- Legend — pushed to bottom -->
         <div style="margin-top:auto;border-top:1px solid #f1f5f9;padding-top:12px;display:flex;flex-direction:column;gap:6px;">
           <div class="db-legend-row" data-status="selesai" data-val="${selesai}" data-pct="${Math.round((selesai/totalStatus)*100)}"
                style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background 0.15s;">
-            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#0f172a;display:inline-block;"></span><span style="color:#334155;">Selesai</span></span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:${DONUT[0].color};display:inline-block;"></span><span style="color:#334155;">Selesai</span></span>
             <b style="color:#0f172a;">${selesai}</b>
           </div>
           <div class="db-legend-row" data-status="proses" data-val="${proses}" data-pct="${Math.round((proses/totalStatus)*100)}"
                style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background 0.15s;">
-            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#1e3a8a;display:inline-block;"></span><span style="color:#334155;">Proses</span></span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:${DONUT[1].color};display:inline-block;"></span><span style="color:#334155;">Proses</span></span>
             <b style="color:#0f172a;">${proses}</b>
           </div>
           <div class="db-legend-row" data-status="belum" data-val="${belum}" data-pct="${Math.round((belum/totalStatus)*100)}"
                style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background 0.15s;">
-            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#cbd5e1;display:inline-block;"></span><span style="color:#334155;">Belum</span></span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:${DONUT[2].color};display:inline-block;"></span><span style="color:#334155;">Belum</span></span>
             <b style="color:#0f172a;">${belum}</b>
           </div>
         </div>
@@ -363,56 +386,56 @@ function renderDashboard(d) {
     });
   });
 
-  // ── Donut legend hover: ubah warna ring + update center text ──
-  const donutPctEl  = document.getElementById('db-donut-pct');
-  const donutLblEl  = document.getElementById('db-donut-lbl');
-  const donutRing   = document.getElementById('db-donut-ring');
+   // ── Donut interaktif: hover segmen / legenda → highlight, tooltip, teks tengah ──
+  const donutSvgEl = document.getElementById('db-donut-svg');
+  const donutPctEl = document.getElementById('db-donut-pct');
+  const donutLblEl = document.getElementById('db-donut-lbl');
 
-  // Warna solid per status untuk highlight
-  const statusColors = {
-    selesai: '#0f172a',  // navy
-    proses:  '#2563eb',  // biru
-    belum:   '#cbd5e1',  // abu
-  };
-  const statusLabels = { selesai: 'Selesai', proses: 'Proses', belum: 'Belum' };
+  if (donutSvgEl && donutPctEl && donutLblEl) {
+    let tip = document.getElementById('db-donut-tip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'db-donut-tip';
+      tip.style.cssText = 'position:fixed;display:none;z-index:9999;pointer-events:none;background:rgba(15,23,42,.92);color:#fff;font-size:12px;padding:8px 12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.25);';
+      document.body.appendChild(tip);
+    }
+    const info = {};
+    DONUT.forEach(x => { info[x.key] = x; });
 
-  if (donutPctEl && donutLblEl && donutRing) {
+    function setDonutActive(key) {
+      const x = key ? info[key] : null;
+      donutSvgEl.classList.toggle('has-hover', !!x);
+      donutSvgEl.querySelectorAll('.db-donut-seg').forEach(sg => sg.classList.toggle('active', sg.dataset.status === key));
+      document.querySelectorAll('.db-legend-row').forEach(r => { r.style.background = r.dataset.status === key ? '#f1f5f9' : ''; });
+      donutPctEl.style.color   = x ? x.color : progressColor;
+      donutPctEl.textContent   = x ? x.value : progressPct + '%';
+      donutLblEl.textContent   = x ? x.label : 'Progress Selesai';
+    }
+
+    function showDonutTip(key, e) {
+      const x = info[key];
+      if (!x) return;
+      const pct = Math.round((x.value / totalStatus) * 100);
+      tip.innerHTML =
+        `<div style="font-weight:700;margin-bottom:4px;">${x.label}</div>` +
+        `<div style="display:flex;align-items:center;gap:6px;">` +
+        `<span style="width:10px;height:10px;background:${x.color};border:1px solid #fff;display:inline-block;"></span>` +
+        `<b>${x.value}</b><span style="opacity:.7;">(${pct}%)</span></div>`;
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top  = (e.clientY + 14) + 'px';
+      tip.style.display = 'block';
+    }
+
+    donutSvgEl.querySelectorAll('.db-donut-seg').forEach(sg => {
+      const key = sg.dataset.status;
+      sg.addEventListener('mouseenter', e => { setDonutActive(key); showDonutTip(key, e); });
+      sg.addEventListener('mousemove',  e => showDonutTip(key, e));
+      sg.addEventListener('mouseleave', () => { setDonutActive(null); tip.style.display = 'none'; });
+    });
+
     document.querySelectorAll('.db-legend-row').forEach(row => {
-      const status = row.dataset.status;
-      const val    = row.dataset.val;
-      const color  = statusColors[status] || '#334155';
-
-      row.addEventListener('mouseenter', () => {
-        row.style.background = '#f1f5f9';
-        // Ring berubah jadi solid satu warna sesuai status
-        donutRing.style.background = `conic-gradient(${color} 0deg 360deg)`;
-        donutRing.style.transform  = 'scale(1.06)';
-        // Center text update
-        donutPctEl.style.color     = color;
-        donutPctEl.textContent     = val;
-        donutLblEl.textContent     = statusLabels[status] || status;
-      });
-      row.addEventListener('mouseleave', () => {
-        row.style.background       = '';
-        // Kembalikan ke conic-gradient asli berdasarkan data
-        donutRing.style.background = conicGrad;
-        donutRing.style.transform  = '';
-        donutPctEl.style.color     = '#0f172a';
-        donutPctEl.textContent     = progressPct + '%';
-        donutLblEl.textContent     = 'Progress Selesai';
-      });
-    });
-
-    // Hover langsung di ring → scale saja, tidak ubah warna
-    donutRing.addEventListener('mouseenter', () => {
-      if (!document.querySelector('.db-legend-row:hover')) {
-        donutRing.style.transform = 'scale(1.04)';
-      }
-    });
-    donutRing.addEventListener('mouseleave', () => {
-      if (!document.querySelector('.db-legend-row:hover')) {
-        donutRing.style.transform = '';
-      }
+      row.addEventListener('mouseenter', () => setDonutActive(row.dataset.status));
+      row.addEventListener('mouseleave', () => setDonutActive(null));
     });
   }
 }
