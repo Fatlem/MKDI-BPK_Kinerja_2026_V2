@@ -9,11 +9,11 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\BuktiController;
 use App\Http\Controllers\BatlController;
 
-Route::view('/',              'app');
-Route::view('/dashboard',     'app');
-Route::view('/ruang-isian',   'app');
-Route::view('/ruang-isian/detail', 'app');
-Route::view('/rekap-laporan', 'app');
+Route::view('/',              'layouts.app');
+Route::view('/dashboard',     'layouts.app');
+Route::view('/ruang-isian',   'layouts.app');
+Route::view('/ruang-isian/detail', 'layouts.app');
+Route::view('/rekap-laporan', 'layouts.app');
 
 $apiRoutes = function () {
     Route::post('/auth/login',  [AuthController::class, 'login']);

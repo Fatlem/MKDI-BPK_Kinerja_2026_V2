@@ -1,140 +1,6 @@
-const centerTextPlugin = {
-  id: 'centerText',
-  afterDraw(chart) {
-    if (chart.config.type !== 'doughnut') return;
-    const { ctx, chartArea: { width, height, left, top } } = chart;
-    ctx.save();
-    const data  = chart.data.datasets[0].data;
-    const total = data.reduce((a, b) => a + b, 0);
-    const pct   = total > 0 ? Math.round((data[0] / total) * 100) : 0;
-    const cx = left + width / 2, cy = top + height / 2;
-    
-    ctx.textAlign = 'center'; 
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '800 22px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(pct + '%', cx, cy - 6);
-    
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '600 10px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('Progress Selesai', cx, cy + 12);
-    ctx.restore();
-  }
-};
-if (typeof Chart !== 'undefined') {
-  Chart.register(centerTextPlugin);
-}
+/* dashboard.js - halaman DASHBOARD (statistik, bar chart, donut, daftar PIC, filter) */
 
-function loadDashboard() {
-  const nama = S.user?.nama || S.user?.username || 'Administrator';
-  
-  const hdrTitle = document.getElementById('hdr-title');
-  if (hdrTitle) {
-    hdrTitle.innerHTML = `Selamat Datang, ${esc(nama)} <i data-lucide="sparkles" style="width:18px;height:18px;color:#FFCC00;display:inline-block;vertical-align:middle;margin-left:4px;"></i>`;
-  }
-  
-  document.getElementById('hdr-sub').textContent = 'Pantau dan kelola data kinerja dengan mudah dan cepat.';
-  setBody(loadingHtml());
-  refreshIcons();
-
-  apiFetch('/api/temuan')
-    .then(rows => {
-      S.allR = rows || [];
-      calculateAndRenderDashboard(rows || []);
-    })
-    .catch(() => showToast('Gagal memuat data dari server', 'err'));
-}
-
-
-// ── Filter dashboard: Sumber / Tahun / Unit PIC (satu-satunya filter tahun di dashboard) ──
-if (!S.dbF) S.dbF = { sumber: '', tahun: '', pic: '' };
-
-function dbFilteredRows(rows) {
-  const f = S.dbF;
-  return (rows || []).filter(r =>
-    (!f.sumber || (r.Sumber || 'bpk') === f.sumber) &&
-    (!f.tahun  || String(r.Tahun || '') === f.tahun) &&
-    (!f.pic    || hasPic(splitPics(r.PIC), f.pic))
-  );
-}
-
-function dbApplyFilter() {
-  const v = id => (document.getElementById('db-flt-' + id) || {}).value || '';
-  S.dbF = { sumber: v('sumber'), tahun: v('tahun'), pic: v('pic') };
-  calculateAndRenderDashboard(S.allR || []);
-}
-
-function dbFilterBarHtml() {
-  const f = S.dbF;
-  const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${f.sumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
-  const optTahun  = tahunOptions(S.allR).map(y => `<option value="${esc(y)}" ${f.tahun === y ? 'selected' : ''}>${esc(y)}</option>`).join('');
-  const optPic    = allPicOptions().map(p => `<option value="${esc(p.username)}" ${f.pic === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
-  return `
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:24px;">
-      <label class="flt-chip">
-        <i data-lucide="shield" class="flt-ico flt-violet"></i><span class="flt-lbl">Sumber:</span>
-        <select id="db-flt-sumber" onchange="dbApplyFilter()"><option value="">Semua Sumber</option>${optSumber}</select>
-      </label>
-      <label class="flt-chip">
-        <i data-lucide="calendar" class="flt-ico flt-green"></i><span class="flt-lbl">Tahun:</span>
-        <select id="db-flt-tahun" onchange="dbApplyFilter()"><option value="">Semua Tahun</option>${optTahun}</select>
-      </label>
-      <label class="flt-chip flt-chip-pic">
-        <i data-lucide="building-2" class="flt-ico flt-orange"></i><span class="flt-lbl">Unit PIC:</span>
-        <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''}><option value="">Semua PIC</option>${optPic}</select>
-      </label>
-    </div>`;
-}
-
-function calculateAndRenderDashboard(rows) {
-  rows = dbFilteredRows(rows);
-  const picList = S.picList || [];
-  const uniqueNos = new Set();
-  let totalSelesai = 0, totalProses = 0, totalBelum = 0;
-  
-  const picStatsMap = {};
-  picList.forEach(p => {
-    picStatsMap[_picNormKey(p.username)] = { username: p.username, nama: p.nama, jumlah: 0, selesai: 0, progress: 0 };
-  });
-
-  rows.forEach(r => {
-    if (r.No) uniqueNos.add(String(r.No).trim());
-    const st = statusOf(r);
-    if (st.lbl === 'Selesai') totalSelesai++;
-    else if (st.lbl === 'Proses') totalProses++;
-    else totalBelum++;
-
-    const keys = new Set();
-    splitPics(r.PIC).forEach(t => keys.add(picKeyOf(t)));
-    keys.forEach(k => {
-      if (picStatsMap[k]) {
-        picStatsMap[k].jumlah++;
-        if (st.lbl === 'Selesai') picStatsMap[k].selesai++;
-      }
-    });
-  });
-
-  const total = rows.length;
-  const totalTemuan = uniqueNos.size;
-  let picMengisiCount = 0;
-
-  const picStatsArray = Object.keys(picStatsMap).map(k => {
-    const item = picStatsMap[k];
-    if (item.jumlah > 0) picMengisiCount++;
-    item.progress = item.jumlah > 0 ? Math.round((item.selesai / item.jumlah) * 100) : 0;
-    return item;
-  });
-
-  renderDashboard({
-    totalTemuan,
-    totalTindakLanjut: total,
-    picMengisi: picMengisiCount,
-    totalPic: picList.length,
-    progressKeseluruhan: total > 0 ? Math.round((totalSelesai / total) * 100) : 0,
-    status: { selesai: totalSelesai, proses: totalProses, belum: totalBelum },
-    picStats: picStatsArray,
-  });
-}
+// ═══ IKON & SINGKATAN PIC ══════════════════════════════════════════════
 
 // Icon SVG per PIC (by index, matching Figma prototype)
 const PIC_ICONS = [
@@ -194,6 +60,147 @@ function _picShortLabel(p) {
   const skip = new Set(['dan', 'bidang', 'atau', 'di', 'ke', 'yang', 'untuk']);
   const ac = words.filter(w => !skip.has(w.toLowerCase())).map(w => w[0]).join('').toUpperCase();
   return (ac || words[0]).substring(0, 5);
+}
+
+// ═══ FILTER: Sumber / Tahun / Unit PIC ═════════════════════════════════
+
+// ── Filter dashboard: Sumber / Tahun / Unit PIC (satu-satunya filter tahun di dashboard) ──
+if (!S.dbF) S.dbF = { sumber: '', tahun: '', pic: '' };
+
+function dbFilteredRows(rows) {
+  const f = S.dbF;
+  return (rows || []).filter(r =>
+    (!f.sumber || (r.Sumber || 'bpk') === f.sumber) &&
+    (!f.tahun  || String(r.Tahun || '') === f.tahun) &&
+    (!f.pic    || hasPic(splitPics(r.PIC), f.pic))
+  );
+}
+
+function dbApplyFilter() {
+  const v = id => (document.getElementById('db-flt-' + id) || {}).value || '';
+  S.dbF = { sumber: v('sumber'), tahun: v('tahun'), pic: v('pic') };
+  calculateAndRenderDashboard(S.allR || []);
+}
+
+function dbFilterBarHtml() {
+  const f = S.dbF;
+  const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${f.sumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
+  const optTahun  = tahunOptions(S.allR).map(y => `<option value="${esc(y)}" ${f.tahun === y ? 'selected' : ''}>${esc(y)}</option>`).join('');
+  const optPic    = allPicOptions().map(p => `<option value="${esc(p.username)}" ${f.pic === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
+  return `
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:24px;">
+      <label class="flt-chip">
+        <i data-lucide="shield" class="flt-ico flt-violet"></i><span class="flt-lbl">Sumber:</span>
+        <select id="db-flt-sumber" onchange="dbApplyFilter()"><option value="">Semua Sumber</option>${optSumber}</select>
+      </label>
+      <label class="flt-chip">
+        <i data-lucide="calendar" class="flt-ico flt-green"></i><span class="flt-lbl">Tahun:</span>
+        <select id="db-flt-tahun" onchange="dbApplyFilter()"><option value="">Semua Tahun</option>${optTahun}</select>
+      </label>
+      <label class="flt-chip flt-chip-pic">
+        <i data-lucide="building-2" class="flt-ico flt-orange"></i><span class="flt-lbl">Unit PIC:</span>
+        <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''}><option value="">Semua PIC</option>${optPic}</select>
+      </label>
+    </div>`;
+}
+
+// ═══ HALAMAN DASHBOARD ═════════════════════════════════════════════════
+
+const centerTextPlugin = {
+  id: 'centerText',
+  afterDraw(chart) {
+    if (chart.config.type !== 'doughnut') return;
+    const { ctx, chartArea: { width, height, left, top } } = chart;
+    ctx.save();
+    const data  = chart.data.datasets[0].data;
+    const total = data.reduce((a, b) => a + b, 0);
+    const pct   = total > 0 ? Math.round((data[0] / total) * 100) : 0;
+    const cx = left + width / 2, cy = top + height / 2;
+    
+    ctx.textAlign = 'center'; 
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 22px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(pct + '%', cx, cy - 6);
+    
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 10px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('Progress Selesai', cx, cy + 12);
+    ctx.restore();
+  }
+};
+if (typeof Chart !== 'undefined') {
+  Chart.register(centerTextPlugin);
+}
+
+function loadDashboard() {
+  const nama = S.user?.nama || S.user?.username || 'Administrator';
+  
+  const hdrTitle = document.getElementById('hdr-title');
+  if (hdrTitle) {
+    hdrTitle.innerHTML = `Selamat Datang, ${esc(nama)} <i data-lucide="sparkles" style="width:18px;height:18px;color:#FFCC00;display:inline-block;vertical-align:middle;margin-left:4px;"></i>`;
+  }
+  
+  document.getElementById('hdr-sub').textContent = 'Pantau dan kelola data kinerja dengan mudah dan cepat.';
+  setBody(loadingHtml());
+  refreshIcons();
+
+  apiFetch('/api/temuan')
+    .then(rows => {
+      S.allR = rows || [];
+      calculateAndRenderDashboard(rows || []);
+    })
+    .catch(() => showToast('Gagal memuat data dari server', 'err'));
+}
+
+function calculateAndRenderDashboard(rows) {
+  rows = dbFilteredRows(rows);
+  const picList = S.picList || [];
+  const uniqueNos = new Set();
+  let totalSelesai = 0, totalProses = 0, totalBelum = 0;
+  
+  const picStatsMap = {};
+  picList.forEach(p => {
+    picStatsMap[_picNormKey(p.username)] = { username: p.username, nama: p.nama, jumlah: 0, selesai: 0, progress: 0 };
+  });
+
+  rows.forEach(r => {
+    if (r.No) uniqueNos.add(String(r.No).trim());
+    const st = statusOf(r);
+    if (st.lbl === 'Selesai') totalSelesai++;
+    else if (st.lbl === 'Proses') totalProses++;
+    else totalBelum++;
+
+    const keys = new Set();
+    splitPics(r.PIC).forEach(t => keys.add(picKeyOf(t)));
+    keys.forEach(k => {
+      if (picStatsMap[k]) {
+        picStatsMap[k].jumlah++;
+        if (st.lbl === 'Selesai') picStatsMap[k].selesai++;
+      }
+    });
+  });
+
+  const total = rows.length;
+  const totalTemuan = uniqueNos.size;
+  let picMengisiCount = 0;
+
+  const picStatsArray = Object.keys(picStatsMap).map(k => {
+    const item = picStatsMap[k];
+    if (item.jumlah > 0) picMengisiCount++;
+    item.progress = item.jumlah > 0 ? Math.round((item.selesai / item.jumlah) * 100) : 0;
+    return item;
+  });
+
+  renderDashboard({
+    totalTemuan,
+    totalTindakLanjut: total,
+    picMengisi: picMengisiCount,
+    totalPic: picList.length,
+    progressKeseluruhan: total > 0 ? Math.round((totalSelesai / total) * 100) : 0,
+    status: { selesai: totalSelesai, proses: totalProses, belum: totalBelum },
+    picStats: picStatsArray,
+  });
 }
 
 function renderDashboard(d) {

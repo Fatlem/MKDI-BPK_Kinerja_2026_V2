@@ -1,11 +1,3 @@
-/* mkdi/bukti.js - Formulir Unggah Bukti Tindak Lanjut (eviden) per rincian temuan.
- *
- * File ini berdiri sendiri: tidak mengubah fungsi lama. Semua nama diawali "bk"/"Bukti"
- * supaya tidak bentrok dengan core.js, ruang-isian.js, rekap.js, dll.
- * Dipanggil dari tombol "Bukti" di riSubHtml() (ruang-isian.js) lewat openBukti(rowId).
- * Memakai: S, esc, showToast, refreshIcons, isPicUser, isAdminUser, isStaffUser, isAuditorUser, tlPill, subLabel, refreshCurrentPage, apiFetch.
- */
-
 const BK_MAX_BYTES = 10 * 1024 * 1024;                       // 10 MB per berkas
 const BK_EXT       = ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'xls', 'xlsx'];
 
@@ -73,87 +65,16 @@ async function bkUpload(url, formData) {
   return res.json();
 }
 
-// ── Modal (dibuat sekali lewat JS, sama seperti modal Detail) ──────
+// Modal HTML ada di resources/views/components/modals/bukti.blade.php.
+// Fungsi ini hanya memasang drag & drop satu kali.
+let _bkDropBound = false;
 function ensureBuktiModal() {
-  if (document.getElementById('bk-bg')) return;
-  document.body.insertAdjacentHTML('beforeend', `
-    <div id="bk-bg" class="modal-backdrop" onclick="closeBuktiBg(event)">
-      <div class="modal-window bk-window">
-        <div class="modal-header-area">
-          <div class="bk-head">
-            <div class="bk-head-icon"><i data-lucide="cloud-upload" style="width:20px;height:20px;"></i></div>
-            <div class="bk-head-text">
-              <div class="bk-title">Formulir Unggah Bukti Tindak Lanjut</div>
-              <div class="bk-sub">Lengkapi rentang waktu pelaksanaan, uraian capaian aktual, serta dokumen bukti dukung resmi</div>
-            </div>
-          </div>
-          <div class="bk-head-right">
-            <span id="bk-status" class="bk-status-slot"></span>
-            <button class="modal-close-btn" onclick="closeBukti()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
-          </div>
-        </div>
-
-        <div class="modal-body-area">
-          <div id="bk-status-m" class="bk-status-slot-mobile"></div>
-          <div id="bk-ctx" class="bk-ctx"></div>
-          <div id="bk-batl"></div>
-
-          <div id="bk-form">
-          <div class="bk-card">
-            <div class="bk-label"><i data-lucide="calendar-days"></i> Rentang Tanggal Tindak Lanjut <span class="bk-req">*</span></div>
-            <div class="bk-grid-2">
-              <div class="bk-field">
-                <label for="bk-mulai">Tanggal Mulai Tindak Lanjut <span class="bk-req">*</span></label>
-                <input id="bk-mulai" type="date">
-              </div>
-              <div class="bk-field">
-                <label for="bk-selesai">Tanggal Selesai Tindak Lanjut <span class="bk-req">*</span></label>
-                <input id="bk-selesai" type="date">
-              </div>
-            </div>
-          </div>
-
-          <div class="bk-block">
-            <div class="bk-label"><i data-lucide="pencil-line"></i> Uraian Progres / Tindak Lanjut Aktual <span class="bk-req">*</span></div>
-            <textarea id="bk-uraian" class="bk-textarea" maxlength="5000" placeholder="Jelaskan secara rinci tindakan nyata atau dokumen penyelesaian yang telah dilaksanakan oleh Unit Kerja..."></textarea>
-          </div>
-
-          <div class="bk-block">
-            <div class="bk-label"><i data-lucide="paperclip"></i> Unggah Berkas Bukti Dukung (Eviden)</div>
-            <div id="bk-drop" class="bk-drop">
-              <input id="bk-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" onchange="bkPickFile(this)">
-              <div class="bk-drop-info">
-                <div>
-                  <strong class="bk-info-title"><i data-lucide="file-check-2"></i> Format File Spesifik:</strong>
-                  <div class="bk-chips">
-                    <span class="bk-chip bk-chip-pdf">PDF (.pdf)</span>
-                    <span class="bk-chip bk-chip-img">Gambar (.png, .jpg, .jpeg)</span>
-                    <span class="bk-chip bk-chip-word">Word (.doc, .docx)</span>
-                    <span class="bk-chip bk-chip-excel">Excel (.xls, .xlsx)</span>
-                  </div>
-                </div>
-                <div>
-                  <strong class="bk-info-title"><i data-lucide="hard-drive"></i> Kapasitas &amp; Ketentuan Unggah:</strong>
-                  <div>Ukuran maksimal <strong>10 MB</strong> per file (Maks. 1 file setiap pengiriman progres).</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bk-actions">
-            <button type="button" class="bk-btn" onclick="bkReset()">Reset Form</button>
-            <button type="button" id="bk-submit" class="bk-btn bk-btn-pri" onclick="bkSubmit()"></button>
-          </div>
-          </div>
-
-          <div class="bk-history-title"><i data-lucide="history"></i> Riwayat Pengiriman Bukti</div>
-          <div id="bk-list"></div>
-        </div>
-      </div>
-    </div>`);
+  if (_bkDropBound) return;
+  const drop = document.getElementById('bk-drop');
+  if (!drop) return;
+  _bkDropBound = true;
 
   // Drag & drop berkas ke kotak unggah
-  const drop = document.getElementById('bk-drop');
   ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('bk-over'); }));
   ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('bk-over'); }));
   drop.addEventListener('drop', e => {
