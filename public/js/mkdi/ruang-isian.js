@@ -28,6 +28,41 @@ function loadRuangIsian(picFilter) {
     .catch(() => showToast('Gagal memuat data dari server', 'err'));
 }
 
+// ══════ Filter chip Sumber / Tahun / Unit PIC (dipakai halaman Temuan & Detail) ══════
+function riFilterChips(prefix, handler, picOpts) {
+  const tahun = [...new Set((S.allR || []).map(r => r.Tahun).filter(Boolean))].sort().reverse();
+  if (S.riTahun && !tahun.includes(S.riTahun)) S.riTahun = '';
+  const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${S.riSumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
+  const optTahun  = tahun.map(t => `<option value="${esc(t)}" ${S.riTahun === t ? 'selected' : ''}>${esc(t)}</option>`).join('');
+  return `
+    <label class="flt-chip">
+      <i data-lucide="shield" class="flt-ico flt-violet"></i><span class="flt-lbl">Sumber:</span>
+      <select id="${prefix}-flt-sumber" onchange="${handler}()"><option value="">Semua Sumber</option>${optSumber}</select>
+    </label>
+    <label class="flt-chip">
+      <i data-lucide="calendar" class="flt-ico flt-green"></i><span class="flt-lbl">Tahun:</span>
+      <select id="${prefix}-flt-tahun" onchange="${handler}()"><option value="">Semua Tahun</option>${optTahun}</select>
+    </label>
+    <label class="flt-chip flt-chip-pic">
+      <i data-lucide="building-2" class="flt-ico flt-orange"></i><span class="flt-lbl">Unit PIC:</span>
+      <select id="${prefix}-flt-pic" onchange="${handler}()" ${isPicUser() ? 'disabled' : ''}><option value="">Semua PIC</option>${picOpts}</select>
+    </label>`;
+}
+
+function riApplyFilters(rows) {
+  return (rows || []).filter(r =>
+    (!S.riFilter || hasPic(splitPics(r.PIC), S.riFilter)) &&
+    (!S.riSumber || (r.Sumber || 'bpk') === S.riSumber) &&
+    (!S.riTahun  || String(r.Tahun || '') === S.riTahun));
+}
+
+function riReadFilters(prefix) {
+  const v = id => (document.getElementById(`${prefix}-flt-${id}`) || {}).value || '';
+  S.riFilter = v('pic');
+  S.riSumber = v('sumber');
+  S.riTahun  = v('tahun');
+}
+
 function renderRuangIsian(rows) {
   const selesai = rows.filter(r => statusOf(r).lbl === 'Selesai').length;
   const progress = rows.length ? Math.round((selesai / rows.length) * 100) : 0;
@@ -41,10 +76,7 @@ function renderRuangIsian(rows) {
 
     <div class="toolbar-wrap">
       ${isPicUser() ? '' : '<button class="btn-action-pri" onclick="openModal()"><i data-lucide="plus" style="width:16px;"></i> Tambah Temuan Baru</button>'}
-      <select class="select-custom" id="ri-flt-pic" style="width:260px;" onchange="filterRuangIsian()" ${isPicUser() ? 'disabled' : ''}>
-        <option value="">Semua PIC</option>
-        ${picOpts}
-      </select>
+            ${riFilterChips('ri', 'filterRuangIsian', picOpts)}
       <span style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="ri-count"></span>
     </div>
 
@@ -55,7 +87,7 @@ function renderRuangIsian(rows) {
 }
 
 function filterRuangIsian() {
-  S.riFilter = document.getElementById('ri-flt-pic').value;
+  riReadFilters('ri');
   renderEntryList();
 }
 
@@ -444,10 +476,7 @@ function renderDetail() {
 
     <div class="toolbar-wrap">
       ${isPicUser() ? '' : '<button class="btn-action-pri" onclick="openDetAdd(\'\', \'\', \'Kriteria\')"><i data-lucide="plus" style="width:16px;"></i> Tambah Detail</button>'}
-      <select class="select-custom" id="det-flt-pic" style="width:260px;" onchange="filterDetail()" ${isPicUser() ? 'disabled' : ''}>
-        <option value="">Semua PIC</option>
-        ${picOpts}
-      </select>
+            ${riFilterChips('det', 'filterDetail', picOpts)}
       <span style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="det-count"></span>
     </div>
 
@@ -458,7 +487,7 @@ function renderDetail() {
 }
 
 function filterDetail() {
-  S.riFilter = document.getElementById('det-flt-pic').value;
+  riReadFilters('det');
   renderDetailList();
 }
 
@@ -496,7 +525,7 @@ function detRowHtml(r, idx, canAdmin, total) {
 }
 
 function renderDetailList() {
-  const rows = S.riFilter ? S.allR.filter(r => hasPic(splitPics(r.PIC), S.riFilter)) : S.allR;
+  const rows = riApplyFilters(S.allR);
   const list = document.getElementById('det-list');
   const cnt  = document.getElementById('det-count');
   const canAdmin = !isPicUser();

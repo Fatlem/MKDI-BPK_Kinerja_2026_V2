@@ -1003,8 +1003,60 @@ a { text-decoration: none; color: inherit; }
 #pic-pop .pic-pop-item b { font-size: 12px; color: #1e293b; }
 #pic-pop .pic-pop-item span { font-size: 11px; color: #64748b; }
 
-
 /* ── Donut status interaktif (dashboard) ── */
 .db-donut-seg { cursor: pointer; transition: stroke-width .18s ease, opacity .18s ease; }
 .db-donut-seg.active { stroke-width: 32; }
 .db-donut-svg.has-hover .db-donut-seg:not(.active) { opacity: .35; }
+
+/* ── Filter chip: Sumber / Tahun / Unit PIC ── */
+.flt-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; background: #fff; border: 1.5px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-sm); cursor: pointer; transition: border-color .2s, box-shadow .2s; }
+.flt-chip:hover { border-color: #bfdbfe; box-shadow: 0 4px 12px rgba(37,99,235,.08); }
+.flt-chip:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.flt-ico { width: 16px; height: 16px; flex-shrink: 0; }
+.flt-violet { color: #7c3aed; } .flt-green { color: #10b981; } .flt-orange { color: #f59e0b; }
+.flt-lbl { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+.flt-chip select {
+  border: 0; outline: 0; cursor: pointer; min-width: 0; max-width: 220px;
+  padding: 0 20px 0 0; font: inherit; font-size: 13px; font-weight: 700; color: var(--text-main);
+  -webkit-appearance: none; appearance: none; text-overflow: ellipsis;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0 center / 14px;
+}
+.flt-chip-pic select { min-width: 150px; }
+.flt-chip select:disabled { cursor: not-allowed; opacity: .7; }
+@media (max-width: 768px) {
+  .flt-chip { flex: 1 1 100%; }
+  .flt-chip select { flex: 1; max-width: none; font-size: 16px; }
+}
+
+/* ── Dropdown filter chip: daftar pilihan lebih lega ── */
+.flt-chip select option {
+  padding: 10px 14px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text-main); background: #fff;
+}
+
+/* Browser modern (Chrome / Edge terbaru): dropdown bisa didesain penuh */
+@supports (appearance: base-select) {
+  .flt-chip select,
+  .flt-chip select::picker(select) { appearance: base-select; }
+
+  .flt-chip select::picker-icon { display: none; }   /* panah bawaan disembunyikan, pakai panah chip */
+
+  .flt-chip select::picker(select) {
+    margin-top: 8px; padding: 6px;
+    min-width: 240px; max-width: min(92vw, 440px); max-height: 340px;
+    background: #fff;
+    border: 1.5px solid var(--border-color); border-radius: 14px;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, .16);
+  }
+  .flt-chip select option {
+    display: flex; align-items: center;
+    padding: 10px 12px; border-radius: 9px;
+    font-size: 13px; font-weight: 500; color: var(--text-main);
+    cursor: pointer; transition: background .15s, color .15s;
+  }
+  .flt-chip select option:hover,
+  .flt-chip select option:focus-visible { background: #eff6ff; color: #1e3a8a; }
+  .flt-chip select option:checked       { background: #e3ebfb; color: #1e3a8a; font-weight: 700; }
+  .flt-chip select option::checkmark    { display: none; }
+}

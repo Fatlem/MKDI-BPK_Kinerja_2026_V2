@@ -47,6 +47,7 @@ class TemuanController extends Controller
                 'BuktiCount'         => (int) $r->bukti_count,
                 'Sumber'             => $r->sumber ?: Temuan::SUMBER_BPK,
                 'SumberLabel'        => Temuan::SUMBER_LABEL[$r->sumber ?: Temuan::SUMBER_BPK] ?? '',
+                'Tahun'              => $r->created_at?->format('Y') ?? '',
                 'CreatedBy'          => $r->created_by ?? '',
                 'TLStatus'           => $r->tlStatus(),
                 'BatlNomor'          => $r->batl?->nomor ?? '',
