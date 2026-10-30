@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Blokir akses ke file/folder sensitif
+    RewriteRule ^(\.env|\.git|composer\.(json|lock)|artisan|package\.json|phpunit\.xml|vite\.config\.js|README\.md)(/|$) - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)(/|$) - [F,L]
+
+    # Arahkan semua request ke folder public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
