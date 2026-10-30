@@ -14,8 +14,10 @@
         <div class="form-field">
           <label>Jenis</label>
           <select id="det-field">
+            <option value="Kondisi">Kondisi</option>
             <option value="Kriteria">Kriteria</option>
             <option value="Sebab">Sebab</option>
+            <option value="Akibat">Akibat</option>
             <option value="Rekomendasi">Rekomendasi</option>
           </select>
         </div>
@@ -35,8 +37,10 @@
       </div>
 
       <div id="det-edit-sec" style="display:none;">
+        <div class="form-field"><label>Kondisi</label><textarea id="det-e-Kondisi" placeholder="Fakta riil yang ditemukan di lapangan"></textarea></div>
         <div class="form-field"><label>Kriteria</label><textarea id="det-e-Kriteria" placeholder="Kriteria/dasar aturan"></textarea></div>
         <div class="form-field"><label>Sebab</label><textarea id="det-e-Sebab" placeholder="Penyebab temuan"></textarea></div>
+        <div class="form-field"><label>Akibat</label><textarea id="det-e-Akibat" placeholder="Dampak riil (mis. kerugian negara, pemborosan)"></textarea></div>
         <div class="form-field"><label>Rekomendasi</label><textarea id="det-e-Rekomendasi" placeholder="Rekomendasi"></textarea></div>
       </div>
     </div>

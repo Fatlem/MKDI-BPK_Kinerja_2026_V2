@@ -41,7 +41,21 @@
       </div>
 
       <div class="bk-block">
-        <div class="bk-label"><i data-lucide="paperclip"></i> Unggah Berkas Bukti Dukung (Eviden)</div>
+        <div class="bk-label"><i data-lucide="landmark"></i> Validasi Setoran Kas Negara <span class="bk-opt">(isi bila tindak lanjut bersifat finansial)</span></div>
+        <div class="bk-grid-2">
+          <div class="bk-field">
+            <label for="bk-ntpn">NTPN (16 karakter)</label>
+            <input id="bk-ntpn" type="text" maxlength="16" autocomplete="off" placeholder="mis. A1B2C3D4E5F6G7H8" style="text-transform:uppercase;">
+          </div>
+          <div class="bk-field">
+            <label for="bk-nominal">Nominal Setoran (Rp)</label>
+            <input id="bk-nominal" type="text" inputmode="decimal" autocomplete="off" placeholder="mis. 1.500.000">
+          </div>
+        </div>
+      </div>
+
+      <div class="bk-block">
+        <div class="bk-label"><i data-lucide="paperclip"></i> Unggah Berkas Bukti Dukung (Eviden) <span class="bk-req">*</span></div>
         <div id="bk-drop" class="bk-drop">
           <input id="bk-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" onchange="bkPickFile(this)">
           <div class="bk-drop-info">

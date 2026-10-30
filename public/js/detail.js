@@ -5,8 +5,10 @@
 
 // ══════════════════ HALAMAN DETAIL ═══════════════════════════════
 const DET_FIELDS = [
+  { key: 'Kondisi',     label: 'Kondisi',     icon: 'search',         cls: 'blue'   },
   { key: 'Kriteria',    label: 'Kriteria',    icon: 'target',         cls: 'blue'   },
   { key: 'Sebab',       label: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
+  { key: 'Akibat',      label: 'Akibat',      icon: 'alert-triangle', cls: 'orange' },
   { key: 'Rekomendasi', label: 'Rekomendasi', icon: 'clipboard-list', cls: 'purple' }
 ];
 
@@ -134,8 +136,10 @@ let _detPreset = null;                     // rincian yang sudah ditentukan saat
 function rowToPayload(r, over) {
   const p = {
     SubTemuan:         r.SubTemuan         == null ? '' : r.SubTemuan,
+    Kondisi:           r.Kondisi           == null ? '' : r.Kondisi,
     Kriteria:          r.Kriteria          == null ? '' : r.Kriteria,
     Sebab:             r.Sebab             == null ? '' : r.Sebab,
+    Akibat:            r.Akibat            == null ? '' : r.Akibat,
     Rekomendasi:       r.Rekomendasi       == null ? '' : r.Rekomendasi,
     PIC:               r.PIC               == null ? '' : r.PIC,
     RencanaAksi:       r.RencanaAksi       == null ? '' : r.RencanaAksi,

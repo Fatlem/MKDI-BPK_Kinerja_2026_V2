@@ -118,3 +118,9 @@
 .sumber-bpk         { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
 .sumber-inspektorat { background: #ecfeff; color: #0e7490; border-color: #a5f3fc; }
 .entry-badge-code { width: auto; min-width: 44px; padding: 0 12px; font-size: 11.5px; white-space: nowrap; }
+
+/* Input teks (NTPN, nominal setoran) - gaya sama dengan input tanggal */
+.bk-field input[type="text"] { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border-color); border-radius: 999px; font-size: 14px; background: #fff; font-family: inherit; color: var(--text-main); }
+.bk-opt { font-weight: 400; color: #64748b; font-size: 11.5px; }
+.bk-setoran { font-size: 12.5px; color: #334155; margin: 6px 0; display: flex; gap: 14px; flex-wrap: wrap; }
+.bk-setoran b { font-weight: 700; }

@@ -26,6 +26,18 @@
         <div class="field-hint">Menentukan kode temuan: BPK RI = LHP-BPK-xxx, Inspektorat = LHP-INS-xxx.</div>
       </div>
 
+      <div class="form-field" id="m-jenis-wrap">
+        <label>Jenis Audit</label>
+        <select id="m-jenis">
+          <option value="">Belum ditentukan</option>
+          <option value="kinerja">Audit Kinerja (3E: Ekonomis, Efisiensi, Efektivitas)</option>
+          <option value="keuangan">Audit Keuangan</option>
+          <option value="kepatuhan">Audit Kepatuhan</option>
+          <option value="khusus">Audit Khusus / Investigatif</option>
+        </select>
+        <div class="field-hint">Klasifikasi penugasan audit. Berlaku untuk temuan induk beserta sub temuannya.</div>
+      </div>
+
       <div class="form-field">
         <label>Kode Temuan (LHP)</label>
         <input id="m-no" type="text" placeholder="Dibuat otomatis" readonly>

@@ -35,8 +35,9 @@ class BatlController extends Controller
             'nomor'     => ['required', 'string', 'max:120'],
             'tanggal'   => ['required', 'date'],
             'catatan'   => ['nullable', 'string', 'max:5000'],
-            'file'      => ['nullable', 'file', 'max:' . self::MAX_KB, 'mimes:' . self::EXT],
+            'file'      => [config('etlhp.berkas_wajib', true) ? 'required' : 'nullable', 'file', 'max:' . self::MAX_KB, 'mimes:' . self::EXT],
         ], [
+            'file.required'  => 'Berkas Berita Acara Tindak Lanjut wajib diunggah.',
             'temuan_id.*'    => 'Temuan tidak valid.',
             'nomor.required' => 'Nomor BATL wajib diisi.',
             'nomor.max'      => 'Nomor BATL maksimal 120 karakter.',
@@ -57,8 +58,8 @@ class BatlController extends Controller
         if ($temuan->batl) {
             return response()->json(['success' => false, 'message' => 'BATL untuk temuan ini sudah terbit.'], 422);
         }
-        if ($temuan->tlStatus() !== BuktiTindakLanjut::STATUS_TERVERIFIKASI) {
-            return response()->json(['success' => false, 'message' => 'BATL hanya dapat diterbitkan setelah bukti terbaru berstatus terverifikasi.'], 422);
+        if ($alasan = $temuan->batlBlocker()) {
+            return response()->json(['success' => false, 'message' => $alasan], 422);
         }
 
         $path = $name = $mime = $size = null;

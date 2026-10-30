@@ -43,20 +43,39 @@ class BuktiController extends Controller
             'tlStatus' => $temuan->tlStatus(),
             'batl'     => $temuan->batl ? BatlController::present($temuan->batl) : null,
             'canBatl'  => $this->canManageTemuan($temuan) && $this->bisaTerbitBatl($temuan),
+            // Alasan BATL belum bisa terbit (mis. rekomendasi lain belum tuntas); hanya untuk sisi auditor
+            'batlAlasan' => ($this->isStaff() && $temuan->tlStatus() === BuktiTindakLanjut::STATUS_TERVERIFIKASI)
+                ? $temuan->batlBlocker() : null,
         ]);
     }
 
     // ── POST /api/bukti  (multipart/form-data) ────────────────────
     public function store(Request $request)
     {
+        // Nominal boleh dikirim "1.500.000,50" atau "1500000.50"; dinormalkan ke angka murni
+        $request->merge([
+            'ntpn'            => strtoupper(trim((string) $request->input('ntpn', ''))) ?: null,
+            'nominal_setoran' => $this->normalNominal($request->input('nominal_setoran')),
+        ]);
+
+        $berkasWajib = (bool) config('etlhp.berkas_wajib', true);
+
         $v = Validator::make($request->all(), [
             'temuan_id'       => ['required', 'integer', 'exists:temuan,id'],
             'tanggal_mulai'   => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'uraian'          => ['required', 'string', 'max:5000'],
-            'file'            => ['nullable', 'file', 'max:' . self::MAX_KB, 'mimes:' . self::EXT],
+            'ntpn'            => ['nullable', 'regex:/^[A-Z0-9]{16}$/', 'required_with:nominal_setoran'],
+            'nominal_setoran' => ['nullable', 'numeric', 'min:0', 'max:9999999999999999', 'required_with:ntpn'],
+            'file'            => [$berkasWajib ? 'required' : 'nullable', 'file', 'max:' . self::MAX_KB, 'mimes:' . self::EXT],
         ], [
             'temuan_id.*'              => 'Temuan tidak valid.',
+            'ntpn.regex'               => 'NTPN harus 16 karakter huruf/angka.',
+            'ntpn.required_with'       => 'NTPN wajib diisi bila nominal setoran diisi.',
+            'nominal_setoran.numeric'  => 'Nominal setoran harus berupa angka.',
+            'nominal_setoran.min'      => 'Nominal setoran tidak boleh negatif.',
+            'nominal_setoran.required_with' => 'Nominal setoran wajib diisi bila NTPN diisi.',
+            'file.required'            => 'Berkas bukti dukung (eviden) wajib diunggah.',
             'tanggal_mulai.required'   => 'Tanggal mulai tindak lanjut wajib diisi.',
             'tanggal_mulai.date'       => 'Tanggal mulai tidak valid.',
             'tanggal_selesai.required' => 'Tanggal selesai tindak lanjut wajib diisi.',
@@ -101,6 +120,9 @@ class BuktiController extends Controller
             'tanggal_mulai'   => $request->input('tanggal_mulai'),
             'tanggal_selesai' => $request->input('tanggal_selesai'),
             'uraian'          => trim((string) $request->input('uraian')),
+            'ntpn'            => $request->input('ntpn') ?: null,
+            'nominal_setoran' => $request->input('nominal_setoran') !== null && $request->input('nominal_setoran') !== ''
+                                    ? $request->input('nominal_setoran') : null,
             'file_path'       => $path,
             'file_name'       => $name,
             'file_mime'       => $mime,
@@ -212,10 +234,25 @@ class BuktiController extends Controller
         return true;
     }
 
-    /** BATL boleh terbit bila belum ada BATL dan bukti terbaru sudah terverifikasi. */
+    /** BATL boleh terbit bila belum ada BATL, bukti terbaru terverifikasi, dan seluruh rekomendasi tuntas. */
     private function bisaTerbitBatl(Temuan $temuan): bool
     {
-        return $temuan->tlStatus() === BuktiTindakLanjut::STATUS_TERVERIFIKASI;
+        return $temuan->batlBlocker() === null;
+    }
+
+    /** "Rp 1.500.000,50" / "1.500.000,50" / "1500000.50" -> "1500000.50"; kosong -> null */
+    private function normalNominal($v): ?string
+    {
+        $s = trim(preg_replace('/[^\d.,-]/', '', (string) $v));
+        if ($s === '') {
+            return null;
+        }
+        if (str_contains($s, ',')) {                 // format Indonesia: titik ribuan, koma desimal
+            $s = str_replace(['.', ','], ['', '.'], $s);
+        } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $s)) {   // 1.500.000 (titik = ribuan)
+            $s = str_replace('.', '', $s);
+        }
+        return $s;
     }
 
     private function present(BuktiTindakLanjut $b): array
@@ -226,6 +263,8 @@ class BuktiController extends Controller
             'tanggalMulai'    => optional($b->tanggal_mulai)->format('Y-m-d'),
             'tanggalSelesai'  => optional($b->tanggal_selesai)->format('Y-m-d'),
             'uraian'          => $b->uraian,
+            'ntpn'            => $b->ntpn,
+            'nominalSetoran'  => $b->nominal_setoran !== null ? (float) $b->nominal_setoran : null,
             'fileName'        => $b->file_name,
             'fileSize'        => $b->file_size,
             'fileUrl'         => $b->file_path ? '/api/bukti/' . $b->id . '/file' : null,

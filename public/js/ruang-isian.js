@@ -71,8 +71,10 @@ function riReadFilters(prefix) {
 
 // ══════════════════ TAMPILAN RINCIAN ═══════════════════
 const RI_CARDS = [
+  { key: 'Kondisi',     title: 'Kondisi',      icon: 'search',         cls: 'blue'   },
   { key: 'Kriteria',    title: 'Kriteria',     icon: 'target',         cls: 'blue'   },
   { key: 'Sebab',       title: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
+  { key: 'Akibat',      title: 'Akibat',       icon: 'alert-triangle', cls: 'orange' },
   { key: 'Rekomendasi', title: 'Rekomendasi',  icon: 'clipboard-list', cls: 'purple' },
   { key: 'RencanaAksi', title: 'Rencana Aksi', icon: 'file-text',      cls: 'orange' }
 ];
@@ -519,6 +521,8 @@ function openModal(pic, row) {
   ['m-no', 'm-temuan', 'm-subtemuan', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  const jenisEl = document.getElementById('m-jenis');
+  if (jenisEl) jenisEl.value = '';
 
   const r = row ? S.allR.find(x => String(x._row) === String(row)) : null;
   renderPicChecklist(r ? splitPics(r.PIC) : (pic ? splitPics(pic) : []));
@@ -535,11 +539,16 @@ function openModal(pic, row) {
       document.getElementById('m-jadwal').value       = r.JadwalPelaksanaan || '';
       document.getElementById('m-output').value       = cleanOutput(r.Output);
       setSumberField(r.Sumber || 'bpk', true);
+      if (jenisEl) jenisEl.value = r.JenisAudit || '';
     }
   } else {
     setSumberField('inspektorat', false);
     onSumberChange();
   }
+
+  // Jenis audit: hanya sisi auditor/admin, dan hanya pada temuan induk (sub temuan mengikuti induk)
+  const jw = document.getElementById('m-jenis-wrap');
+  if (jw) jw.style.display = (isPicUser() || (r && r.isSubRow)) ? 'none' : '';
 }
 
 function openAddSubModal(row) {
@@ -562,6 +571,8 @@ function openAddSubModal(row) {
 
   renderPicChecklist(splitPics(r.PIC));
   applyModalRole();
+  const jwSub = document.getElementById('m-jenis-wrap');
+  if (jwSub) jwSub.style.display = 'none';          // sub temuan mengikuti jenis audit induknya
 
   ['m-subtemuan', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
     document.getElementById(id).value = '';
@@ -590,8 +601,10 @@ function saveTemuan() {
     PIC: getSelectedPics().join(PIC_SEP),
     Temuan: document.getElementById('m-temuan').value.trim(),
     SubTemuan: document.getElementById('m-subtemuan').value.trim(),
+    Kondisi: keep('Kondisi'),
     Kriteria: keep('Kriteria'),
     Sebab: keep('Sebab'),
+    Akibat: keep('Akibat'),
     Rekomendasi: keep('Rekomendasi'),
     RencanaAksi: document.getElementById('m-rencanaaksi').value.trim(),
     JadwalPelaksanaan: document.getElementById('m-jadwal').value.trim(),
@@ -600,11 +613,14 @@ function saveTemuan() {
     parentRow: document.getElementById('m-parent-row').value,
   };
 
+  const jenisSel = document.getElementById('m-jenis');
+  if (jenisSel && !isPicUser() && !isSub && !(origRow && origRow.isSubRow)) fd.JenisAudit = jenisSel.value;
+
   if (isPicUser()) {
     const rowId = document.getElementById('m-row').value;
     const orig = rowId ? S.allR.find(x => String(x._row) === String(rowId)) : null;
     if (!orig) { showToast('Akun PIC hanya dapat mengisi temuan yang ditugaskan kepadanya', 'err'); return; }
-    ['No', 'Temuan', 'SubTemuan', 'Kriteria', 'Sebab', 'Rekomendasi', 'PIC'].forEach(k => { fd[k] = orig[k] == null ? '' : orig[k]; });
+    ['No', 'Temuan', 'SubTemuan', 'Kondisi', 'Kriteria', 'Sebab', 'Akibat', 'Rekomendasi', 'PIC'].forEach(k => { fd[k] = orig[k] == null ? '' : orig[k]; });
     fd.isSubAdd = false;
     fd.parentRow = '';
   }

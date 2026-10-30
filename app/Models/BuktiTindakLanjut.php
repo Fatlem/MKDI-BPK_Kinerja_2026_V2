@@ -16,6 +16,7 @@ class BuktiTindakLanjut extends Model
 
     protected $fillable = [
         'temuan_id', 'tanggal_mulai', 'tanggal_selesai', 'uraian',
+        'ntpn', 'nominal_setoran',
         'file_path', 'file_name', 'file_mime', 'file_size',
         'status', 'catatan_verifikasi',
         'diunggah_oleh', 'diverifikasi_oleh', 'diverifikasi_pada',
@@ -25,6 +26,7 @@ class BuktiTindakLanjut extends Model
         'tanggal_mulai'     => 'date',
         'tanggal_selesai'   => 'date',
         'diverifikasi_pada' => 'datetime',
+        'nominal_setoran'   => 'decimal:2',
     ];
 
     public function temuan()

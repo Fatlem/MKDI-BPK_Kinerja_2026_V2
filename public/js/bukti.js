@@ -145,6 +145,8 @@ function bkReset() {
   document.getElementById('bk-selesai').value = t;
   document.getElementById('bk-uraian').value  = '';
   document.getElementById('bk-file').value    = '';
+  const nt = document.getElementById('bk-ntpn');    if (nt) nt.value = '';
+  const nm = document.getElementById('bk-nominal'); if (nm) nm.value = '';
 }
 
 function bkPickFile(inp) {
@@ -173,17 +175,26 @@ async function bkSubmit() {
   if (!mulai || !selesai) { showToast('Tanggal mulai dan selesai wajib diisi', 'err'); return; }
   if (selesai < mulai)    { showToast('Tanggal selesai tidak boleh lebih awal dari tanggal mulai', 'err'); return; }
   if (!uraian)            { showToast('Uraian progres wajib diisi', 'err'); return; }
-  if (file && (!BK_EXT.includes(bkExt(file.name)) || file.size > BK_MAX_BYTES)) {
+  if (!file)              { showToast('Berkas bukti dukung (eviden) wajib diunggah', 'err'); return; }
+  if (!BK_EXT.includes(bkExt(file.name)) || file.size > BK_MAX_BYTES) {
     showToast('Berkas tidak valid (format atau ukuran)', 'err');
     return;
   }
+
+  const ntpn    = ((document.getElementById('bk-ntpn') || {}).value || '').trim().toUpperCase();
+  const nominal = ((document.getElementById('bk-nominal') || {}).value || '').trim();
+  if (ntpn && !/^[A-Z0-9]{16}$/.test(ntpn)) { showToast('NTPN harus 16 karakter huruf/angka', 'err'); return; }
+  if (ntpn && !nominal)                     { showToast('Nominal setoran wajib diisi bila NTPN diisi', 'err'); return; }
+  if (nominal && !ntpn)                     { showToast('NTPN wajib diisi bila nominal setoran diisi', 'err'); return; }
 
   const fd = new FormData();
   fd.append('temuan_id', _bk.rowId);
   fd.append('tanggal_mulai', mulai);
   fd.append('tanggal_selesai', selesai);
   fd.append('uraian', uraian);
-  if (file) fd.append('file', file);
+  if (ntpn)    fd.append('ntpn', ntpn);
+  if (nominal) fd.append('nominal_setoran', nominal);
+  fd.append('file', file);
 
   _bk.busy = true;
   bkSubmitLabel(true);
@@ -219,6 +230,7 @@ async function bkLoad() {
     _bk.list    = res.data || [];
     _bk.batl    = res.batl || null;
     _bk.canBatl = !!res.canBatl;
+    _bk.batlAlasan = res.batlAlasan || null;
     _bk.tl      = res.tlStatus || 'belum';
     bkSetStatus(_bk.tl === 'belum' ? null : _bk.tl);
     bkRenderBatl();
@@ -297,6 +309,7 @@ function bkItemHtml(b) {
         ${bkPill(b.status)}
       </div>
       <div class="bk-item-text">${esc(b.uraian)}</div>
+      ${(b.ntpn || b.nominalSetoran != null) ? `<div class="bk-setoran"><span>NTPN: <b>${esc(b.ntpn || '-')}</b></span><span>Nominal setoran: <b>${b.nominalSetoran != null ? 'Rp ' + Number(b.nominalSetoran).toLocaleString('id-ID') : '-'}</b></span></div>` : ''}
       <div class="bk-item-file">${file}</div>
       <div class="bk-item-meta">Dikirim oleh ${esc(b.diunggahOleh || '-')} · ${esc(b.dibuat || '')}${verifiedMeta}</div>
       ${note}
@@ -356,14 +369,16 @@ function bkRenderBatl() {
           <div class="bk-field"><label for="bk-batl-tgl">Tanggal BATL <span class="bk-req">*</span></label><input id="bk-batl-tgl" type="date" value="${bkToday()}"></div>
         </div>
         <div class="bk-block"><div class="bk-label">Catatan (opsional)</div><textarea id="bk-batl-cat" class="bk-textarea" maxlength="5000" placeholder="Catatan penyelesaian tindak lanjut"></textarea></div>
-        <div class="bk-block"><div class="bk-label"><i data-lucide="paperclip"></i> Berkas BATL (opsional, PDF/gambar/Word, maks 10 MB)</div><input id="bk-batl-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"></div>
+        <div class="bk-block"><div class="bk-label"><i data-lucide="paperclip"></i> Berkas BATL <span class="bk-req">*</span> (PDF/gambar/Word, maks 10 MB)</div><input id="bk-batl-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"></div>
         <div class="bk-actions"><button type="button" id="bk-batl-submit" class="bk-btn bk-btn-pri" onclick="bkBatlSubmit()"><i data-lucide="stamp" style="width:16px;height:16px;"></i> Terbitkan BATL</button></div>
       </div>`;
     refreshIcons();
     return;
   }
 
-  box.innerHTML = prog;
+  const blokir = (staff && !_bk.canBatl && _bk.tl === 'terverifikasi' && _bk.batlAlasan)
+    ? `<div class="bk-note"><strong>BATL belum dapat diterbitkan:</strong> ${esc(_bk.batlAlasan)}</div>` : '';
+  box.innerHTML = prog + blokir;
   refreshIcons();
 }
 
@@ -377,7 +392,8 @@ async function bkBatlSubmit() {
 
   if (!nomor) { showToast('Nomor BATL wajib diisi', 'err'); return; }
   if (!tgl)   { showToast('Tanggal BATL wajib diisi', 'err'); return; }
-  if (file && (!['pdf','png','jpg','jpeg','doc','docx'].includes(bkExt(file.name)) || file.size > BK_MAX_BYTES)) {
+  if (!file) { showToast('Berkas BATL wajib diunggah', 'err'); return; }
+  if (!['pdf','png','jpg','jpeg','doc','docx'].includes(bkExt(file.name)) || file.size > BK_MAX_BYTES) {
     showToast('Berkas BATL tidak valid (PDF/gambar/Word, maks 10 MB)', 'err'); return;
   }
 
@@ -386,7 +402,7 @@ async function bkBatlSubmit() {
   fd.append('nomor', nomor);
   fd.append('tanggal', tgl);
   if (cat) fd.append('catatan', cat);
-  if (file) fd.append('file', file);
+  fd.append('file', file);
 
   const btn = document.getElementById('bk-batl-submit');
   _bk.busy = true; if (btn) btn.disabled = true;

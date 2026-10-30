@@ -20,7 +20,6 @@ class PicSeeder extends Seeder
             'Deputi Bidang Koordinasi Keterjangkauan dan Keamanan Pangan',
             'Deputi Bidang Koordinasi Sumber Daya Maritim',
             'Staf Ahli Bidang Konektivitas',
-            'Inspektorat',
         ];
 
         foreach ($list as $nama) {

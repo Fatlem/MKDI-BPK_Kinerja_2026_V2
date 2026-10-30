@@ -42,7 +42,17 @@ class TemuanController extends Controller
             return $r->created_at?->format('Y') ?? '';
         };
 
-        $data = $rows->map(function ($r) use (&$lastNo, &$lastTemuan, $tahunOf) {
+        // Jenis audit disimpan di temuan induk; sub temuan mengikuti induknya
+        $jenisOf = function ($r) use ($byId) {
+            $guard = 0;
+            while (! $r->jenis_audit && $r->parent_id && isset($byId[$r->parent_id]) && $guard++ < 20) {
+                $r = $byId[$r->parent_id];
+            }
+            return $r->jenis_audit ?: '';
+        };
+
+        $data = $rows->map(function ($r) use (&$lastNo, &$lastTemuan, $tahunOf, $jenisOf) {
+            $jenis = $jenisOf($r);
             $rawNo     = $r->no     ?? '';
             $rawTemuan = $r->temuan ?? '';
 
@@ -54,8 +64,10 @@ class TemuanController extends Controller
                 'No'                 => $rawNo     ?: $lastNo,
                 'Temuan'             => $rawTemuan ?: $lastTemuan,
                 'SubTemuan'          => $r->sub_temuan          ?? '',
+                'Kondisi'            => $r->kondisi             ?? '',
                 'Kriteria'           => $r->kriteria            ?? '',
                 'Sebab'              => $r->sebab               ?? '',
+                'Akibat'             => $r->akibat              ?? '',
                 'Rekomendasi'        => $r->rekomendasi         ?? '',
                 'PIC'                => $r->pic                 ?? '',
                 'RencanaAksi'        => $r->rencana_aksi        ?? '',
@@ -63,6 +75,8 @@ class TemuanController extends Controller
                 'Output'             => $r->output              ?? '',
                 'isSubRow'           => ($r->parent_id !== null),
                 'BuktiCount'         => (int) $r->bukti_count,
+                'JenisAudit'         => $jenis,
+                'JenisAuditLabel'    => Temuan::JENIS_AUDIT_LABEL[$jenis] ?? '',
                 'Sumber'             => $r->sumber ?: Temuan::SUMBER_BPK,
                 'SumberLabel'        => Temuan::SUMBER_LABEL[$r->sumber ?: Temuan::SUMBER_BPK] ?? '',
                 'Tahun'              => $tahunOf($r),
@@ -125,9 +139,12 @@ class TemuanController extends Controller
                 'sumber'              => $sumber,
                 'created_by'          => $createdBy,
                 'temuan'              => $isSub ? null : ($fd['Temuan']  ?? null),
+                'jenis_audit'         => $isSub ? null : $this->cleanJenis($fd['JenisAudit'] ?? null),
                 'sub_temuan'          => $fd['SubTemuan']         ?? null,
+                'kondisi'             => $fd['Kondisi']           ?? null,
                 'kriteria'            => $fd['Kriteria']          ?? null,
                 'sebab'               => $fd['Sebab']             ?? null,
+                'akibat'              => $fd['Akibat']            ?? null,
                 'rekomendasi'         => $fd['Rekomendasi']       ?? null,
                 'pic'                 => $fd['PIC']               ?? null,
                 'rencana_aksi'        => $fd['RencanaAksi']       ?? null,
@@ -190,6 +207,21 @@ class TemuanController extends Controller
             'output'              => $fd['Output']            ?? null,
         ]);
 
+        // Kolom baru: hanya diubah bila dikirim (klien lama tidak mengirimnya -> nilai lama dipertahankan)
+        $extra = [];
+        foreach (['Kondisi' => 'kondisi', 'Akibat' => 'akibat'] as $key => $column) {
+            if (array_key_exists($key, $fd)) {
+                $extra[$column] = $fd[$key];
+            }
+        }
+        if ($temuan->parent_id === null && array_key_exists('JenisAudit', $fd)) {
+            $jenis = $this->cleanJenis($fd['JenisAudit']);
+            $extra['jenis_audit'] = $jenis;
+        }
+        if ($extra) {
+            $temuan->update($extra);
+        }
+
         $this->syncPics($fd['PIC'] ?? '');
 
         return response()->json(['success' => true]);
@@ -224,6 +256,13 @@ class TemuanController extends Controller
     {
         $v = strtolower(trim((string) $v));
         return array_key_exists($v, Temuan::KODE_PREFIX) ? $v : Temuan::SUMBER_BPK;
+    }
+
+    /** Jenis audit valid atau null (belum ditentukan) */
+    private function cleanJenis($v): ?string
+    {
+        $v = strtolower(trim((string) $v));
+        return array_key_exists($v, Temuan::JENIS_AUDIT_LABEL) ? $v : null;
     }
 
     private function generateKode(string $sumber): string
