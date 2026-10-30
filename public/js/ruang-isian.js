@@ -269,9 +269,17 @@ function riTableHtml(groups, cfg) {
           </span>
         </td>
         <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">
-          <span class="rounded-md bg-blue-50 px-2.5 py-1 text-[12px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+          <div class="flex flex-col items-start gap-1">
+            <span class="rounded-md bg-blue-50 px-2.5 py-1 text-[12px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+            ${dokumenBadge(parent)}
+          </div>
         </td>
-        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">${sumberBadge(parent) || '<span class="text-slate-400">-</span>'}</td>
+        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">
+          <div class="flex flex-col items-start gap-1">
+            ${sumberBadge(parent) || '<span class="text-slate-400">-</span>'}
+            ${jenisAuditBadge(parent)}
+          </div>
+        </td>
         <td class="border-b border-slate-100 px-3 py-4">
           <div class="whitespace-pre-line break-words text-[13.5px] font-semibold leading-snug text-slate-900">${esc(parent.Temuan) || '—'}</div>
           <div class="mt-1 text-[11.5px] text-slate-500">${subCountLabel(items.length)}</div>

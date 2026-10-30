@@ -34,13 +34,14 @@ class TemuanController extends Controller
         // Tahun sub temuan mengikuti temuan induknya (bukan tanggal sub dibuat),
         // supaya satu temuan tidak terpecah ke beberapa tahun.
         $byId = $rows->keyBy('id');
-        $tahunOf = function ($r) use ($byId) {
+        $rootOf = function ($r) use ($byId) {
             $guard = 0;
             while ($r->parent_id && isset($byId[$r->parent_id]) && $guard++ < 20) {
                 $r = $byId[$r->parent_id];
             }
-            return $r->created_at?->format('Y') ?? '';
+            return $r;
         };
+        $tahunOf = fn ($r) => $rootOf($r)->created_at?->format('Y') ?? '';
 
         // Jenis audit disimpan di temuan induk; sub temuan mengikuti induknya
         $jenisOf = function ($r) use ($byId) {
@@ -51,7 +52,8 @@ class TemuanController extends Controller
             return $r->jenis_audit ?: '';
         };
 
-        $data = $rows->map(function ($r) use (&$lastNo, &$lastTemuan, $tahunOf, $jenisOf) {
+        $data = $rows->map(function ($r) use (&$lastNo, &$lastTemuan, $rootOf, $tahunOf, $jenisOf) {
+            $root  = $rootOf($r);
             $jenis = $jenisOf($r);
             $rawNo     = $r->no     ?? '';
             $rawTemuan = $r->temuan ?? '';
@@ -79,11 +81,14 @@ class TemuanController extends Controller
                 'JenisAuditLabel'    => Temuan::JENIS_AUDIT_LABEL[$jenis] ?? '',
                 'Sumber'             => $r->sumber ?: Temuan::SUMBER_BPK,
                 'SumberLabel'        => Temuan::SUMBER_LABEL[$r->sumber ?: Temuan::SUMBER_BPK] ?? '',
+                'StatusDokumen'      => $root->status_dokumen ?: Temuan::DOKUMEN_LHP_SEMENTARA,
+                'NoLha'              => $root->no_lha ?? '',
                 'Tahun'              => $tahunOf($r),
                 'CreatedBy'          => $r->created_by ?? '',
                 'TLStatus'           => $r->tlStatus(),
                 'BatlNomor'          => $r->batl?->nomor ?? '',
                 'BatlTanggal'        => $r->batl?->tanggal?->format('Y-m-d') ?? '',
+                'BatlSignedBoth'     => $r->batl ? $r->batl->isSignedBoth() : false,
             ];
         });
 
@@ -155,6 +160,7 @@ class TemuanController extends Controller
             ]);
         });
 
+        $temuan->syncStatusLha();
         $this->syncPics($fd['PIC'] ?? '');
 
         return response()->json(['success' => true, 'row' => $temuan->id, 'no' => $temuan->no]);

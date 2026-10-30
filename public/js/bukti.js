@@ -227,11 +227,14 @@ async function bkLoad() {
     const res = await apiFetch('/api/bukti?temuan_id=' + encodeURIComponent(id));
     if (id !== _bk.rowId) return;                          // modal sudah pindah ke rincian lain
     if (!res || !res.success) throw new Error((res && res.message) ? res.message : 'Gagal memuat riwayat');
-    _bk.list    = res.data || [];
-    _bk.batl    = res.batl || null;
-    _bk.canBatl = !!res.canBatl;
-    _bk.batlAlasan = res.batlAlasan || null;
-    _bk.tl      = res.tlStatus || 'belum';
+    _bk.list          = res.data || [];
+    _bk.batl          = res.batl || null;
+    _bk.canBatl       = !!res.canBatl;
+    _bk.batlAlasan    = res.batlAlasan || null;
+    _bk.tl            = res.tlStatus || 'belum';
+    _bk.progress      = res.progress || { total: 1, tuntas: 0, semuaTuntas: false };
+    _bk.statusDokumen = res.statusDokumen || 'lhp_sementara';
+    _bk.noLha         = res.noLha || null;
     bkSetStatus(_bk.tl === 'belum' ? null : _bk.tl);
     bkRenderBatl();
     bkRenderList();
@@ -328,27 +331,68 @@ function bkRenderBatl() {
   // Form unggah: hanya biro (PIC) / admin, dan tertutup setelah BATL terbit
   if (form) form.style.display = (isAuditorUser() || _bk.batl) ? 'none' : '';
 
-  // Biro melihat posisi proses temuan ini (progres)
-  const prog = `<div class="bk-progress"><span>Status tindak lanjut:</span> ${tlPill(_bk.tl)}</div>`;
+  const p = _bk.progress || { total: 1, tuntas: 0, semuaTuntas: false };
+  const isLha = _bk.statusDokumen === 'lha';
+  const docBanner = isLha
+    ? `<span class="bk-pill bk-st-batl"><i data-lucide="award"></i> LHA Resmi (${esc(_bk.noLha || 'Tercatat')})</span>`
+    : `<span class="bk-pill bk-st-menunggu"><i data-lucide="file-clock"></i> LHP (Temuan Sementara)</span>`;
+
+  // Biro melihat posisi proses temuan ini (progres) + status dokumen LHP vs LHA
+  const prog = `
+    <div class="bk-progress" style="flex-wrap:wrap;gap:8px;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span>Status tindak lanjut:</span> ${tlPill(_bk.tl)}
+        ${docBanner}
+      </div>
+      <div style="font-size:12px;color:#475569;font-weight:600;">
+        Ketuntasan Rekomendasi Temuan: <strong>${p.tuntas}/${p.total} Tuntas</strong>
+      </div>
+    </div>`;
 
   if (_bk.batl) {
     const b = _bk.batl;
     const file = b.fileUrl
       ? `<a href="${esc(b.fileUrl)}" target="_blank" rel="noopener"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> ${esc(b.fileName || 'Berkas BATL')}</a> <span class="bk-item-nofile">(${esc(bkSize(b.fileSize))})</span>`
       : '<span class="bk-item-nofile">Tanpa berkas</span>';
+
+    const ttdAuditorHtml = b.ttdAuditorPada
+      ? `<span style="color:#047857;font-weight:700;"><i data-lucide="check-circle-2" style="width:13px;height:13px;display:inline;vertical-align:middle;"></i> Disepakati oleh ${esc(b.ttdAuditorOleh || 'Auditor')} (${esc(b.ttdAuditorPada)})</span>`
+      : `<span style="color:#b45309;">Menunggu Tanda Tangan Auditor</span>`;
+
+    const ttdAuditeeHtml = b.ttdAuditeePada
+      ? `<span style="color:#047857;font-weight:700;"><i data-lucide="check-circle-2" style="width:13px;height:13px;display:inline;vertical-align:middle;"></i> Disepakati oleh ${esc(b.ttdAuditeeOleh || 'Satker Auditee')} (${esc(b.ttdAuditeePada)})</span>`
+      : `<span style="color:#b45309;font-weight:600;">Menunggu Tanda Tangan Kesepakatan Auditee (Satker PIC)</span>`;
+
+    const canSignAuditee = !b.ttdAuditeePada && (isPicUser() || isAdminUser() || isAuditorUser());
+    const signBtn = canSignAuditee
+      ? `<button class="bk-btn bk-btn-sm bk-btn-pri" onclick="bkBatlSign(${Number(b.id)})"><i data-lucide="pen-tool" style="width:13px;height:13px;"></i> Tanda Tangani Kesepakatan Auditee &amp; Tutup LHP Menjadi LHA</button>`
+      : '';
+
+    const lhaNotice = b.signedBoth
+      ? `<div class="bk-note bk-note-ok" style="margin-top:8px;"><strong><i data-lucide="award" style="width:14px;height:14px;display:inline;vertical-align:middle;"></i> LHP Resmi Ditutup &amp; Berubah Menjadi LHA:</strong> Kedua pihak (Auditor &amp; Auditee) telah menandatangani kesepakatan. Data ini resmi tercatat sebagai <strong>${esc(_bk.noLha || 'LHA')}</strong>.</div>`
+      : `<div class="bk-note bk-note-pending" style="margin-top:8px;"><strong>Status Saat Ini Masih LHP (Temuan Sementara):</strong> Menunggu tanda tangan kesepakatan dari pihak Auditee (Satker) agar LHP resmi ditutup dan berubah menjadi LHA.</div>`;
+
     box.innerHTML = prog + `
       <div class="bk-batl bk-batl-done">
-        <div class="bk-batl-head"><i data-lucide="file-check-2"></i> Berita Acara Tindak Lanjut (BATL)</div>
+        <div class="bk-batl-head"><i data-lucide="file-check-2"></i> Berita Acara Tindak Lanjut (BATL) &amp; Kesepakatan LHA</div>
         <div class="bk-batl-grid">
           <div><span>Nomor BATL</span><strong>${esc(b.nomor)}</strong></div>
           <div><span>Tanggal</span><strong>${bkDate(b.tanggal)}</strong></div>
           <div><span>Diterbitkan oleh</span><strong>${esc(b.diterbitkanOleh || '-')}</strong></div>
         </div>
-        ${b.catatan ? `<div class="bk-note bk-note-ok"><strong>Catatan:</strong> ${esc(b.catatan)}</div>` : ''}
+        <div class="bk-grid-2" style="margin-top:10px;padding:10px;background:#fff;border-radius:10px;border:1px solid #cbd5e1;font-size:12px;">
+          <div><div style="color:#64748b;font-weight:600;margin-bottom:2px;">Tanda Tangan Auditor:</div>${ttdAuditorHtml}</div>
+          <div><div style="color:#64748b;font-weight:600;margin-bottom:2px;">Tanda Tangan Auditee (Satker):</div>${ttdAuditeeHtml}</div>
+        </div>
+        ${lhaNotice}
+        ${b.catatan ? `<div class="bk-note bk-note-ok" style="margin-top:8px;"><strong>Catatan:</strong> ${esc(b.catatan)}</div>` : ''}
         <div class="bk-item-file" style="margin-top:8px;">${file}</div>
-        ${staff ? `<div class="bk-item-actions"><button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkToggle('bk-batl-cancel')"><i data-lucide="undo-2" style="width:13px;height:13px;"></i> Batalkan BATL</button></div>
-        <div id="bk-batl-cancel" class="bk-inline">
-          <div class="bk-note">Batalkan BATL? Temuan kembali berstatus proses dan biro dapat mengirim bukti lagi.</div>
+        <div class="bk-item-actions" style="margin-top:10px;">
+          ${signBtn}
+          ${staff ? `<button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkToggle('bk-batl-cancel')"><i data-lucide="undo-2" style="width:13px;height:13px;"></i> Batalkan BATL</button>` : ''}
+        </div>
+        ${staff ? `<div id="bk-batl-cancel" class="bk-inline">
+          <div class="bk-note">Batalkan BATL? Status LHA akan dikembalikan menjadi LHP (Temuan Sementara) dan biro dapat mengirim bukti lagi.</div>
           <div class="bk-actions">
             <button class="bk-btn bk-btn-sm" onclick="bkToggle('bk-batl-cancel')">Tidak</button>
             <button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkBatlCancel(${Number(b.id)})">Ya, Batalkan</button>
@@ -362,14 +406,20 @@ function bkRenderBatl() {
   if (staff && _bk.canBatl) {
     box.innerHTML = prog + `
       <div class="bk-batl">
-        <div class="bk-batl-head"><i data-lucide="file-signature"></i> Terbitkan BATL</div>
-        <div class="bk-sub" style="margin-bottom:12px;">Bukti sudah terverifikasi. Terbitkan Berita Acara Tindak Lanjut untuk menyelesaikan temuan ini.</div>
+        <div class="bk-batl-head"><i data-lucide="file-signature"></i> Terbitkan BATL &amp; Kesepakatan Penutupan LHP &rarr; LHA</div>
+        <div class="bk-sub" style="margin-bottom:12px;">Bukti sudah terverifikasi dan seluruh rekomendasi tuntas. Terbitkan Berita Acara Tindak Lanjut (BATL) dan tanda tangan kesepakatan untuk menutup LHP menjadi LHA.</div>
         <div class="bk-grid-2">
           <div class="bk-field"><label for="bk-batl-nomor">Nomor BATL <span class="bk-req">*</span></label><input id="bk-batl-nomor" type="text" maxlength="120" placeholder="mis. BATL/001/2026"></div>
           <div class="bk-field"><label for="bk-batl-tgl">Tanggal BATL <span class="bk-req">*</span></label><input id="bk-batl-tgl" type="date" value="${bkToday()}"></div>
         </div>
         <div class="bk-block"><div class="bk-label">Catatan (opsional)</div><textarea id="bk-batl-cat" class="bk-textarea" maxlength="5000" placeholder="Catatan penyelesaian tindak lanjut"></textarea></div>
         <div class="bk-block"><div class="bk-label"><i data-lucide="paperclip"></i> Berkas BATL <span class="bk-req">*</span> (PDF/gambar/Word, maks 10 MB)</div><input id="bk-batl-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"></div>
+        <div class="bk-block" style="margin-top:8px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:#1e293b;cursor:pointer;">
+            <input id="bk-batl-both" type="checkbox" checked>
+            <span>Berkas BATL telah ditandatangani bersama oleh Auditor &amp; Satker (Auditee) &mdash; langsung tutup LHP dan ubah menjadi <strong>LHA Resmi</strong></span>
+          </label>
+        </div>
         <div class="bk-actions"><button type="button" id="bk-batl-submit" class="bk-btn bk-btn-pri" onclick="bkBatlSubmit()"><i data-lucide="stamp" style="width:16px;height:16px;"></i> Terbitkan BATL</button></div>
       </div>`;
     refreshIcons();
@@ -387,6 +437,7 @@ async function bkBatlSubmit() {
   const nomor = document.getElementById('bk-batl-nomor').value.trim();
   const tgl   = document.getElementById('bk-batl-tgl').value;
   const cat   = document.getElementById('bk-batl-cat').value.trim();
+  const both  = !!(document.getElementById('bk-batl-both') && document.getElementById('bk-batl-both').checked);
   const inp   = document.getElementById('bk-batl-file');
   const file  = inp.files && inp.files[0];
 
@@ -401,6 +452,7 @@ async function bkBatlSubmit() {
   fd.append('temuan_id', _bk.rowId);
   fd.append('nomor', nomor);
   fd.append('tanggal', tgl);
+  fd.append('ttd_auditee_sekaligus', both ? '1' : '0');
   if (cat) fd.append('catatan', cat);
   fd.append('file', file);
 
@@ -409,7 +461,7 @@ async function bkBatlSubmit() {
   try {
     const res = await bkUpload('/api/batl', fd);
     if (!res || !res.success) throw new Error((res && res.message) ? res.message : 'Gagal menerbitkan BATL');
-    showToast('BATL berhasil diterbitkan. Temuan selesai.', 'ok');
+    showToast(both ? 'BATL terbit & disepakati kedua pihak. LHP resmi ditutup menjadi LHA!' : 'BATL berhasil diterbitkan. Menunggu tanda tangan kesepakatan Auditee.', 'ok');
     _bk.dirty = true;
     await bkLoad();
   } catch (e) {
@@ -417,6 +469,18 @@ async function bkBatlSubmit() {
     if (btn) btn.disabled = false;
   }
   _bk.busy = false;
+}
+
+async function bkBatlSign(id) {
+  try {
+    const res = await apiFetch('/api/batl/' + id + '/sign', 'POST', { pihak: 'auditee' });
+    if (!res || !res.success) throw new Error((res && res.message) ? res.message : 'Gagal menandatangani kesepakatan');
+    showToast('Kesepakatan ditandatangani! LHP resmi ditutup dan berubah menjadi LHA.', 'ok');
+    _bk.dirty = true;
+    await bkLoad();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'err');
+  }
 }
 
 async function bkBatlCancel(id) {

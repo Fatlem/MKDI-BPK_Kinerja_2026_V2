@@ -36,16 +36,20 @@ class BuktiController extends Controller
             ->map(fn ($b) => $this->present($b));
 
         $temuan->load(['bukti:id,temuan_id,status', 'batl']);
+        $root = $temuan->rootTemuan();
 
         return response()->json([
-            'success'  => true,
-            'data'     => $rows,
-            'tlStatus' => $temuan->tlStatus(),
-            'batl'     => $temuan->batl ? BatlController::present($temuan->batl) : null,
-            'canBatl'  => $this->canManageTemuan($temuan) && $this->bisaTerbitBatl($temuan),
+            'success'       => true,
+            'data'          => $rows,
+            'tlStatus'      => $temuan->tlStatus(),
+            'batl'          => $temuan->batl ? BatlController::present($temuan->batl) : null,
+            'canBatl'       => $this->canManageTemuan($temuan) && $this->bisaTerbitBatl($temuan),
             // Alasan BATL belum bisa terbit (mis. rekomendasi lain belum tuntas); hanya untuk sisi auditor
-            'batlAlasan' => ($this->isStaff() && $temuan->tlStatus() === BuktiTindakLanjut::STATUS_TERVERIFIKASI)
+            'batlAlasan'    => ($this->isStaff() && $temuan->tlStatus() === BuktiTindakLanjut::STATUS_TERVERIFIKASI)
                 ? $temuan->batlBlocker() : null,
+            'progress'      => $temuan->rekomendasiProgress(),
+            'statusDokumen' => $root->status_dokumen ?: Temuan::DOKUMEN_LHP_SEMENTARA,
+            'noLha'         => $root->no_lha,
         ]);
     }
 
@@ -131,6 +135,8 @@ class BuktiController extends Controller
             'diunggah_oleh'   => $this->currentUser()['username'] ?? null,
         ]);
 
+        $temuan->syncStatusLha();
+
         return response()->json(['success' => true, 'data' => $this->present($bukti)]);
     }
 
@@ -190,6 +196,8 @@ class BuktiController extends Controller
             'diverifikasi_oleh'  => $this->username() ?: null,
             'diverifikasi_pada'  => now(),
         ]);
+
+        $bukti->temuan->syncStatusLha();
 
         return response()->json(['success' => true, 'data' => $this->present($bukti)]);
     }

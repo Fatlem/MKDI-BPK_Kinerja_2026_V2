@@ -14,10 +14,14 @@ class Temuan extends Model
         'output', 'parent_id', 'sort_order',
         'sumber', 'created_by',
         'jenis_audit', 'kondisi', 'akibat',
+        'status_dokumen', 'no_lha',
     ];
 
     public const SUMBER_BPK         = 'bpk';
     public const SUMBER_INSPEKTORAT = 'inspektorat';
+
+    public const DOKUMEN_LHP_SEMENTARA = 'lhp_sementara';
+    public const DOKUMEN_LHA           = 'lha';
 
     /** Awalan kode LHP per sumber audit. Contoh: LHP-BPK-001, LHP-INS-001 */
     public const KODE_PREFIX = [
@@ -116,6 +120,81 @@ class Temuan extends Model
             return 'Masih ada ' . $belum->count() . ' rekomendasi lain pada temuan ini yang belum tuntas (terverifikasi). BATL terbit setelah seluruh rekomendasi tuntas.';
         }
         return null;
+    }
+
+    /** Ambil baris induk utama dari temuan/sub-temuan ini. */
+    public function rootTemuan(): self
+    {
+        $cur   = $this;
+        $guard = 0;
+        while ($cur->parent_id && $guard++ < 20) {
+            $parent = self::find($cur->parent_id);
+            if (! $parent) {
+                break;
+            }
+            $cur = $parent;
+        }
+        return $cur;
+    }
+
+    /**
+     * Hitung progres ketuntasan seluruh rekomendasi/sub-temuan dalam satu Temuan Induk (Fase 4 - D7).
+     * Mengembalikan ['total' => int, 'tuntas' => int, 'semuaTuntas' => bool].
+     */
+    public function rekomendasiProgress(): array
+    {
+        $root  = $this->rootTemuan();
+        $items = self::with(['bukti:id,temuan_id,status', 'batl'])
+            ->where(fn ($q) => $q->where('id', $root->id)->orWhere('parent_id', $root->id))
+            ->get();
+
+        $total  = $items->count();
+        $tuntas = $items->filter(fn (self $r) => in_array($r->tlStatus(), [
+            BuktiTindakLanjut::STATUS_TERVERIFIKASI,
+            'batl',
+        ], true))->count();
+
+        return [
+            'total'       => $total,
+            'tuntas'      => $tuntas,
+            'semuaTuntas' => $total > 0 && $tuntas === $total,
+        ];
+    }
+
+    /**
+     * Sinkronisasi status dokumen (LHP Sementara -> LHA) pada Temuan Induk beserta seluruh sub-temuannya.
+     * Berubah menjadi LHA hanya jika seluruh rekomendasi pada temuan induk sudah tuntas
+     * dan BATL telah ditandatangani oleh kedua pihak (Auditor & Auditee).
+     */
+    public function syncStatusLha(): void
+    {
+        $root  = $this->rootTemuan();
+        $items = self::with(['bukti:id,temuan_id,status', 'batl'])
+            ->where(fn ($q) => $q->where('id', $root->id)->orWhere('parent_id', $root->id))
+            ->get();
+
+        $prog = $this->rekomendasiProgress();
+        $hasSignedBatl = $items->contains(fn (self $r) => $r->batl && $r->batl->isSignedBoth());
+
+        if ($hasSignedBatl && $prog['semuaTuntas']) {
+            $kodeLhp = (string) ($root->no ?: 'LHP-INS-' . str_pad((string) $root->id, 3, '0', STR_PAD_LEFT));
+            $kodeLha = preg_replace('/^LHP-/i', 'LHA-', $kodeLhp);
+            if ($kodeLha === $kodeLhp) {
+                $kodeLha = 'LHA-' . $kodeLhp;
+            }
+
+            self::where(fn ($q) => $q->where('id', $root->id)->orWhere('parent_id', $root->id))
+                ->update([
+                    'status_dokumen' => self::DOKUMEN_LHA,
+                    'no_lha'         => $kodeLha,
+                ]);
+        } else {
+            self::where(fn ($q) => $q->where('id', $root->id)->orWhere('parent_id', $root->id))
+                ->update([
+                    'status_dokumen' => self::DOKUMEN_LHP_SEMENTARA,
+                    'no_lha'         => null,
+                ]);
+        }
     }
 
     protected static function booted(): void

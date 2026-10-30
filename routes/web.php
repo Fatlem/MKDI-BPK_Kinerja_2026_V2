@@ -37,8 +37,9 @@ $apiRoutes = function () {
         Route::put('/bukti/{id}/verifikasi', [BuktiController::class, 'verifikasi']);
         Route::delete('/bukti/{id}',         [BuktiController::class, 'destroy']);
 
-        // Berita Acara Tindak Lanjut (BATL) - diterbitkan auditor
+        // Berita Acara Tindak Lanjut (BATL) - diterbitkan auditor & disepakati menjadi LHA
         Route::post('/batl',                 [BatlController::class,  'store']);
+        Route::post('/batl/{id}/sign',       [BatlController::class,  'sign']);
         Route::get('/batl/{id}/file',        [BatlController::class,  'file']);
         Route::delete('/batl/{id}',          [BatlController::class,  'destroy']);
     });

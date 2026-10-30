@@ -138,6 +138,8 @@ function rekapEntryHtml(g) {
         <div class="min-w-0 flex-1">
           <div class="mb-2 flex flex-wrap items-center gap-2">
             <span class="whitespace-nowrap rounded-md bg-blue-50 px-2.5 py-1 text-[11.5px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+            ${dokumenBadge(parent)}
+            ${jenisAuditBadge(parent)}
             <span class="whitespace-nowrap rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500">${subCountLabel(items.length)}</span>
           </div>
 

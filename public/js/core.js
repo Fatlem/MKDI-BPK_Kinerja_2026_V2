@@ -212,9 +212,30 @@ function isAuditorUser() { return roleOf(S.user) === 'auditor'; }
 // Sisi Inspektorat (admin atau auditor) = lawan dari akun PIC/biro
 function isStaffUser() { return isAdminUser() || isAuditorUser(); }
 
-// Sumber audit temuan
+// Sumber audit temuan & Jenis Audit
 const SUMBER_LABEL = { bpk: 'BPK RI', inspektorat: 'Inspektorat' };
 function sumberLabel(r) { return (r && (r.SumberLabel || SUMBER_LABEL[r.Sumber])) || ''; }
+
+const JENIS_AUDIT_LABEL = {
+  kinerja:   'Audit Kinerja',
+  keuangan:  'Audit Keuangan',
+  kepatuhan: 'Audit Kepatuhan',
+  khusus:    'Audit Khusus / Investigatif'
+};
+function jenisAuditLabel(r) {
+  return (r && (r.JenisAuditLabel || JENIS_AUDIT_LABEL[r.JenisAudit])) || '';
+}
+function jenisAuditBadge(r) {
+  const lbl = jenisAuditLabel(r);
+  return lbl ? `<span class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 border border-indigo-100">${esc(lbl)}</span>` : '';
+}
+function dokumenBadge(r) {
+  if (r && r.StatusDokumen === 'lha') {
+    const code = r.NoLha ? ' · ' + r.NoLha : '';
+    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200" title="LHP telah ditutup dan disepakati Auditor &amp; Auditee menjadi LHA Resmi"><i data-lucide="award" style="width:12px;height:12px;" class="icon-plain"></i> LHA Resmi${esc(code)}</span>`;
+  }
+  return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200" title="Masih berstatus LHP (Temuan Sementara) hingga seluruh rekomendasi tuntas dan ditandatangani Auditor &amp; Auditee"><i data-lucide="file-clock" style="width:12px;height:12px;" class="icon-plain"></i> LHP (Temuan Sementara)</span>`;
+}
 
 // Status tindak lanjut (alur kerja biro -> auditor), dikirim server di r.TLStatus
 const TL_STATUS = {

@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 /**
- * Berita Acara Tindak Lanjut (BATL).
- * Diterbitkan auditor pemilik temuan setelah bukti terbaru terverifikasi.
- * Biro (PIC) hanya dapat melihat / mengunduh BATL pada temuannya.
+ * Berita Acara Tindak Lanjut (BATL) & Tanda Tangan Kesepakatan Penutupan LHP -> LHA.
+ * Diterbitkan auditor pemilik temuan setelah bukti terbaru terverifikasi dan seluruh rekomendasi tuntas.
+ * Saat ditandatangani kedua pihak (Auditor & Auditee/Satker), LHP ditutup dan berubah menjadi LHA.
  */
 class BatlController extends Controller
 {
@@ -37,15 +37,15 @@ class BatlController extends Controller
             'catatan'   => ['nullable', 'string', 'max:5000'],
             'file'      => [config('etlhp.berkas_wajib', true) ? 'required' : 'nullable', 'file', 'max:' . self::MAX_KB, 'mimes:' . self::EXT],
         ], [
-            'file.required'  => 'Berkas Berita Acara Tindak Lanjut wajib diunggah.',
-            'temuan_id.*'    => 'Temuan tidak valid.',
-            'nomor.required' => 'Nomor BATL wajib diisi.',
-            'nomor.max'      => 'Nomor BATL maksimal 120 karakter.',
+            'file.required'    => 'Berkas Berita Acara Tindak Lanjut wajib diunggah.',
+            'temuan_id.*'      => 'Temuan tidak valid.',
+            'nomor.required'   => 'Nomor BATL wajib diisi.',
+            'nomor.max'        => 'Nomor BATL maksimal 120 karakter.',
             'tanggal.required' => 'Tanggal BATL wajib diisi.',
-            'tanggal.date'   => 'Tanggal BATL tidak valid.',
-            'file.max'       => 'Ukuran berkas maksimal 10 MB.',
-            'file.mimes'     => 'Format berkas BATL harus PDF, gambar, atau Word.',
-            'file.uploaded'  => 'Berkas gagal diunggah. Periksa batas upload_max_filesize di server.',
+            'tanggal.date'     => 'Tanggal BATL tidak valid.',
+            'file.max'         => 'Ukuran berkas maksimal 10 MB.',
+            'file.mimes'       => 'Format berkas BATL harus PDF, gambar, atau Word.',
+            'file.uploaded'    => 'Berkas gagal diunggah. Periksa batas upload_max_filesize di server.',
         ]);
         if ($v->fails()) {
             return response()->json(['success' => false, 'message' => $v->errors()->first()], 422);
@@ -72,6 +72,10 @@ class BatlController extends Controller
             $path = $file->storeAs('batl/' . $temuan->id, Str::uuid() . '.' . $ext, 'local');
         }
 
+        $auditorUser         = $this->username() ?: ($this->currentUser()['nama'] ?? 'Auditor');
+        $ttdAuditeeSekaligus = filter_var($request->input('ttd_auditee_sekaligus', false), FILTER_VALIDATE_BOOLEAN);
+        $auditeeLabel        = trim((string) ($temuan->pic ?: 'Satker Auditee'));
+
         $batl = Batl::create([
             'temuan_id'        => $temuan->id,
             'nomor'            => trim((string) $request->input('nomor')),
@@ -81,10 +85,62 @@ class BatlController extends Controller
             'file_name'        => $name,
             'file_mime'        => $mime,
             'file_size'        => $size,
-            'diterbitkan_oleh' => $this->username() ?: null,
+            'diterbitkan_oleh' => $auditorUser,
+            'ttd_auditor_oleh' => $auditorUser,
+            'ttd_auditor_pada' => now(),
+            'ttd_auditee_oleh' => $ttdAuditeeSekaligus ? $auditeeLabel : null,
+            'ttd_auditee_pada' => $ttdAuditeeSekaligus ? now() : null,
         ]);
 
+        $temuan->syncStatusLha();
+
         return response()->json(['success' => true, 'data' => self::present($batl)]);
+    }
+
+    // ── POST /api/batl/{id}/sign (Tanda Tangan Kesepakatan Penutupan LHP -> LHA) ──
+    public function sign(Request $request, int $id)
+    {
+        $batl = Batl::with('temuan')->find($id);
+        if (! $batl || ! $batl->temuan) {
+            return response()->json(['success' => false, 'message' => 'Data BATL tidak ditemukan.'], 404);
+        }
+
+        $temuan = $batl->temuan;
+        $signer = $this->currentUser()['nama'] ?? ($this->username() ?: 'Pengguna');
+
+        if ($this->isPic()) {
+            if (! $this->ownsRow($temuan->pic)) {
+                return $this->forbidden('Anda tidak berhak menandatangani kesepakatan temuan ini.');
+            }
+            $batl->update([
+                'ttd_auditee_oleh' => $signer,
+                'ttd_auditee_pada' => now(),
+            ]);
+        } elseif ($this->isStaff()) {
+            if (! $this->canManageTemuan($temuan)) {
+                return $this->forbidden('Temuan ini bukan milik akun Anda.');
+            }
+            $pihak = strtolower((string) $request->input('pihak', 'auditee'));
+            if ($pihak === 'auditor' || ! $batl->ttd_auditor_pada) {
+                $batl->ttd_auditor_oleh = $signer;
+                $batl->ttd_auditor_pada = now();
+            }
+            if ($pihak === 'auditee' || $this->isAdmin()) {
+                $batl->ttd_auditee_oleh = $batl->ttd_auditee_oleh ?: ($temuan->pic ?: $signer);
+                $batl->ttd_auditee_pada = now();
+            }
+            $batl->save();
+        } else {
+            return $this->forbidden('Akses ditolak.');
+        }
+
+        $temuan->syncStatusLha();
+
+        return response()->json([
+            'success' => true,
+            'data'    => self::present($batl->fresh()),
+            'noLha'   => $temuan->rootTemuan()->no_lha,
+        ]);
     }
 
     // ── GET /api/batl/{id}/file ───────────────────────────────────
@@ -101,7 +157,7 @@ class BatlController extends Controller
         return Storage::disk('local')->download($batl->file_path, $batl->file_name ?: basename($batl->file_path));
     }
 
-    // ── DELETE /api/batl/{id}  (batalkan BATL -> proses dibuka lagi) ─
+    // ── DELETE /api/batl/{id}  (batalkan BATL -> proses dibuka lagi & kembali jadi LHP Sementara) ─
     public function destroy(int $id)
     {
         if (! $this->isStaff()) {
@@ -116,8 +172,13 @@ class BatlController extends Controller
             return $this->forbidden('Temuan ini bukan milik akun Anda.');
         }
 
+        $temuan = $batl->temuan;
         $batl->hapusFile();
         $batl->delete();
+
+        if ($temuan) {
+            $temuan->syncStatusLha();
+        }
 
         return response()->json(['success' => true]);
     }
@@ -137,16 +198,21 @@ class BatlController extends Controller
     public static function present(Batl $b): array
     {
         return [
-            'id'             => $b->id,
-            'temuanId'       => $b->temuan_id,
-            'nomor'          => $b->nomor,
-            'tanggal'        => optional($b->tanggal)->format('Y-m-d'),
-            'catatan'        => $b->catatan,
-            'fileName'       => $b->file_name,
-            'fileSize'       => $b->file_size,
-            'fileUrl'        => $b->file_path ? '/api/batl/' . $b->id . '/file' : null,
-            'diterbitkanOleh'=> $b->diterbitkan_oleh,
-            'dibuat'         => optional($b->created_at)->format('Y-m-d H:i'),
+            'id'              => $b->id,
+            'temuanId'        => $b->temuan_id,
+            'nomor'           => $b->nomor,
+            'tanggal'         => optional($b->tanggal)->format('Y-m-d'),
+            'catatan'         => $b->catatan,
+            'fileName'        => $b->file_name,
+            'fileSize'        => $b->file_size,
+            'fileUrl'         => $b->file_path ? '/api/batl/' . $b->id . '/file' : null,
+            'diterbitkanOleh' => $b->diterbitkan_oleh,
+            'ttdAuditorOleh'  => $b->ttd_auditor_oleh,
+            'ttdAuditorPada'  => optional($b->ttd_auditor_pada)->format('Y-m-d H:i'),
+            'ttdAuditeeOleh'  => $b->ttd_auditee_oleh,
+            'ttdAuditeePada'  => optional($b->ttd_auditee_pada)->format('Y-m-d H:i'),
+            'signedBoth'      => $b->isSignedBoth(),
+            'dibuat'          => optional($b->created_at)->format('Y-m-d H:i'),
         ];
     }
 }
