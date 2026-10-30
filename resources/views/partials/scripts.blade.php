@@ -7,9 +7,10 @@
         'core',           // state, apiFetch, helper PIC & status
         'auth',           // login, logout, navigate()
         'dashboard',      // halaman Dashboard (+ filter)
-        'ruang-isian',    // Ruang Isian > Temuan (lihat, tambah/ubah, hapus)
-        'detail',         // Ruang Isian > Detail (lihat, tambah/ubah)
+        'ruang-isian',    // pustaka bersama: kartu rincian, modal tambah/ubah temuan, hapus (dipakai Dashboard)
+        'detail',         // pustaka bersama: modal tambah/ubah isian rincian (halaman Detail sudah digabung ke Dashboard)
         'bukti',          // unggah bukti tindak lanjut
+        'notifikasi',     // lonceng notifikasi header (Satker: temuan baru & hasil verifikasi; auditor: bukti baru)
         'rekap',          // Rekap & Laporan
         'export-excel',   // ekspor Excel (per tahun)
         'router',

@@ -71,7 +71,6 @@ function riReadFilters(prefix) {
 
 // ══════════════════ TAMPILAN RINCIAN ═══════════════════
 const RI_CARDS = [
-  { key: 'Kondisi',     title: 'Kondisi',      icon: 'search',         cls: 'blue'   },
   { key: 'Kriteria',    title: 'Kriteria',     icon: 'target',         cls: 'blue'   },
   { key: 'Sebab',       title: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
   { key: 'Akibat',      title: 'Akibat',       icon: 'alert-triangle', cls: 'orange' },
@@ -191,9 +190,19 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
     </div>`;
 }
 
+// Deadline & nominal kerugian (Audit Keuangan) sebagai chip ringkas di atas kartu rincian
+function riMetaChips(sub) {
+  const chips = [];
+  if (sub.JenisAuditLabel) chips.push(`<span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11.5px] font-semibold text-slate-600"><i data-lucide="tag" style="width:12px;height:12px;" class="icon-plain"></i> ${esc(sub.JenisAuditLabel)}</span>`);
+  if (sub.Deadline)        chips.push(`<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11.5px] font-semibold text-amber-700"><i data-lucide="calendar-clock" style="width:12px;height:12px;" class="icon-plain"></i> Deadline ${esc(fmtTanggal(sub.Deadline))}</span>`);
+  if (sub.NominalKerugian != null) chips.push(`<span class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-[11.5px] font-semibold text-rose-700"><i data-lucide="banknote" style="width:12px;height:12px;" class="icon-plain"></i> Nominal kerugian ${esc(fmtRupiah(sub.NominalKerugian))}</span>`);
+  return chips.length ? `<div class="mb-3 flex flex-wrap items-center gap-2">${chips.join('')}</div>` : '';
+}
+
 function riSubBodyHtml(sub) {
   const secs = parseOutputSections(sub.Output);
   return `
+      ${riMetaChips(sub)}
       <div class="ri-grid">
         ${RI_CARDS.map(c => riCard(c.cls, c.icon, c.title, riListHtml(parseList(sub[c.key]), ''))).join('')}
       </div>
@@ -478,6 +487,8 @@ function applyModalRole() {
 
   const picFields = document.getElementById('m-pic-fields');
   if (picFields) picFields.style.display = pic ? '' : 'none';
+  const dw = document.getElementById('m-deadline-wrap');
+  if (dw) dw.style.display = pic ? 'none' : '';
 
   if (pic) {
     document.getElementById('modal-title').textContent = 'Isi Tindak Lanjut';
@@ -506,7 +517,30 @@ function onSumberChange() {
     .catch(() => { no.value = ''; showToast('Gagal mengambil kode temuan', 'err'); });
 }
 
+// Jenis audit efektif form: untuk temuan induk = isi dropdown; untuk sub temuan = jenis induknya
+let _modalJenisFixed = null;
+
+function modalJenis() {
+  if (_modalJenisFixed !== null) return _modalJenisFixed;
+  return (document.getElementById('m-jenis') || {}).value || '';
+}
+
+// Nominal kerugian hanya muncul untuk Audit Keuangan (diagram "Jenis Audit")
+function onJenisChange() {
+  const w = document.getElementById('m-nominal-wrap');
+  if (w) w.style.display = (modalJenis() === 'keuangan' && !isPicUser()) ? '' : 'none';
+}
+
+function resetFormRincian() {
+  ['m-kriteria', 'm-sebab', 'm-akibat', 'm-rekomendasi', 'm-nominal', 'm-deadline'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
 function openModal(pic, row) {
+  _modalJenisFixed = null;
+  resetFormRincian();
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = '';
   document.getElementById('m-is-sub').value = 'false';
@@ -538,8 +572,15 @@ function openModal(pic, row) {
       document.getElementById('m-rencanaaksi').value  = r.RencanaAksi || '';
       document.getElementById('m-jadwal').value       = r.JadwalPelaksanaan || '';
       document.getElementById('m-output').value       = cleanOutput(r.Output);
+      document.getElementById('m-kriteria').value     = r.Kriteria || '';
+      document.getElementById('m-sebab').value        = r.Sebab || '';
+      document.getElementById('m-akibat').value       = r.Akibat || '';
+      document.getElementById('m-rekomendasi').value  = r.Rekomendasi || '';
+      document.getElementById('m-deadline').value     = r.Deadline || '';
+      document.getElementById('m-nominal').value      = r.NominalKerugian != null ? String(r.NominalKerugian) : '';
       setSumberField(r.Sumber || 'bpk', true);
       if (jenisEl) jenisEl.value = r.JenisAudit || '';
+      if (r.isSubRow) _modalJenisFixed = r.JenisAudit || '';   // sub temuan mengikuti jenis audit induk
     }
   } else {
     setSumberField('inspektorat', false);
@@ -549,11 +590,14 @@ function openModal(pic, row) {
   // Jenis audit: hanya sisi auditor/admin, dan hanya pada temuan induk (sub temuan mengikuti induk)
   const jw = document.getElementById('m-jenis-wrap');
   if (jw) jw.style.display = (isPicUser() || (r && r.isSubRow)) ? 'none' : '';
+  onJenisChange();
 }
 
 function openAddSubModal(row) {
   const r = S.allR.find(x => String(x._row) === String(row));
   if (!r) return;
+  _modalJenisFixed = r.JenisAudit || '';            // sub temuan mengikuti jenis audit induk
+  resetFormRincian();
 
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = row;
@@ -573,6 +617,7 @@ function openAddSubModal(row) {
   applyModalRole();
   const jwSub = document.getElementById('m-jenis-wrap');
   if (jwSub) jwSub.style.display = 'none';          // sub temuan mengikuti jenis audit induknya
+  onJenisChange();
 
   ['m-subtemuan', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
     document.getElementById(id).value = '';
@@ -602,10 +647,10 @@ function saveTemuan() {
     Temuan: document.getElementById('m-temuan').value.trim(),
     SubTemuan: document.getElementById('m-subtemuan').value.trim(),
     Kondisi: keep('Kondisi'),
-    Kriteria: keep('Kriteria'),
-    Sebab: keep('Sebab'),
-    Akibat: keep('Akibat'),
-    Rekomendasi: keep('Rekomendasi'),
+    Kriteria: (document.getElementById('m-kriteria') || {}).value || '',
+    Sebab: (document.getElementById('m-sebab') || {}).value || '',
+    Akibat: (document.getElementById('m-akibat') || {}).value || '',
+    Rekomendasi: (document.getElementById('m-rekomendasi') || {}).value || '',
     RencanaAksi: document.getElementById('m-rencanaaksi').value.trim(),
     JadwalPelaksanaan: document.getElementById('m-jadwal').value.trim(),
     Output: raw,
@@ -615,6 +660,10 @@ function saveTemuan() {
 
   const jenisSel = document.getElementById('m-jenis');
   if (jenisSel && !isPicUser() && !isSub && !(origRow && origRow.isSubRow)) fd.JenisAudit = jenisSel.value;
+  if (!isPicUser()) {
+    fd.Deadline = (document.getElementById('m-deadline') || {}).value || '';
+    if (modalJenis() === 'keuangan') fd.NominalKerugian = ((document.getElementById('m-nominal') || {}).value || '').trim();
+  }
 
   if (isPicUser()) {
     const rowId = document.getElementById('m-row').value;
@@ -625,8 +674,16 @@ function saveTemuan() {
     fd.parentRow = '';
   }
 
-  if (!fd.Temuan) { showToast('Uraian Temuan wajib diisi', 'err'); return; }
+  // Urutan diagram "Input Temuan": sumber > jenis audit > PIC > judul temuan > kriteria > sebab > akibat > rekomendasi
+  if (!isPicUser() && !isSub && !(origRow && origRow.isSubRow) && !fd.JenisAudit) { showToast('Pilih jenis audit terlebih dahulu', 'err'); return; }
   if (!fd.PIC) { showToast('Pilih minimal 1 PIC', 'err'); return; }
+  if (!fd.Temuan) { showToast('Uraian Temuan wajib diisi', 'err'); return; }
+  // Kelengkapan wajib hanya untuk data BARU; data lama yang belum punya Akibat dsb. tetap bisa disimpan
+  if (!isPicUser() && !document.getElementById('m-row').value) {
+    const kosong = [['Kriteria', fd.Kriteria], ['Sebab', fd.Sebab], ['Akibat', fd.Akibat], ['Rekomendasi', fd.Rekomendasi]].filter(x => !String(x[1]).trim()).map(x => x[0]);
+    if (kosong.length) { showToast('Lengkapi isian: ' + kosong.join(', '), 'err'); return; }
+    if (modalJenis() === 'keuangan' && !fd.NominalKerugian) { showToast('Nominal kerugian wajib diisi untuk Audit Keuangan (isi 0 bila tidak ada)', 'err'); return; }
+  }
 
   const row = document.getElementById('m-row').value;
   const btn = document.querySelector('.modal-footer-area .btn-action-pri');

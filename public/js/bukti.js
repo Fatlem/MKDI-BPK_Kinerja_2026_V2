@@ -113,6 +113,8 @@ function openBukti(rowId) {
   _bk = { rowId: r._row, list: [], busy: false, dirty: false, no: r.No, batl: null, canBatl: false, tl: 'belum' };
 
   document.getElementById('bk-ctx').textContent = bkRowLabel(r);
+  const sw = document.getElementById('bk-setoran-wrap');     // NTPN/nominal setoran: khusus Audit Keuangan
+  if (sw) sw.style.display = r.JenisAudit === 'keuangan' ? '' : 'none';
   bkReset();
   bkSetStatus(null);
   bkSubmitLabel(false);

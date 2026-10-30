@@ -14,6 +14,12 @@ class Temuan extends Model
         'output', 'parent_id', 'sort_order',
         'sumber', 'created_by',
         'jenis_audit', 'kondisi', 'akibat',
+        'deadline', 'nominal_kerugian',
+    ];
+
+    protected $casts = [
+        'deadline'         => 'date:Y-m-d',
+        'nominal_kerugian' => 'decimal:2',
     ];
 
     public const SUMBER_BPK         = 'bpk';

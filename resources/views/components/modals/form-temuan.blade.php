@@ -14,7 +14,7 @@
       <input type="hidden" id="m-is-sub">
 
       <div id="m-role-note" class="role-note" style="display:none;">
-        Kolom Kode sampai PIC diisi oleh auditor (Inspektorat) dan tidak dapat diubah. Silakan isi <b>Rencana Aksi</b>, <b>Jadwal Pelaksanaan</b>, dan <b>Output</b>.
+        Data temuan (sumber, jenis audit, PIC, kriteria, sebab, akibat, rekomendasi) diisi oleh auditor (Inspektorat) dan tidak dapat diubah. Silakan isi <b>Rencana Aksi</b>, <b>Jadwal Pelaksanaan</b>, dan <b>Output</b>.
       </div>
 
       <div class="form-field" id="m-sumber-wrap">
@@ -27,19 +27,19 @@
       </div>
 
       <div class="form-field" id="m-jenis-wrap">
-        <label>Jenis Audit</label>
-        <select id="m-jenis">
-          <option value="">Belum ditentukan</option>
+        <label>Jenis Audit <span style="color:#e11d48;">*</span></label>
+        <select id="m-jenis" onchange="onJenisChange()">
+          <option value="">Pilih jenis audit...</option>
           <option value="kinerja">Audit Kinerja (3E: Ekonomis, Efisiensi, Efektivitas)</option>
           <option value="keuangan">Audit Keuangan</option>
           <option value="kepatuhan">Audit Kepatuhan</option>
           <option value="khusus">Audit Khusus / Investigatif</option>
         </select>
-        <div class="field-hint">Klasifikasi penugasan audit. Berlaku untuk temuan induk beserta sub temuannya.</div>
+        <div class="field-hint">Isi rincian temuan sama untuk semua jenis (kriteria, sebab, akibat, rekomendasi). Audit Keuangan ditambah nominal kerugian.</div>
       </div>
 
       <div class="form-field">
-        <label>Kode Temuan (LHP)</label>
+        <label>No. Dokumen (Surat LHP)</label>
         <input id="m-no" type="text" placeholder="Dibuat otomatis" readonly>
       </div>
 
@@ -61,6 +61,23 @@
       <div class="form-field">
         <label>Sub Temuan</label>
         <textarea id="m-subtemuan" placeholder="Uraikan sub temuan tindak lanjut..."></textarea>
+      </div>
+
+      <div class="form-field"><label>Kriteria</label><textarea id="m-kriteria" placeholder="Peraturan / SOP yang menjadi dasar (boleh lebih dari satu baris)"></textarea></div>
+      <div class="form-field"><label>Sebab</label><textarea id="m-sebab" placeholder="Akar penyebab terjadinya temuan"></textarea></div>
+      <div class="form-field"><label>Akibat</label><textarea id="m-akibat" placeholder="Dampak yang ditimbulkan (mis. pemborosan, kerugian negara)"></textarea></div>
+      <div class="form-field"><label>Rekomendasi</label><textarea id="m-rekomendasi" placeholder="Rekomendasi auditor (boleh lebih dari satu baris)"></textarea></div>
+
+      <div class="form-field" id="m-nominal-wrap" style="display:none;">
+        <label>Nominal Kerugian (Rp) <span style="color:#e11d48;">*</span></label>
+        <input id="m-nominal" type="text" inputmode="decimal" autocomplete="off" placeholder="mis. 1.500.000 (isi 0 bila tidak ada kerugian)">
+        <div class="field-hint">Khusus Audit Keuangan.</div>
+      </div>
+
+      <div class="form-field" id="m-deadline-wrap">
+        <label>Deadline Tindak Lanjut</label>
+        <input id="m-deadline" type="date">
+        <div class="field-hint">Batas waktu Satker menyelesaikan tindak lanjut. Tampil di Dashboard.</div>
       </div>
 
       <!-- Kolom ini diisi oleh akun PIC. Disembunyikan untuk admin. -->

@@ -65,21 +65,51 @@ function _picShortLabel(p) {
 // ═══ FILTER: Sumber / Tahun / Unit PIC ═════════════════════════════════
 
 // ── Filter dashboard: Sumber / Tahun / Unit PIC (satu-satunya filter tahun di dashboard) ──
-if (!S.dbF) S.dbF = { sumber: '', tahun: '', pic: '' };
+if (!S.dbF) S.dbF = { sumber: '', tahun: '', pic: '', jenis: '', status: '', q: '' };
+
+// Jenis audit & status/pencarian khusus tabel (status & kata kunci tidak ikut mengubah grafik)
+const JENIS_AUDIT_SHORT = { kinerja: 'Kinerja', keuangan: 'Keuangan', kepatuhan: 'Kepatuhan', khusus: 'Khusus' };
+const JENIS_AUDIT_CLS = {
+  kinerja:   'bg-blue-50 text-blue-700',
+  keuangan:  'bg-emerald-50 text-emerald-700',
+  kepatuhan: 'bg-violet-50 text-violet-700',
+  khusus:    'bg-rose-50 text-rose-700'
+};
 
 function dbFilteredRows(rows) {
   const f = S.dbF;
   return (rows || []).filter(r =>
     (!f.sumber || (r.Sumber || 'bpk') === f.sumber) &&
     (!f.tahun  || String(r.Tahun || '') === f.tahun) &&
+    (!f.jenis  || (r.JenisAudit || '') === f.jenis) &&
     (!f.pic    || hasPic(splitPics(r.PIC), f.pic))
   );
 }
 
 function dbApplyFilter() {
   const v = id => (document.getElementById('db-flt-' + id) || {}).value || '';
-  S.dbF = { sumber: v('sumber'), tahun: v('tahun'), pic: v('pic') };
+  S.dbF = { sumber: v('sumber'), tahun: v('tahun'), pic: v('pic'), jenis: v('jenis'), status: v('status'), q: S.dbF.q || '' };
   calculateAndRenderDashboard(S.allR || []);
+}
+
+// Kata kunci: hanya menyegarkan tabel (fokus ketikan tidak hilang)
+function dbSearch() {
+  S.dbF.q = (document.getElementById('db-flt-q') || {}).value || '';
+  const box = document.getElementById('db-table-body');
+  if (box) { box.innerHTML = dbTableHtml(); dbSyncCount(); refreshIcons(); }
+}
+
+function dbSyncCount() {
+  const c = document.getElementById('db-table-count');
+  if (c) c.textContent = S._dbCountText || '';
+}
+
+// Klik kartu PIC = saring tabel untuk PIC tersebut (klik lagi = batalkan)
+function dbPickPic(username) {
+  if (!isPicUser()) S.dbF.pic = (S.dbF.pic === username) ? '' : username;
+  calculateAndRenderDashboard(S.allR || []);
+  const sec = document.getElementById('db-table-sec');
+  if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function dbFilterBarHtml() {
@@ -87,6 +117,8 @@ function dbFilterBarHtml() {
   const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${f.sumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
   const optTahun  = tahunOptions(S.allR).map(y => `<option value="${esc(y)}" ${f.tahun === y ? 'selected' : ''}>${esc(y)}</option>`).join('');
   const optPic    = allPicOptions().map(p => `<option value="${esc(p.username)}" ${f.pic === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
+  const optJenis  = Object.keys(JENIS_AUDIT_SHORT).map(k => `<option value="${k}" ${f.jenis === k ? 'selected' : ''}>${JENIS_AUDIT_SHORT[k]}</option>`).join('');
+  const optStatus = ['Selesai', 'Proses', 'Belum'].map(k => `<option value="${k}" ${f.status === k ? 'selected' : ''}>${k}</option>`).join('');
   return `
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:24px;">
       <label class="flt-chip">
@@ -97,10 +129,196 @@ function dbFilterBarHtml() {
         <i data-lucide="calendar" class="flt-ico flt-green"></i><span class="flt-lbl">Tahun:</span>
         <select id="db-flt-tahun" onchange="dbApplyFilter()"><option value="">Semua Tahun</option>${optTahun}</select>
       </label>
+      <label class="flt-chip">
+        <i data-lucide="tag" class="flt-ico flt-violet"></i><span class="flt-lbl">Jenis Audit:</span>
+        <select id="db-flt-jenis" onchange="dbApplyFilter()"><option value="">Semua Jenis</option>${optJenis}</select>
+      </label>
       <label class="flt-chip flt-chip-pic">
         <i data-lucide="building-2" class="flt-ico flt-orange"></i><span class="flt-lbl">Unit PIC:</span>
         <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''}><option value="">Semua PIC</option>${optPic}</select>
       </label>
+      <label class="flt-chip">
+        <i data-lucide="activity" class="flt-ico flt-green"></i><span class="flt-lbl">Status:</span>
+        <select id="db-flt-status" onchange="dbApplyFilter()"><option value="">Semua Status</option>${optStatus}</select>
+      </label>
+    </div>`;
+}
+
+// ═══ TABEL TEMUAN DI DASHBOARD ═════════════════════════════════════════
+// Kolom: No. Dokumen | Uraian Kegiatan & Pelaksanaan | Sumber | Jenis Audit | PIC | Deadline | Status Kelengkapan
+// Ruang Isian & Detail digabung ke sini: baris dapat dibuka untuk melihat/ubah rincian (kriteria, sebab,
+// akibat, rekomendasi, renaksi, output), unggah bukti, dan terbitkan BATL.
+
+function dbJenisBadge(r) {
+  const k = r && r.JenisAudit;
+  if (!k) return '<span class="text-slate-400">-</span>';
+  return `<span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${JENIS_AUDIT_CLS[k] || 'bg-slate-100 text-slate-600'}" title="${esc(r.JenisAuditLabel || '')}">${esc(JENIS_AUDIT_SHORT[k] || k)}</span>`;
+}
+
+// Ringkasan satu temuan induk beserta sub temuannya
+function dbGroupInfo(items) {
+  const total = items.length;
+  let selesai = 0, proses = 0, tuntas = 0;
+  items.forEach(r => {
+    const lbl = statusOf(r).lbl;
+    if (lbl === 'Selesai') selesai++; else if (lbl === 'Proses') proses++;
+    if (r.TLStatus === 'terverifikasi' || r.TLStatus === 'batl' || lbl === 'Selesai') tuntas++;
+  });
+  const status = selesai === total ? 'Selesai' : ((proses > 0 || selesai > 0) ? 'Proses' : 'Belum');
+  const allTuntas = tuntas === total;
+
+  // Deadline terdekat dari rincian yang belum tuntas (bila semua tuntas: deadline paling akhir)
+  const dated = items.filter(r => r.Deadline);
+  const pending = dated.filter(r => !(r.TLStatus === 'terverifikasi' || r.TLStatus === 'batl'));
+  const pool = (pending.length ? pending : dated).map(r => r.Deadline).sort();
+  const deadline = pool.length ? pool[0] : '';
+  return { total, tuntas, status, allTuntas, deadline, pct: total ? Math.round((tuntas / total) * 100) : 0 };
+}
+
+function dbDeadlineHtml(g) {
+  if (!g.deadline) return '<span class="text-slate-400">-</span>';
+  const d = daysUntil(g.deadline);
+  let note = '';
+  if (g.allTuntas)      note = '<div class="mt-0.5 text-[11px] font-semibold text-emerald-600">Tuntas</div>';
+  else if (d < 0)       note = `<div class="mt-0.5 text-[11px] font-bold text-red-600">Terlambat ${Math.abs(d)} hari</div>`;
+  else if (d === 0)     note = '<div class="mt-0.5 text-[11px] font-bold text-amber-600">Hari ini</div>';
+  else if (d <= 7)      note = `<div class="mt-0.5 text-[11px] font-bold text-amber-600">H-${d}</div>`;
+  return `<div class="text-[12.5px] font-semibold text-slate-800">${esc(fmtTanggal(g.deadline))}</div>${note}`;
+}
+
+function dbStatusHtml(g) {
+  const st = g.status === 'Selesai' ? { cls: 'pill-ok', icon: 'check-circle' }
+           : g.status === 'Proses'  ? { cls: 'pill-prog', icon: 'clock' }
+           :                          { cls: 'pill-empty', icon: 'minus-circle' };
+  const bar = g.pct >= 100 ? '#16a34a' : g.pct > 0 ? '#2563eb' : '#cbd5e1';
+  return `
+    <span class="status-pill ${st.cls}"><i data-lucide="${st.icon}" style="width:12px;" class="icon-plain"></i> ${g.status.toUpperCase()}</span>
+    <div class="mt-2 h-1.5 w-full min-w-[110px] overflow-hidden rounded-full bg-slate-100"><div style="width:${g.pct}%;height:100%;background:${bar};border-radius:999px;"></div></div>
+    <div class="mt-1 text-[11px] text-slate-500">${g.tuntas}/${g.total} rincian tuntas</div>`;
+}
+
+function dbTableHtml() {
+  const f = S.dbF;
+  const q = String(f.q || '').toLowerCase().trim();
+  const canAdd = !isPicUser();
+
+  const rows = scopeRows(dbFilteredRows(S.allR || []));
+  const groups = {};
+  rows.forEach(r => {
+    const k = String(r.No || '0');
+    (groups[k] = groups[k] || []).push(r);
+  });
+
+  S._dbCountText = '0 Temuan';
+  const keys = Object.keys(groups).filter(k => {
+    const items = groups[k];
+    if (f.status && dbGroupInfo(items).status !== f.status) return false;
+    if (!q) return true;
+    const hay = [k, items[0].SumberLabel, items[0].JenisAuditLabel, items[0].Temuan]
+      .concat(items.map(r => r.SubTemuan), items.map(r => r.RencanaAksi), items.map(r => groupPicNames([r]).join(' '))).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  S._dbCountText = `${keys.length} Temuan (${keys.reduce((a, k) => a + groups[k].length, 0)} rincian)`;
+
+  if (!keys.length) {
+    return `
+      <div style="text-align:center;padding:48px 16px;background:#fff;border-radius:16px;border:1.5px dashed var(--border-color);">
+        <i data-lucide="folder-open" style="width:38px;height:38px;color:var(--text-muted);margin-bottom:8px;" class="icon-plain"></i>
+        <h4 style="font-weight:700">Data Tidak Ditemukan</h4>
+        <p style="font-size:12px;color:var(--text-muted)">${canAdd ? 'Ubah filter / kata kunci, atau tambahkan temuan baru.' : 'Belum ada temuan yang ditugaskan kepada Anda, atau ubah filter.'}</p>
+      </div>`;
+  }
+
+  const th = 'px-3 py-3 text-left';
+  const body = keys.map(noKey => {
+    const items = groups[noKey];
+    const parent = items[0];
+    const g = dbGroupInfo(items);
+    const key = 't:' + noKey;
+    const open = !!S.riOpen[key];
+    const rencana = (items.find(r => String(r.RencanaAksi || '').trim()) || {}).RencanaAksi;
+    const pelaksanaan = rencana
+      ? `<span class="font-semibold text-slate-600">Pelaksanaan:</span> ${esc(riShort(String(rencana).replace(/^\s*\d{1,2}\s*[.)]\s*/, ''), 120))}`
+      : '<span class="italic text-slate-400">Belum ada rencana aksi</span>';
+
+    return `
+      <tr data-key="${esc(key)}" onclick="togTblRow(this)"
+        class="cursor-pointer align-top transition-colors hover:bg-slate-50 ${open ? 'bg-slate-50' : ''}">
+        <td class="border-b border-slate-100 py-4 pl-4 pr-1">
+          <span class="rk-chev flex items-center text-slate-400" style="transition:transform .2s;transform:rotate(${open ? 180 : 0}deg);">
+            <i data-lucide="chevron-down" style="width:18px;height:18px;" class="icon-plain"></i>
+          </span>
+        </td>
+        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">
+          <span class="rounded-md bg-blue-50 px-2.5 py-1 text-[12px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+        </td>
+        <td class="border-b border-slate-100 px-3 py-4">
+          <div class="whitespace-pre-line break-words text-[13.5px] font-semibold leading-snug text-slate-900" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(parent.Temuan) || '—'}</div>
+          <div class="mt-1 text-[11.5px] leading-snug text-slate-500">${pelaksanaan}</div>
+          <div class="mt-1 text-[11px] text-slate-400">${subCountLabel(items.length)}</div>
+        </td>
+        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">${sumberBadge(parent) || '<span class="text-slate-400">-</span>'}</td>
+        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">${dbJenisBadge(parent)}</td>
+        <td class="border-b border-slate-100 px-3 py-4">${riPicChips(groupPicNames(items))}</td>
+        <td class="whitespace-nowrap border-b border-slate-100 px-3 py-4">${dbDeadlineHtml(g)}</td>
+        <td class="border-b border-slate-100 px-3 py-4">${dbStatusHtml(g)}</td>
+        ${canAdd ? `<td class="whitespace-nowrap border-b border-slate-100 px-4 py-4 text-right">
+          <button class="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400" onclick="event.stopPropagation(); openAddSubModal(${items[items.length - 1]._row})">
+            <i data-lucide="plus-circle" style="width:14px;height:14px;" class="icon-plain"></i> Sub Temuan
+          </button></td>` : ''}
+      </tr>
+      <tr style="display:${open ? 'table-row' : 'none'};">
+        <td colspan="${canAdd ? 9 : 8}" class="border-b border-slate-200 bg-slate-50 p-4 max-[768px]:p-3">${items.map((sub, idx) => riSubHtml(sub, idx, true, items.length)).join('')}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1040px] border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <th class="w-10 py-3 pl-4 pr-1"></th>
+              <th class="${th} w-[140px]">No. Dokumen</th>
+              <th class="${th}">Uraian Kegiatan &amp; Pelaksanaan</th>
+              <th class="${th} w-[110px]">Sumber</th>
+              <th class="${th} w-[110px]">Jenis Audit</th>
+              <th class="${th} w-[220px]">PIC</th>
+              <th class="${th} w-[130px]">Deadline</th>
+              <th class="${th} w-[170px]">Status Kelengkapan</th>
+              ${canAdd ? '<th class="w-[130px] px-4 py-3 text-right">Aksi</th>' : ''}
+            </tr>
+          </thead>
+          <tbody class="[&>tr:last-child>td]:border-b-0">${body}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function dbTableSectionHtml() {
+  const canAdd = !isPicUser();
+  return `
+    <div id="db-table-sec" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:28px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="padding:8px;background:#eff6ff;color:#2563eb;border-radius:8px;display:flex;align-items:center;">
+            <i data-lucide="list-checks" style="width:18px;height:18px;"></i>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#0f172a;">Daftar Temuan &amp; Tindak Lanjut</div>
+            <div style="font-size:12px;color:#64748b;" id="db-table-count"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="flt-chip">
+            <i data-lucide="search" class="flt-ico icon-plain"></i>
+            <input type="text" id="db-flt-q" value="${esc(S.dbF.q || '')}" placeholder="Cari no. dokumen / uraian..." class="flt-search-input" oninput="dbSearch()">
+          </div>
+          ${canAdd ? '<button class="btn-action-pri" onclick="openModal()"><i data-lucide="plus" style="width:16px;"></i> Tambah Temuan Baru</button>' : ''}
+        </div>
+      </div>
+      <div id="db-table-body">${dbTableHtml()}</div>
     </div>`;
 }
 
@@ -281,7 +499,7 @@ function renderDashboard(d) {
         const progressColor   = progressPctCard >= 100 ? '#16a34a' : progressPctCard > 0 ? '#2563eb' : '#cbd5e1';
         const progressTextColor = progressPctCard >= 100 ? 'color:#16a34a;' : 'color:#dc2626;';
         return `
-          <div class="db-pic-card" onclick="navigate('ruang-isian','${esc(jsq(p.username))}')">
+          <div class="db-pic-card" onclick="dbPickPic('${esc(jsq(p.username))}')">
             <div class="db-pic-card-body">
               <div class="db-pic-icon-wrap">${_picIconSvg(i)}</div>
               <h4 class="db-pic-name">${esc(p.nama)}</h4>
@@ -388,6 +606,9 @@ function renderDashboard(d) {
     <!-- Filter: Sumber / Tahun / Unit PIC -->
     ${dbFilterBarHtml()}
 
+    <!-- Tabel Temuan & Tindak Lanjut (gabungan Ruang Isian + Detail) -->
+    ${dbTableSectionHtml()}
+
     <!-- PIC Section Header -->
     <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
@@ -410,6 +631,7 @@ function renderDashboard(d) {
     </div>
   `);
 
+  dbSyncCount();
   refreshIcons();
 
   // ── Animate bar fills from 0 → target width ──────────────────

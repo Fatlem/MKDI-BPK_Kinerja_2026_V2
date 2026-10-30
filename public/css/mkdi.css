@@ -1116,3 +1116,25 @@ svg.icon-plain,
 .ri-sky    .ri-card-head svg.icon-plain { color: #0284c7 !important; }
 .status-pill svg.icon-plain { color: currentColor !important; }
 .ri-sub-meta svg.icon-plain { color: #3b82f6 !important; }
+
+/* ═══ Notifikasi (lonceng header) ═══ */
+.notif-wrap { position: relative; }
+button.header-notif { padding: 0; font: inherit; }
+.notif-badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; line-height: 1; }
+.notif-panel { position: absolute; right: 0; top: 46px; width: 360px; max-width: calc(100vw - 24px); background: #fff; border: 1.5px solid var(--border-color); border-radius: 14px; box-shadow: 0 12px 32px rgba(15,23,42,.18); z-index: 300; overflow: hidden; }
+.notif-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #0f172a; }
+.notif-readall { background: none; border: 0; color: #2563eb; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+.notif-list { max-height: 380px; overflow-y: auto; }
+.notif-empty { padding: 28px 14px; text-align: center; font-size: 12.5px; color: #94a3b8; }
+.notif-item { display: flex; gap: 10px; padding: 11px 14px; border-bottom: 1px solid #f8fafc; cursor: pointer; transition: background .15s; }
+.notif-item:hover { background: #f8fafc; }
+.notif-item.unread { background: #eff6ff; }
+.notif-ico { width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.notif-ico svg { width: 15px; height: 15px; }
+.notif-ico.n-blue { background: #dbeafe; color: #2563eb; } .notif-ico.n-green { background: #dcfce7; color: #16a34a; }
+.notif-ico.n-amber { background: #fef3c7; color: #d97706; } .notif-ico.n-red { background: #fee2e2; color: #dc2626; }
+.notif-ico.n-purple { background: #ede9fe; color: #7c3aed; }
+.notif-body { min-width: 0; flex: 1; }
+.notif-title { font-size: 12.5px; font-weight: 700; color: #0f172a; }
+.notif-msg { font-size: 11.5px; color: #475569; margin-top: 2px; overflow-wrap: anywhere; }
+.notif-time { font-size: 10.5px; color: #94a3b8; margin-top: 3px; }

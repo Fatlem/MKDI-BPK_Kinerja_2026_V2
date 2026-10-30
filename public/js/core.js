@@ -203,7 +203,7 @@ function syncPicList(rows) {
   });
 }
 
-const ADMIN_ONLY_FIELDS = ['m-no', 'm-temuan', 'm-subtemuan', 'm-kriteria', 'm-sebab', 'm-rekomendasi'];
+const ADMIN_ONLY_FIELDS = ['m-no', 'm-temuan', 'm-subtemuan', 'm-kriteria', 'm-sebab', 'm-akibat', 'm-rekomendasi'];
 
 function roleOf(u) { return String((u && u.role) || '').trim().toLowerCase(); }
 function isPicUser() { return roleOf(S.user) === 'pic'; }
@@ -247,6 +247,25 @@ function tahunOptions(rows) {
 }
 
 function _picNormKey(s) { return String(s || '').trim().toLowerCase(); }
+
+// ── Format tampilan: tanggal (Y-m-d) & rupiah ─────────────────────────
+function fmtTanggal(ymd) {
+  const m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return '';
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function fmtRupiah(n) {
+  if (n == null || n === '') return '';
+  return 'Rp ' + Number(n).toLocaleString('id-ID');
+}
+// Selisih hari dari hari ini ke tanggal Y-m-d (negatif = sudah lewat)
+function daysUntil(ymd) {
+  const m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  return Math.round((t - now.getTime()) / 86400000);
+}
 
 const STATUS_TAG_RE = /\s*\[(selesai|proses|belum)\]/gi;
 

@@ -16,6 +16,12 @@
     return;
   }
 
+  // Ruang Isian & Detail sudah digabung ke Dashboard. URL lama (/ruang-isian, /ruang-isian/detail)
+  // tetap dikenali, tetapi menampilkan Dashboard (alamat otomatis diganti ke /dashboard).
+  function canonical(page) {
+    return (page === 'ruang-isian' || page === DETAIL) ? 'dashboard' : page;
+  }
+
   function normPath(p) {
     return (p.replace(/\/+$/, '') || '/').toLowerCase();
   }
@@ -48,11 +54,11 @@
   };
 
   function syncNav(page) {
-    var inRI = (page === 'ruang-isian' || page === DETAIL);
+    var inRI = false;
     var items = document.querySelectorAll('#sidebar .nav-item');
     for (var i = 0; i < items.length; i++) items[i].classList.remove('active');
 
-    var el = document.getElementById(inRI ? 'nav-ruang-isian' : 'nav-' + page);
+    var el = document.getElementById('nav-' + page);
     if (el) el.classList.add('active');
 
     var t = document.getElementById('nav-ri-temuan');
@@ -83,6 +89,7 @@
       var urlPage = pageFromPath();
       if (urlPage) page = urlPage;
     }
+    page = canonical(page);
 
     var args = arguments.length ? [page].concat([].slice.call(arguments, 1)) : [page];
     var result = render(page, args);
@@ -98,7 +105,7 @@
 
   window.addEventListener('popstate', function () {
     if (!appVisible()) return;
-    render(pageFromPath() || 'dashboard');
+    render(canonical(pageFromPath() || 'dashboard'));
   });
 
   var originalLogout = window.doLogout;

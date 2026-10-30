@@ -21,9 +21,18 @@
         <span id="hdr-time" class="hdr-time-val">—</span>
       </div>
     </div>
-    <div class="header-notif" title="Notifikasi">
-      <i data-lucide="bell" style="width:18px;height:18px;"></i>
-      <span class="notif-dot"></span>
+    <div class="notif-wrap">
+      <button type="button" id="hdr-notif" class="header-notif" title="Notifikasi" aria-label="Notifikasi" onclick="toggleNotif(event)">
+        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+        <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
+      </button>
+      <div id="notif-panel" class="notif-panel" style="display:none;" onclick="event.stopPropagation()">
+        <div class="notif-head">
+          <strong>Notifikasi</strong>
+          <button type="button" class="notif-readall" onclick="notifMarkAllRead()">Tandai sudah dibaca</button>
+        </div>
+        <div id="notif-list" class="notif-list"></div>
+      </div>
     </div>
     <div id="hdr-avatar" class="header-avatar-btn">A</div>
   </div>

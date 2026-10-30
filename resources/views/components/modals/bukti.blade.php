@@ -40,7 +40,7 @@
         <textarea id="bk-uraian" class="bk-textarea" maxlength="5000" placeholder="Jelaskan secara rinci tindakan nyata atau dokumen penyelesaian yang telah dilaksanakan oleh Unit Kerja..."></textarea>
       </div>
 
-      <div class="bk-block">
+      <div class="bk-block" id="bk-setoran-wrap" style="display:none;">
         <div class="bk-label"><i data-lucide="landmark"></i> Validasi Setoran Kas Negara <span class="bk-opt">(isi bila tindak lanjut bersifat finansial)</span></div>
         <div class="bk-grid-2">
           <div class="bk-field">

@@ -75,6 +75,8 @@ class TemuanController extends Controller
                 'Output'             => $r->output              ?? '',
                 'isSubRow'           => ($r->parent_id !== null),
                 'BuktiCount'         => (int) $r->bukti_count,
+                'Deadline'           => $r->deadline?->format('Y-m-d') ?? '',
+                'NominalKerugian'    => $r->nominal_kerugian !== null ? (float) $r->nominal_kerugian : null,
                 'JenisAudit'         => $jenis,
                 'JenisAuditLabel'    => Temuan::JENIS_AUDIT_LABEL[$jenis] ?? '',
                 'Sumber'             => $r->sumber ?: Temuan::SUMBER_BPK,
@@ -129,11 +131,21 @@ class TemuanController extends Controller
             }
         }
 
+        // Alur input temuan: jenis audit wajib dipilih saat membuat temuan induk baru
+        if (! $isSub && $this->cleanJenis($fd['JenisAudit'] ?? null) === null) {
+            return response()->json(['success' => false, 'message' => 'Jenis audit wajib dipilih.'], 422);
+        }
+
         $sumber    = $isSub ? ($parent->sumber ?: Temuan::SUMBER_BPK) : $this->cleanSumber($fd['Sumber'] ?? null);
         $createdBy = $isSub ? $parent->created_by : $this->username();
         $sortOrder = $this->resolveSort($isSub ? $parentId : null);
 
-        $temuan = DB::transaction(function () use ($isSub, $fd, $sumber, $createdBy, $parentId, $sortOrder) {
+        // Nominal kerugian hanya untuk audit Keuangan (induk atau sub temuan dari induk Keuangan)
+        $jenisBaris = $isSub ? $this->jenisInduk($parent) : $this->cleanJenis($fd['JenisAudit'] ?? null);
+        $nominal    = $jenisBaris === Temuan::JENIS_KEUANGAN ? $this->cleanNominal($fd['NominalKerugian'] ?? null) : null;
+        $deadline   = $this->cleanTanggal($fd['Deadline'] ?? null);
+
+        $temuan = DB::transaction(function () use ($isSub, $fd, $sumber, $createdBy, $parentId, $sortOrder, $nominal, $deadline) {
             return Temuan::create([
                 'no'                  => $isSub ? null : $this->generateKode($sumber),
                 'sumber'              => $sumber,
@@ -150,6 +162,8 @@ class TemuanController extends Controller
                 'rencana_aksi'        => $fd['RencanaAksi']       ?? null,
                 'jadwal_pelaksanaan'  => $fd['JadwalPelaksanaan'] ?? null,
                 'output'              => $fd['Output']            ?? null,
+                'deadline'            => $deadline,
+                'nominal_kerugian'    => $nominal,
                 'parent_id'           => $isSub ? $parentId : null,
                 'sort_order'          => $sortOrder,
             ]);
@@ -218,6 +232,20 @@ class TemuanController extends Controller
             $jenis = $this->cleanJenis($fd['JenisAudit']);
             $extra['jenis_audit'] = $jenis;
         }
+        if (array_key_exists('Deadline', $fd)) {
+            $extra['deadline'] = $this->cleanTanggal($fd['Deadline']);
+        }
+        if ($temuan->parent_id === null && array_key_exists('jenis_audit', $extra) && $extra['jenis_audit'] !== Temuan::JENIS_KEUANGAN) {
+            // Jenis audit diubah menjadi non-Keuangan: nominal kerugian induk & sub temuan tidak relevan lagi
+            Temuan::where('parent_id', $temuan->id)->update(['nominal_kerugian' => null]);
+            $extra['nominal_kerugian'] = null;
+        }
+        if (array_key_exists('NominalKerugian', $fd)) {
+            // Berlaku hanya bila jenis audit efektif baris ini = Keuangan; selain itu dikosongkan
+            $jenisEfektif = array_key_exists('jenis_audit', $extra) ? $extra['jenis_audit'] : $this->jenisInduk($temuan);
+            $extra['nominal_kerugian'] = $jenisEfektif === Temuan::JENIS_KEUANGAN
+                ? $this->cleanNominal($fd['NominalKerugian']) : null;
+        }
         if ($extra) {
             $temuan->update($extra);
         }
@@ -256,6 +284,39 @@ class TemuanController extends Controller
     {
         $v = strtolower(trim((string) $v));
         return array_key_exists($v, Temuan::KODE_PREFIX) ? $v : Temuan::SUMBER_BPK;
+    }
+
+    /** Jenis audit efektif sebuah baris: miliknya, atau milik induknya bila sub temuan */
+    private function jenisInduk(?Temuan $t): ?string
+    {
+        $guard = 0;
+        while ($t && ! $t->jenis_audit && $t->parent_id && $guard++ < 20) {
+            $t = Temuan::find($t->parent_id);
+        }
+        return $t ? ($t->jenis_audit ?: null) : null;
+    }
+
+    /** "1.500.000,50" / "1500000.5" -> "1500000.50"; kosong atau tidak valid -> null */
+    private function cleanNominal($v): ?string
+    {
+        $s = trim(preg_replace('/[^\d.,]/', '', (string) $v));
+        if ($s === '') {
+            return null;
+        }
+        if (str_contains($s, ',')) {
+            $s = str_replace(['.', ','], ['', '.'], $s);
+        } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $s)) {
+            $s = str_replace('.', '', $s);
+        }
+        return is_numeric($s) ? number_format((float) $s, 2, '.', '') : null;
+    }
+
+    /** Tanggal Y-m-d yang valid atau null */
+    private function cleanTanggal($v): ?string
+    {
+        $s = trim((string) $v);
+        $d = \DateTime::createFromFormat('Y-m-d', $s);
+        return ($d && $d->format('Y-m-d') === $s) ? $s : null;
     }
 
     /** Jenis audit valid atau null (belum ditentukan) */

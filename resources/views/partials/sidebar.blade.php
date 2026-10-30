@@ -44,26 +44,6 @@
           <span class="mini:hidden">Dashboard</span>
         </div>
 
-        {{-- Ruang Isian (dropdown) --}}
-        <div id="nav-ruang-isian" onclick="toggleNavGroup('ruang-isian')" title="Ruang Isian"
-          class="nav-item nav-parent group/p mb-[3px] flex cursor-pointer items-center gap-3.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-600 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:bg-[#e3eaf8] act:font-semibold act:text-blue-900 mini:justify-center mini:px-0 mini:py-[11px]">
-          <i data-lucide="file-edit" class="size-5 shrink-0"></i>
-          <span class="mini:hidden">Ruang Isian</span>
-          <i data-lucide="chevron-down" class="ml-auto size-4 transition-transform group-[.open]/p:rotate-180 mini:hidden"></i>
-        </div>
-        <div id="nav-sub-ruang-isian" class="nav-sub-wrap max-h-0 overflow-hidden transition-[max-height] duration-300 opened:max-h-36 mini:hidden">
-          <div id="nav-ri-temuan" onclick="navigate('ruang-isian')"
-            class="nav-subitem group/s mb-[3px] ml-[18px] flex cursor-pointer items-center gap-3 rounded-[10px] border-l-[1.5px] border-slate-200 py-[9px] pl-[22px] pr-3.5 text-[13px] font-medium text-slate-500 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:border-blue-600 act:bg-[#eaf0fc] act:font-semibold act:text-blue-900">
-            <span class="size-1.5 shrink-0 rounded-full bg-slate-300 group-[.active]/s:bg-blue-600"></span>
-            <span>Temuan / Sub Temuan</span>
-          </div>
-          <div id="nav-ri-detail" onclick="navigate('ruang-isian-detail')"
-            class="nav-subitem group/s mb-[3px] ml-[18px] flex cursor-pointer items-center gap-3 rounded-[10px] border-l-[1.5px] border-slate-200 py-[9px] pl-[22px] pr-3.5 text-[13px] font-medium text-slate-500 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:border-blue-600 act:bg-[#eaf0fc] act:font-semibold act:text-blue-900">
-            <span class="size-1.5 shrink-0 rounded-full bg-slate-300 group-[.active]/s:bg-blue-600"></span>
-            <span>Detail</span>
-          </div>
-        </div>
-
         {{-- Rekap --}}
         <div id="nav-rekap" onclick="navigate('rekap')" title="Rekap & Laporan"
           class="nav-item mb-[3px] flex cursor-pointer items-center gap-3.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-600 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:bg-[#e3eaf8] act:font-semibold act:text-blue-900 mini:justify-center mini:px-0 mini:py-[11px]">
@@ -125,7 +105,7 @@
       if (el) el.classList.toggle('collapsed');
     };
 
-    // Saat ciut, klik "Ruang Isian" -> perluas dulu lalu buka submenu.
+    // (Menu bertingkat sudah tidak dipakai; pembungkus ini dibiarkan agar aman bila ada submenu baru.)
     var origToggleGroup = window.toggleNavGroup;
     if (typeof origToggleGroup === 'function') {
       window.toggleNavGroup = function (name) {

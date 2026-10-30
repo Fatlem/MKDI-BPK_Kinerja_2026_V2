@@ -5,7 +5,6 @@
 
 // ══════════════════ HALAMAN DETAIL ═══════════════════════════════
 const DET_FIELDS = [
-  { key: 'Kondisi',     label: 'Kondisi',     icon: 'search',         cls: 'blue'   },
   { key: 'Kriteria',    label: 'Kriteria',    icon: 'target',         cls: 'blue'   },
   { key: 'Sebab',       label: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
   { key: 'Akibat',      label: 'Akibat',      icon: 'alert-triangle', cls: 'orange' },

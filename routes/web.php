@@ -8,6 +8,7 @@ use App\Http\Controllers\PicController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BuktiController;
 use App\Http\Controllers\BatlController;
+use App\Http\Controllers\NotifikasiController;
 
 Route::view('/',              'layouts.app');
 Route::view('/dashboard',     'layouts.app');
@@ -36,6 +37,9 @@ $apiRoutes = function () {
         Route::get('/bukti/{id}/file',       [BuktiController::class, 'file']);
         Route::put('/bukti/{id}/verifikasi', [BuktiController::class, 'verifikasi']);
         Route::delete('/bukti/{id}',         [BuktiController::class, 'destroy']);
+
+        // Notifikasi (lonceng header)
+        Route::get('/notifikasi',            [NotifikasiController::class, 'index']);
 
         // Berita Acara Tindak Lanjut (BATL) - diterbitkan auditor
         Route::post('/batl',                 [BatlController::class,  'store']);
