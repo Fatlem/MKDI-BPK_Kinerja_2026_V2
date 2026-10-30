@@ -53,5 +53,3 @@ Route::prefix('api')
 Route::withoutMiddleware([VerifyCsrfToken::class])
     ->name('noprefix.')
     ->group($apiRoutes);
-
- require __DIR__ . '/../public/index.php';
