@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\MkdiUser;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -17,7 +17,7 @@ class AuthController extends Controller
             return response()->json(['success' => false, 'message' => 'Username dan password wajib diisi.']);
         }
 
-        $user = MkdiUser::whereRaw('LOWER(username) = ?', [strtolower($username)])->first();
+        $user = User::whereRaw('LOWER(username) = ?', [strtolower($username)])->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
             return response()->json(['success' => false, 'message' => 'Username atau password salah.']);

@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Concerns\ChecksMkdiAccess;
 use App\Models\Temuan;
 use App\Models\Pic;
-use App\Models\MkdiUser;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class TemuanController extends Controller
@@ -260,7 +260,7 @@ class TemuanController extends Controller
         foreach (Pic::pluck('nama') as $n) {
             $known[$key($n)] = true;
         }
-        foreach (MkdiUser::get(['username', 'nama']) as $u) {
+        foreach (User::get(['username', 'nama']) as $u) {
             $known[$key($u->username)] = true;
             $known[$key($u->nama)]     = true;
         }

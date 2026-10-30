@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MkdiUser;
+use App\Models\User;
 
 class UserController extends Controller
 {
     /** Daftar user untuk autocomplete di halaman login */
     public function listForLogin()
     {
-        $users = MkdiUser::select('username', 'nama', 'role')
+        $users = User::select('username', 'nama', 'role')
             ->where('role', '!=', 'admin')   // sembunyikan admin dari datalist
             ->get()
             ->map(fn($u) => [

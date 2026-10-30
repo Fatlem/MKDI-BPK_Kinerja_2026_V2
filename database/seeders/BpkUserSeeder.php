@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\MkdiUser;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -30,7 +30,7 @@ class BpkUserSeeder extends Seeder
         ];
 
         foreach ($users as [$username, $nama, $role]) {
-            MkdiUser::query()->updateOrCreate(
+            User::query()->updateOrCreate(
                 ['username' => $username],
                 ['nama' => $nama, 'password' => Hash::make($password), 'role' => $role]
             );
