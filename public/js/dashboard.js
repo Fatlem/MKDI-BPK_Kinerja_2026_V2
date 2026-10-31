@@ -88,31 +88,41 @@ function dbResetFilter() {
   calculateAndRenderDashboard(S.allR || []);
 }
 
-function dbFilterBarHtml() {
+function dbFilterBarHtml(summaryText) {
   const f = S.dbF;
   const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${f.sumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
   const optJenis  = Object.keys(JENIS_AUDIT_LABEL).map(k => `<option value="${esc(k)}" ${f.jenis === k ? 'selected' : ''}>${esc(JENIS_AUDIT_LABEL[k])}</option>`).join('');
   const optTahun  = tahunOptions(S.allR).map(y => `<option value="${esc(y)}" ${f.tahun === y ? 'selected' : ''}>${esc(y)}</option>`).join('');
   const optPic    = allPicOptions().map(p => `<option value="${esc(p.username)}" ${f.pic === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
-  const selCls    = 'h-8 px-3 text-xs bg-white border border-black/[0.08] rounded-[9px] focus:border-[#0071E3] focus:outline-none text-[#1D1D1F] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.02)]';
+  const selCls    = 'h-8 px-2.5 text-xs bg-[#F5F5F7] border border-transparent rounded-[8px] focus:bg-white focus:border-[#0071E3] focus:outline-none text-[#1D1D1F] font-medium transition-colors';
   return `
-    <div class="mb-5 flex flex-wrap items-center gap-2">
-      <select id="db-flt-sumber" onchange="dbApplyFilter()" class="${selCls}">
-        <option value="">Semua Sumber</option>${optSumber}
-      </select>
-      <select id="db-flt-jenis" onchange="dbApplyFilter()" class="${selCls}">
-        <option value="">Semua Jenis Audit</option>${optJenis}
-      </select>
-      <select id="db-flt-tahun" onchange="dbApplyFilter()" class="${selCls}">
-        <option value="">Semua Tahun</option>${optTahun}
-      </select>
-      <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''} class="${selCls} max-w-[220px] truncate">
-        <option value="">Semua Unit Kerja</option>${optPic}
-      </select>
-      <button type="button" onclick="dbResetFilter()" class="h-8 px-3 text-xs text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/[0.04] rounded-[9px] transition-colors flex items-center gap-1" title="Reset">
-        <span>Reset</span>
-      </button>
+    <div class="mb-4 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <select id="db-flt-sumber" onchange="dbApplyFilter()" class="${selCls}">
+          <option value="">Semua Sumber</option>${optSumber}
+        </select>
+        <select id="db-flt-jenis" onchange="dbApplyFilter()" class="${selCls}">
+          <option value="">Semua Jenis Audit</option>${optJenis}
+        </select>
+        <select id="db-flt-tahun" onchange="dbApplyFilter()" class="${selCls}">
+          <option value="">Semua Tahun</option>${optTahun}
+        </select>
+        <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''} class="${selCls} max-w-[220px] truncate">
+          <option value="">Semua Unit Kerja</option>${optPic}
+        </select>
+        <button type="button" onclick="dbResetFilter()" class="h-8 px-2.5 text-xs text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] rounded-[8px] transition-colors">
+          Reset
+        </button>
+      </div>
+      ${summaryText ? `<span class="text-xs text-[#86868B]">${summaryText}</span>` : ''}
     </div>`;
+}
+
+// Navigasi langsung dari Dashboard ke Detail Komponen Temuan tertentu
+function openTemuanFromDashboard(noKey) {
+  if (!noKey) return;
+  S.activeLhaNo = String(noKey);
+  navigate('ruang-isian');
 }
 
 // ═══ HALAMAN DASHBOARD ═════════════════════════════════════════════════
@@ -166,27 +176,60 @@ function calculateAndRenderDashboard(rows) {
   const picList = S.picList || [];
   const uniqueNos = new Set();
   const lhaNos = new Set();
+  const docGroups = {};
+
   let totalSelesai = 0, totalProses = 0, totalBelum = 0;
   let totalSubTemuan = 0, totalRenaksi = 0;
+  let totalBukti = 0, menungguReview = 0;
+  let stage1BelumRenaksi = 0, stage2MenungguBukti = 0, stage3ReviewAuditor = 0, stage4Selesai = 0;
   let targetTotal = 0, realisasiTotal = 0, selisihTotal = 0;
-  
+
   const picStatsMap = {};
   picList.forEach(p => {
-    picStatsMap[_picNormKey(p.username)] = { username: p.username, nama: p.nama, jumlah: 0, selesai: 0, progress: 0 };
+    picStatsMap[_picNormKey(p.username)] = {
+      username: p.username,
+      nama: p.nama,
+      jumlah: 0,
+      selesai: 0,
+      proses: 0,
+      belum: 0,
+      progress: 0
+    };
   });
 
   rows.forEach(r => {
-    if (r.No) {
-      uniqueNos.add(String(r.No).trim());
-      if (r.StatusDokumen === 'lha') lhaNos.add(String(r.No).trim());
+    const noKey = String(r.No || '').trim();
+    if (noKey) {
+      uniqueNos.add(noKey);
+      if (r.StatusDokumen === 'lha') lhaNos.add(noKey);
+      if (!docGroups[noKey]) docGroups[noKey] = [];
+      docGroups[noKey].push(r);
     }
     if (r.isSubRow || String(r.SubTemuan || '').trim()) totalSubTemuan++;
-    if (String(r.RencanaAksi || '').trim()) totalRenaksi++;
+
+    const hasRenaksi = !!String(r.RencanaAksi || '').trim();
+    const bCount     = Number(r.BuktiCount) || 0;
+    const tlSt       = r.TLStatus || 'belum';
+    if (hasRenaksi) totalRenaksi++;
+    totalBukti += bCount;
+    if (tlSt === 'menunggu' || tlSt === 'pending') menungguReview++;
 
     const st = statusOf(r);
-    if (st.lbl === 'Selesai') totalSelesai++;
-    else if (st.lbl === 'Proses') totalProses++;
-    else totalBelum++;
+    if (st.lbl === 'Selesai') {
+      totalSelesai++;
+      stage4Selesai++;
+    } else if (st.lbl === 'Proses') {
+      totalProses++;
+      if (bCount > 0 || tlSt === 'menunggu' || tlSt === 'pending' || tlSt === 'ditolak') {
+        stage3ReviewAuditor++;
+      } else {
+        stage2MenungguBukti++;
+      }
+    } else {
+      totalBelum++;
+      if (hasRenaksi) stage2MenungguBukti++;
+      else stage1BelumRenaksi++;
+    }
 
     const nt = Number(r.NilaiTemuan) || 0;
     const nr = Number(r.NilaiRealisasi) || 0;
@@ -201,8 +244,90 @@ function calculateAndRenderDashboard(rows) {
       if (picStatsMap[k]) {
         picStatsMap[k].jumlah++;
         if (st.lbl === 'Selesai') picStatsMap[k].selesai++;
+        else if (st.lbl === 'Proses' || hasRenaksi || bCount > 0) picStatsMap[k].proses++;
+        else picStatsMap[k].belum++;
       }
     });
+  });
+
+  // Hitung metrik dokumen induk (Sumber Audit & SLA 60 Hari)
+  let bpkDocs = 0, insDocs = 0;
+  let slaOnTrack = 0, slaWarning = 0, slaOverdue = 0, slaDone = 0;
+  let daysSum = 0, activeDocsCount = 0;
+  const docSummaries = [];
+
+  Object.keys(docGroups).forEach(noKey => {
+    const items = docGroups[noKey];
+    const parent = items[0];
+    const isBpk = (parent.Sumber || 'bpk') === 'bpk';
+    if (isBpk) bpkDocs++;
+    else insDocs++;
+
+    let dSelesai = 0, dRenaksi = 0, dBukti = 0;
+    items.forEach(it => {
+      if (statusOf(it).lbl === 'Selesai') dSelesai++;
+      if (String(it.RencanaAksi || '').trim()) dRenaksi++;
+      dBukti += (Number(it.BuktiCount) || 0);
+    });
+    const dTotal = items.length || 1;
+    const dPct = Math.round((dSelesai / dTotal) * 100);
+    const isDocDone = dSelesai === dTotal && dTotal > 0;
+
+    const dl = getDeadlineInfo({
+      TanggalInput: parent.TanggalInput,
+      DeadlineDate: parent.DeadlineDate,
+      TLStatus: isDocDone ? 'terverifikasi' : (dRenaksi > 0 || dBukti > 0 ? 'menunggu' : 'belum')
+    });
+
+    if (isDocDone || parent.StatusDokumen === 'lha') {
+      slaDone++;
+      slaOnTrack++;
+    } else if (dl.isOverdue) {
+      slaOverdue++;
+    } else {
+      slaOnTrack++;
+      if (dl.daysRemaining <= 14) slaWarning++;
+      daysSum += Math.max(0, dl.daysRemaining);
+      activeDocsCount++;
+    }
+
+    // Tentukan tahap dokumen saat ini
+    let stageLabel = 'Belum Renaksi';
+    let stageTone  = 'muted';
+    if (parent.StatusDokumen === 'lha') {
+      stageLabel = 'LHA Resmi';
+      stageTone  = 'blue';
+    } else if (isDocDone) {
+      stageLabel = 'Siap BATL';
+      stageTone  = 'blue';
+    } else if (dBukti > 0) {
+      stageLabel = 'Review Bukti';
+      stageTone  = 'dark';
+    } else if (dRenaksi > 0) {
+      stageLabel = 'Menunggu Bukti';
+      stageTone  = 'dark';
+    }
+
+    docSummaries.push({
+      noKey,
+      parent,
+      items,
+      total: dTotal,
+      selesai: dSelesai,
+      renaksi: dRenaksi,
+      bukti: dBukti,
+      pct: dPct,
+      isDone: isDocDone,
+      dl,
+      stageLabel,
+      stageTone
+    });
+  });
+
+  // Urutkan daftar dokumen prioritas: yang belum selesai dulu, lalu sisa hari paling sedikit
+  docSummaries.sort((a, b) => {
+    if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
+    return (a.dl.daysRemaining || 0) - (b.dl.daysRemaining || 0);
   });
 
   const total = rows.length;
@@ -222,10 +347,28 @@ function calculateAndRenderDashboard(rows) {
     totalLha: lhaNos.size,
     totalTindakLanjut: total,
     totalRenaksi,
+    renaksiPct: total > 0 ? Math.round((totalRenaksi / total) * 100) : 0,
+    belumRenaksi: Math.max(0, total - totalRenaksi),
+    totalBukti,
+    menungguReview,
     picMengisi: picMengisiCount,
     totalPic: picList.length,
     progressKeseluruhan: total > 0 ? Math.round((totalSelesai / total) * 100) : 0,
     status: { selesai: totalSelesai, proses: totalProses, belum: totalBelum },
+    stages: {
+      belumRenaksi: stage1BelumRenaksi,
+      menungguBukti: stage2MenungguBukti,
+      reviewAuditor: stage3ReviewAuditor,
+      selesai: stage4Selesai
+    },
+    sumberCount: { bpk: bpkDocs, inspektorat: insDocs },
+    sla: {
+      onTrack: slaOnTrack,
+      warning: slaWarning,
+      overdue: slaOverdue,
+      done: slaDone,
+      avgDaysLeft: activeDocsCount > 0 ? Math.round(daysSum / activeDocsCount) : null
+    },
     financial: {
       target: targetTotal,
       realisasi: realisasiTotal,
@@ -233,49 +376,66 @@ function calculateAndRenderDashboard(rows) {
       pct: targetTotal > 0 ? Math.min(100, Math.round((realisasiTotal / targetTotal) * 100)) : 0
     },
     picStats: picStatsArray,
+    docSummaries
   });
 }
 
 function renderDashboard(d) {
   if (!d) return;
-  const isPic = isPicUser();
-  let picGrid = d.picStats || [];
-  if (isPic) picGrid = picGrid.filter(p => picKeyOf(p.username) === picKeyOf(S.user.username) || picKeyOf(p.username) === picKeyOf(S.user.nama));
+  const { selesai, proses, belum } = d.status;
+  const totalStatus = selesai + proses + belum || 1;
+  const progressPct = Math.round((selesai / totalStatus) * 100);
+  const lhpCount    = Math.max(0, (d.totalTemuan || 0) - (d.totalLha || 0));
+  const fin         = d.financial || { target: 0, realisasi: 0, selisih: 0, pct: 0 };
 
-  // Bar chart rows — use all picStats (not filtered by isPic)
-  const barStats = d.picStats || [];
-  const barMax   = barStats.reduce((m, p) => Math.max(m, p.jumlah), 0) || 1;
+  // 1. Urutkan Unit Kerja berdasarkan beban terbanyak -> paling sedikit (piramida bersih)
+  const sortedPics = (d.picStats || []).slice().sort((a, b) => {
+    if (b.jumlah !== a.jumlah) return b.jumlah - a.jumlah;
+    return b.selesai - a.selesai;
+  });
+  const barMax = sortedPics.reduce((m, p) => Math.max(m, p.jumlah), 0) || 1;
 
-  // Bar rows start at width:0 — JS will animate them after DOM insert
-  const barRows = barStats.map((p) => {
-    const targetPct = Math.round((p.jumlah / barMax) * 100);
-    const label     = _picShortLabel(p);
-    const hasVal    = p.jumlah > 0;
+  // Stacked Horizontal Bar: panjang total proporsional terhadap beban (barMax),
+  // isi di dalamnya terbagi menjadi Selesai (#0071E3), Proses (#86868B), Belum (#D2D2D7)
+  const barRows = sortedPics.map((p) => {
+    const label       = _picShortLabel(p);
+    const hasVal      = p.jumlah > 0;
+    const wTotalPct   = hasVal ? Math.max(6, Math.round((p.jumlah / barMax) * 100)) : 0;
+    const pSelesaiPct = hasVal ? Math.round((p.selesai / p.jumlah) * 100) : 0;
+    const pProsesPct  = hasVal ? Math.round((p.proses / p.jumlah) * 100) : 0;
+    const pBelumPct   = hasVal ? Math.max(0, 100 - pSelesaiPct - pProsesPct) : 0;
+
     return `
-      <div class="db-bar-row" data-pct="${targetPct}" data-nama="${esc(p.nama)}" data-jumlah="${p.jumlah}"
-           style="display:flex;align-items:center;gap:10px;font-size:12px;border-radius:8px;padding:4px 6px;cursor:default;position:relative;transition:background 0.15s;">
-        <span style="width:48px;font-weight:600;color:#6E6E73;flex-shrink:0;">${esc(label)}</span>
+      <div class="db-bar-row group" data-pct="${wTotalPct}"
+           onclick="if(window.S){S.activeLhaNo=null;} navigate('ruang-isian','${esc(jsq(p.username))}')"
+           style="display:flex;align-items:center;gap:10px;font-size:12px;border-radius:8px;padding:4.5px 8px;cursor:pointer;position:relative;transition:background 0.15s;">
+        <span style="width:46px;font-weight:600;color:${hasVal ? '#1D1D1F' : '#86868B'};flex-shrink:0;" class="group-hover:text-[#0071E3] transition-colors">${esc(label)}</span>
         <div style="flex:1;background:#F5F5F7;border-radius:999px;height:10px;overflow:hidden;position:relative;">
-          <div class="db-bar-fill" style="width:0%;height:100%;border-radius:999px;background:${hasVal ? '#0071E3' : '#E5E5EA'};transition:width 0.55s cubic-bezier(.4,0,.2,1);"></div>
+          ${hasVal ? `
+          <div class="db-bar-fill" style="width:0%;height:100%;border-radius:999px;overflow:hidden;display:flex;transition:width 0.55s cubic-bezier(.4,0,.2,1);">
+            ${pSelesaiPct > 0 ? `<div style="width:${pSelesaiPct}%;height:100%;background:#0071E3;"></div>` : ''}
+            ${pProsesPct > 0 ? `<div style="width:${pProsesPct}%;height:100%;background:#86868B;"></div>` : ''}
+            ${pBelumPct > 0 ? `<div style="width:${pBelumPct}%;height:100%;background:#D2D2D7;"></div>` : ''}
+          </div>` : ''}
         </div>
-        <span style="width:24px;text-align:right;font-weight:${hasVal ? '600' : '500'};color:${hasVal ? '#1D1D1F' : '#86868B'};flex-shrink:0;">${p.jumlah}</span>
-        <div class="db-bar-tooltip" style="display:none;position:absolute;left:54px;top:-36px;background:rgba(29,29,31,0.92);color:#fff;font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.16);">
-          ${esc(p.nama)}: <b>${p.jumlah}</b> (${p.selesai} selesai)
+        <div style="width:74px;text-align:right;flex-shrink:0;" class="flex items-center justify-end gap-1.5">
+          <span style="font-weight:${hasVal ? '600' : '400'};color:${hasVal ? '#1D1D1F' : '#86868B'};">${p.jumlah}</span>
+          <span class="text-[10.5px] text-[#86868B]">(${p.selesai}/${p.jumlah})</span>
+        </div>
+        <div class="db-bar-tooltip" style="display:none;position:absolute;left:54px;top:-34px;background:rgba(29,29,31,0.94);color:#fff;font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.16);">
+          ${esc(p.nama)} · <b>${p.jumlah} rincian</b> (${p.selesai} selesai, ${p.proses} proses, ${p.belum} belum)
         </div>
       </div>`;
   }).join('');
 
-  // Donut interaktif (SVG) — Palet Apple UI Kit (Blue, Gray, Light Gray)
-  const { selesai, proses, belum } = d.status;
-  const totalStatus = selesai + proses + belum || 1;
-  const progressPct = Math.round((selesai / totalStatus) * 100);
+  // 2. Donut SVG + 4-Stage Pipeline Breakdown
   const progressColor = '#1D1D1F';
   const DONUT = [
     { key: 'selesai', label: 'Selesai', value: selesai, color: '#0071E3' },
     { key: 'proses',  label: 'Proses',  value: proses,  color: '#86868B' },
     { key: 'belum',   label: 'Belum',   value: belum,   color: '#E5E5EA' },
   ];
-  const _donutR = 70, _donutC = 2 * Math.PI * _donutR;
+  const _donutR = 62, _donutC = 2 * Math.PI * _donutR;
   const _donutOn = DONUT.filter(x => x.value > 0);
   const _donutGap = _donutOn.length > 1 ? 2.5 : 0;
   let _donutAcc = 0;
@@ -284,140 +444,275 @@ function renderDashboard(d) {
         if (!x.value) return '';
         const len  = (x.value / totalStatus) * _donutC;
         const dash = Math.max(len - _donutGap, 0.5);
-        const el = `<circle class="db-donut-seg" data-status="${x.key}" cx="90" cy="90" r="${_donutR}" fill="none"
-            stroke="${x.color}" stroke-width="20" stroke-dasharray="${dash} ${_donutC - dash}"
-            stroke-dashoffset="${-_donutAcc}" transform="rotate(-90 90 90)"/>`;
+        const el = `<circle class="db-donut-seg" data-status="${x.key}" cx="80" cy="80" r="${_donutR}" fill="none"
+            stroke="${x.color}" stroke-width="18" stroke-dasharray="${dash} ${_donutC - dash}"
+            stroke-dashoffset="${-_donutAcc}" transform="rotate(-90 80 80)"/>`;
         _donutAcc += len;
         return el;
       }).join('')
-    : `<circle cx="90" cy="90" r="${_donutR}" fill="none" stroke="#E5E5EA" stroke-width="20"/>`;
+    : `<circle cx="80" cy="80" r="${_donutR}" fill="none" stroke="#E5E5EA" stroke-width="18"/>`;
 
-  // PIC cards HTML
-  const picCardsHtml = picGrid.length
-    ? picGrid.map((p, i) => {
-        const progressPctCard = p.progress || 0;
-        const progressBarClr  = progressPctCard > 0 ? '#0071E3' : '#E5E5EA';
-        const progressTextClr = progressPctCard > 0 ? 'color:#0071E3;' : 'color:#86868B;';
+  const stg = d.stages || { belumRenaksi: 0, menungguBukti: 0, reviewAuditor: 0, selesai: 0 };
+  const pipelineRows = [
+    { label: '1. Belum Isi Renaksi',      actor: 'Satker',  val: stg.belumRenaksi,  color: '#D2D2D7' },
+    { label: '2. Menunggu Unggah Bukti',  actor: 'Satker',  val: stg.menungguBukti, color: '#86868B' },
+    { label: '3. Review Bukti Auditor',   actor: 'Auditor', val: stg.reviewAuditor, color: '#1D1D1F' },
+    { label: '4. Disetujui / Tuntas',     actor: 'Selesai', val: stg.selesai,       color: '#0071E3' },
+  ].map(s => {
+    const pct = Math.round((s.val / totalStatus) * 100);
+    return `
+      <div class="py-1.5">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background:${s.color};"></span>
+            <span class="text-[#1D1D1F] font-medium">${s.label}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-[#86868B]">${s.actor}</span>
+            <span class="font-semibold text-[#1D1D1F] w-5 text-right">${s.val}</span>
+          </div>
+        </div>
+        <div class="w-full bg-[#F5F5F7] rounded-full h-1 overflow-hidden">
+          <div class="h-1 rounded-full transition-all duration-500" style="width:${pct}%;background:${s.color};"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // 3. Tabel Pantauan Prioritas & Batas Waktu 60 Hari (Bawah)
+  const priorityDocs = (d.docSummaries || []).slice(0, 6);
+  const priorityRowsHtml = priorityDocs.length
+    ? priorityDocs.map(doc => {
+        const p = doc.parent;
+        const pics = groupPicShort(doc.items).join(', ') || '—';
+        const dlText = doc.isDone
+          ? `<span class="text-xs font-medium text-[#0071E3]">Selesai</span>`
+          : doc.dl.isOverdue
+            ? `<span class="text-xs font-medium text-[#D70015]">Lewat ${Math.abs(doc.dl.daysRemaining)} hari</span>`
+            : `<span class="text-xs font-medium ${doc.dl.daysRemaining <= 14 ? 'text-[#1D1D1F]' : 'text-[#6E6E73]'}">Sisa ${doc.dl.daysRemaining} hari</span>`;
+
+        const stagePill = doc.stageTone === 'blue'
+          ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>${doc.stageLabel}</span>`
+          : doc.stageTone === 'dark'
+            ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#1D1D1F]"><span class="w-1.5 h-1.5 rounded-full bg-[#86868B]"></span>${doc.stageLabel}</span>`
+            : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#86868B]"><span class="w-1.5 h-1.5 rounded-full bg-[#D2D2D7]"></span>${doc.stageLabel}</span>`;
+
         return `
-          <div class="db-pic-card" onclick="if(window.S){S.activeLhaNo=null;} navigate('ruang-isian','${esc(jsq(p.username))}')">
-            <div class="db-pic-card-body">
-              <div class="db-pic-icon-wrap" style="background:#F5F5F7;color:#6E6E73;">${_picIconSvg(i)}</div>
-              <h4 class="db-pic-name" style="color:#1D1D1F;font-weight:600;font-size:12.5px;">${esc(p.nama)}</h4>
-            </div>
-            <div class="db-pic-card-footer" style="border-top:1px solid rgba(0,0,0,0.05);">
-              <span class="db-pic-tl-lbl" style="color:#86868B;">${p.selesai}/${p.jumlah} selesai</span>
-              <span style="font-size:11.5px;font-weight:600;${progressTextClr}">${progressPctCard}%</span>
-            </div>
-            <div class="db-pic-bar-track" style="background:#F5F5F7;height:4px;">
-              <div class="db-pic-bar-fill" style="width:${progressPctCard}%;background:${progressBarClr};"></div>
-            </div>
-          </div>`;
+          <tr onclick="openTemuanFromDashboard('${esc(jsq(doc.noKey))}')" class="hover:bg-[#F5F5F7]/70 transition-colors cursor-pointer group">
+            <td class="py-3 px-4 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs font-semibold text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors">${esc(doc.noKey)}</span>
+                ${dokumenBadge(p)}
+              </div>
+              <div class="text-[11px] text-[#86868B] mt-0.5">${(p.Sumber || 'bpk') === 'bpk' ? 'BPK RI' : 'Inspektorat'} · ${esc(jenisAuditLabel(p) || 'Audit Kinerja')}</div>
+            </td>
+            <td class="py-3 px-4 max-w-md">
+              <div class="text-xs font-medium text-[#1D1D1F] line-clamp-1">${esc(p.Temuan || '—')}</div>
+              <div class="text-[11px] text-[#86868B] mt-0.5">${doc.total} rincian · ${doc.renaksi}/${doc.total} Renaksi · ${doc.bukti} bukti</div>
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap text-xs text-[#1D1D1F]">${esc(pics)}</td>
+            <td class="py-3 px-4 whitespace-nowrap">${stagePill}</td>
+            <td class="py-3 px-4 whitespace-nowrap">
+              ${dlText}
+              <div class="text-[11px] text-[#86868B]">${esc(doc.dl.deadlineFormatted)}</div>
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap text-right">
+              <div class="inline-flex items-center gap-3">
+                <div class="w-20">
+                  <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-[#86868B]">${doc.selesai}/${doc.total}</span>
+                    <span class="font-medium text-[#1D1D1F]">${doc.pct}%</span>
+                  </div>
+                  <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-[#0071E3] h-1.5 rounded-full" style="width:${doc.pct}%"></div>
+                  </div>
+                </div>
+                <span class="inline-flex items-center gap-0.5 text-xs font-medium text-[#0071E3] group-hover:translate-x-0.5 transition-transform">
+                  <span>Buka</span>
+                  <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </span>
+              </div>
+            </td>
+          </tr>`;
       }).join('')
-    : `<div style="grid-column:1/-1;text-align:center;padding:36px;color:#86868B;">Belum ada data unit kerja</div>`;
+    : `<tr><td colspan="6" class="py-10 text-center text-xs text-[#86868B]">Belum ada dokumen temuan</td></tr>`;
 
-  const fin = d.financial || { target: 0, realisasi: 0, selisih: 0, pct: 0 };
-  const lhpCount = Math.max(0, (d.totalTemuan || 0) - (d.totalLha || 0));
+  // SLA Card helper
+  const slaHasOverdue = d.sla.overdue > 0;
+  const slaSubText = fin.target > 0
+    ? `Kas: Rp ${formatIDR(fin.realisasi)} / Rp ${formatIDR(fin.target)}`
+    : (d.sla.avgDaysLeft !== null ? `Rata-rata sisa ${d.sla.avgDaysLeft} hari kerja` : 'Seluruh dokumen tuntas');
 
   setBody(`
-    ${dbFilterBarHtml()}
+    ${dbFilterBarHtml(`${d.totalTemuan} dokumen · ${d.totalTindakLanjut} rekomendasi`)}
 
-    <!-- 4 Minimalist Apple KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+    <!-- 4 Informative Apple BAN Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <!-- BAN 1: Dokumen Audit -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-        <span class="text-xs font-medium text-[#6E6E73]">Temuan</span>
-        <div class="mt-2">
-          <div class="text-3xl font-semibold text-[#1D1D1F] tracking-tight">${d.totalTemuan || 0}</div>
-          <div class="mt-2 text-xs text-[#86868B]">${lhpCount} LHP · ${d.totalLha || 0} LHA</div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-[#6E6E73]">Dokumen Audit</span>
+          <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F5F5F7] text-[#1D1D1F]">${lhpCount} LHP · ${d.totalLha || 0} LHA</span>
+        </div>
+        <div class="mt-3">
+          <div class="flex items-baseline gap-2">
+            <span class="text-3xl font-semibold text-[#1D1D1F] tracking-tight">${d.totalTemuan || 0}</span>
+            <span class="text-xs text-[#86868B]">dokumen</span>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-black/[0.05] flex items-center justify-between text-xs text-[#6E6E73]">
+            <span>BPK RI: <b class="text-[#1D1D1F]">${d.sumberCount.bpk}</b></span>
+            <span>Inspektorat: <b class="text-[#1D1D1F]">${d.sumberCount.inspektorat}</b></span>
+          </div>
         </div>
       </div>
 
+      <!-- BAN 2: Kesiapan Rencana Aksi (Renaksi) -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-        <span class="text-xs font-medium text-[#6E6E73]">Rekomendasi</span>
-        <div class="mt-2">
-          <div class="text-3xl font-semibold text-[#1D1D1F] tracking-tight">${d.totalTindakLanjut || 0}</div>
-          <div class="mt-2 text-xs text-[#86868B]">${d.totalRenaksi || 0} Rencana Aksi · ${d.picMengisi || 0}/${d.totalPic || 0} Unit</div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-[#6E6E73]">Kesiapan Renaksi</span>
+          <span class="text-xs font-semibold text-[#1D1D1F]">${d.totalRenaksi}/${d.totalTindakLanjut || 0}</span>
+        </div>
+        <div class="mt-3">
+          <div class="flex items-baseline gap-2">
+            <span class="text-3xl font-semibold text-[#1D1D1F] tracking-tight">${d.renaksiPct}%</span>
+            <span class="text-xs text-[#86868B]">tersusun</span>
+          </div>
+          <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden mt-2.5">
+            <div class="bg-[#1D1D1F] h-1.5 rounded-full transition-all duration-500" style="width:${d.renaksiPct}%"></div>
+          </div>
+          <div class="mt-2 text-[11px] text-[#86868B] flex items-center justify-between">
+            <span>${d.belumRenaksi > 0 ? `${d.belumRenaksi} belum diisi Satker` : 'Semua Renaksi terisi'}</span>
+            <span>${d.picMengisi}/${d.totalPic} Unit</span>
+          </div>
         </div>
       </div>
 
+      <!-- BAN 3: Penyelesaian & Verifikasi Bukti -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
         <div class="flex items-center justify-between">
           <span class="text-xs font-medium text-[#6E6E73]">Penyelesaian</span>
-          <span class="text-xs font-medium text-[#0071E3]">${selesai}/${d.totalTindakLanjut || 0}</span>
+          <span class="text-xs font-semibold text-[#0071E3]">${selesai}/${d.totalTindakLanjut || 0}</span>
         </div>
-        <div class="mt-2">
-          <div class="text-3xl font-semibold text-[#0071E3] tracking-tight">${d.progressKeseluruhan || 0}%</div>
+        <div class="mt-3">
+          <div class="flex items-baseline gap-2">
+            <span class="text-3xl font-semibold text-[#0071E3] tracking-tight">${d.progressKeseluruhan || 0}%</span>
+            <span class="text-xs text-[#86868B]">selesai</span>
+          </div>
           <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden mt-2.5">
             <div class="bg-[#0071E3] h-1.5 rounded-full transition-all duration-700" style="width:${d.progressKeseluruhan || 0}%"></div>
           </div>
-          <div class="mt-1.5 text-[11px] text-[#86868B]">${proses} proses · ${belum} belum</div>
+          <div class="mt-2 text-[11px] text-[#86868B] flex items-center justify-between">
+            <span>${d.totalBukti} berkas bukti</span>
+            <span>${d.menungguReview > 0 ? `${d.menungguReview} menunggu review` : `${proses} dalam proses`}</span>
+          </div>
         </div>
       </div>
 
+      <!-- BAN 4: Kepatuhan Batas Waktu 60 Hari (SLA) & Kas -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-[#6E6E73]">Pemulihan Kas</span>
-          <span class="text-xs font-medium text-[#6E6E73]">${fin.pct || 0}%</span>
+          <span class="text-xs font-medium text-[#6E6E73]">Batas Waktu (60 Hari)</span>
+          <span class="text-[11px] font-medium px-2 py-0.5 rounded-full ${slaHasOverdue ? 'bg-[#FFF2F2] text-[#D70015]' : 'bg-[#F5F5F7] text-[#6E6E73]'}">${slaHasOverdue ? `${d.sla.overdue} Terlambat` : 'Sesuai SLA'}</span>
         </div>
-        <div class="mt-2">
-          <div class="text-2xl font-semibold text-[#1D1D1F] tracking-tight truncate" title="Rp ${Number(fin.realisasi || 0).toLocaleString('id-ID')}">Rp ${formatIDR(fin.realisasi || 0)}</div>
-          <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden mt-2.5">
-            <div class="bg-[#0071E3] h-1.5 rounded-full transition-all duration-500" style="width:${fin.pct || 0}%"></div>
+        <div class="mt-3">
+          <div class="flex items-baseline gap-2">
+            <span class="text-3xl font-semibold ${slaHasOverdue ? 'text-[#D70015]' : 'text-[#1D1D1F]'} tracking-tight">${d.sla.onTrack}/${d.totalTemuan || 0}</span>
+            <span class="text-xs text-[#86868B]">dalam tenggang</span>
           </div>
-          <div class="mt-1.5 text-[11px] text-[#86868B] truncate">Target Rp ${formatIDR(fin.target || 0)}</div>
+          <div class="mt-3 pt-2.5 border-t border-black/[0.05] text-[11px] text-[#6E6E73] truncate">
+            ${esc(slaSubText)}
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-5">
-      <div class="lg:col-span-2 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-5 flex flex-col">
-        <h3 class="text-[13px] font-semibold text-[#1D1D1F] mb-2">Status Tindak Lanjut</h3>
-        <div class="flex-1 flex flex-col items-center justify-center py-2">
-          <div id="db-donut-ring" style="width:196px;max-width:100%;aspect-ratio:1/1;position:relative;">
-            <svg id="db-donut-svg" class="db-donut-svg" viewBox="0 0 180 180" style="display:block;width:100%;height:100%;overflow:visible;">${donutSegs}</svg>
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-              <span id="db-donut-pct" style="font-size:28px;font-weight:600;color:${progressColor};line-height:1;letter-spacing:-0.03em;transition:color 0.2s;">${progressPct}%</span>
-              <span id="db-donut-lbl" style="font-size:11px;font-weight:500;color:#86868B;margin-top:4px;">Selesai</span>
+    <!-- Middle Bento Section: 4-Stage Pipeline + Sorted Stacked Unit Bar -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
+      <!-- Left: Donut + 4-Stage Probis Pipeline -->
+      <div class="lg:col-span-2 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-[13px] font-semibold text-[#1D1D1F]">Tahapan Tindak Lanjut</h3>
+            <span class="text-[11px] text-[#86868B]">${d.totalTindakLanjut || 0} rekomendasi</span>
+          </div>
+
+          <div class="flex items-center gap-5 py-2">
+            <div id="db-donut-ring" style="width:136px;flex-shrink:0;aspect-ratio:1/1;position:relative;">
+              <svg id="db-donut-svg" class="db-donut-svg" viewBox="0 0 160 160" style="display:block;width:100%;height:100%;overflow:visible;">${donutSegs}</svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                <span id="db-donut-pct" style="font-size:22px;font-weight:600;color:${progressColor};line-height:1;letter-spacing:-0.03em;transition:color 0.2s;">${progressPct}%</span>
+                <span id="db-donut-lbl" style="font-size:10px;font-weight:500;color:#86868B;margin-top:3px;">Selesai</span>
+              </div>
+            </div>
+
+            <div class="flex-1 space-y-1.5">
+              ${DONUT.map(item => `
+              <div class="db-legend-row flex items-center justify-between text-xs px-2 py-1 rounded-md cursor-pointer transition-colors"
+                   data-status="${item.key}" data-val="${item.value}" data-pct="${Math.round((item.value/totalStatus)*100)}">
+                <span class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full inline-block" style="background:${item.color};"></span>
+                  <span class="text-[#6E6E73]">${item.label}</span>
+                </span>
+                <span class="font-semibold text-[#1D1D1F]">${item.value}</span>
+              </div>`).join('')}
             </div>
           </div>
         </div>
-        <div class="mt-auto border-t border-black/[0.05] pt-3 flex flex-col gap-1">
-          ${DONUT.map(item => `
-          <div class="db-legend-row flex items-center justify-between text-xs px-2 py-1 rounded-md cursor-pointer transition-colors"
-               data-status="${item.key}" data-val="${item.value}" data-pct="${Math.round((item.value/totalStatus)*100)}">
-            <span class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full inline-block" style="background:${item.color};"></span>
-              <span class="text-[#6E6E73]">${item.label}</span>
-            </span>
-            <span class="font-medium text-[#1D1D1F]">${item.value}</span>
-          </div>`).join('')}
+
+        <div class="mt-3 pt-3 border-t border-black/[0.06] space-y-1">
+          <div class="text-[11px] font-medium text-[#86868B] mb-1">Rincian Posisi Proses Bisnis</div>
+          ${pipelineRows}
         </div>
       </div>
 
-      <div class="lg:col-span-3 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-[13px] font-semibold text-[#1D1D1F]">Distribusi Unit Kerja</h3>
-          <button type="button" onclick="if(window.S){S.activeLhaNo=null;} navigate('ruang-isian')" class="text-xs font-medium text-[#0071E3] hover:underline flex items-center gap-0.5">
-            <span>Daftar Temuan</span>
-            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-        <div class="flex flex-col gap-2 pt-1">
-          ${barRows || '<div class="text-[#86868B] text-xs text-center py-8">Belum ada data</div>'}
+      <!-- Right: Beban & Progres Unit Kerja (Sorted Stacked Bar) -->
+      <div class="lg:col-span-3 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-[13px] font-semibold text-[#1D1D1F]">Beban &amp; Progres Unit Kerja</h3>
+              <p class="text-[11px] text-[#86868B]">Diurutkan berdasarkan jumlah rekomendasi · Klik unit untuk membuka</p>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] text-[#6E6E73]">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#0071E3]"></span>Selesai</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#86868B]"></span>Proses</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#D2D2D7]"></span>Belum</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1.5 pt-1">
+            ${barRows || '<div class="text-[#86868B] text-xs text-center py-8">Belum ada data</div>'}
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Unit Kerja Grid -->
-    <div class="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-[13px] font-semibold text-[#1D1D1F]">${isPic ? 'Unit Kerja Anda' : 'Unit Kerja'}</h3>
-        <a href="#" class="text-xs text-[#0071E3] hover:underline font-medium flex items-center gap-0.5" onclick="navigate('rekap'); return false;">
-          <span>Rekap</span>
+    <!-- Bottom Section: Pantauan Prioritas & Batas Waktu 60 Hari -->
+    <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden">
+      <div class="px-5 py-4 border-b border-black/[0.05] flex items-center justify-between">
+        <div>
+          <h3 class="text-[13px] font-semibold text-[#1D1D1F]">Pantauan Prioritas &amp; Batas Waktu 60 Hari</h3>
+          <p class="text-[11px] text-[#86868B]">Klik baris temuan untuk langsung mengisi Rencana Aksi, Bukti, atau Evaluasi</p>
+        </div>
+        <button type="button" onclick="if(window.S){S.activeLhaNo=null;} navigate('ruang-isian')" class="text-xs font-medium text-[#0071E3] hover:underline flex items-center gap-0.5">
+          <span>Semua Temuan</span>
           <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-        </a>
+        </button>
       </div>
-      <div class="db-pic-grid">${picCardsHtml}</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[780px]">
+          <thead>
+            <tr class="border-b border-black/[0.05] text-[11px] text-[#86868B]">
+              <th class="py-2.5 px-4 font-medium">Dokumen</th>
+              <th class="py-2.5 px-4 font-medium">Temuan Utama</th>
+              <th class="py-2.5 px-4 font-medium">Unit Kerja</th>
+              <th class="py-2.5 px-4 font-medium">Tahap Saat Ini</th>
+              <th class="py-2.5 px-4 font-medium">Tenggat 60 Hari</th>
+              <th class="py-2.5 px-4 text-right font-medium">Progres</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-black/[0.04]">${priorityRowsHtml}</tbody>
+        </table>
+      </div>
     </div>
   `);
 
@@ -432,10 +727,9 @@ function renderDashboard(d) {
         requestAnimationFrame(() => { fill.style.width = pct + '%'; });
       }
 
-      // Hover: highlight row background + show tooltip
       const tip = row.querySelector('.db-bar-tooltip');
       row.addEventListener('mouseenter', () => {
-        row.style.background = '#f8fafc';
+        row.style.background = '#F5F5F7';
         if (tip) tip.style.display = 'block';
       });
       row.addEventListener('mouseleave', () => {
@@ -445,7 +739,7 @@ function renderDashboard(d) {
     });
   });
 
-   // ── Donut interaktif: hover segmen / legenda → highlight, tooltip, teks tengah ──
+  // ── Donut interaktif: hover segmen / legenda ──
   const donutSvgEl = document.getElementById('db-donut-svg');
   const donutPctEl = document.getElementById('db-donut-pct');
   const donutLblEl = document.getElementById('db-donut-lbl');
@@ -455,7 +749,7 @@ function renderDashboard(d) {
     if (!tip) {
       tip = document.createElement('div');
       tip.id = 'db-donut-tip';
-      tip.style.cssText = 'position:fixed;display:none;z-index:9999;pointer-events:none;background:rgba(15,23,42,.92);color:#fff;font-size:12px;padding:8px 12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.25);';
+      tip.style.cssText = 'position:fixed;display:none;z-index:9999;pointer-events:none;background:rgba(29,29,31,.94);color:#fff;font-size:12px;padding:8px 12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.22);';
       document.body.appendChild(tip);
     }
     const info = {};
@@ -465,10 +759,10 @@ function renderDashboard(d) {
       const x = key ? info[key] : null;
       donutSvgEl.classList.toggle('has-hover', !!x);
       donutSvgEl.querySelectorAll('.db-donut-seg').forEach(sg => sg.classList.toggle('active', sg.dataset.status === key));
-      document.querySelectorAll('.db-legend-row').forEach(r => { r.style.background = r.dataset.status === key ? '#f1f5f9' : ''; });
+      document.querySelectorAll('.db-legend-row').forEach(r => { r.style.background = r.dataset.status === key ? '#F5F5F7' : ''; });
       donutPctEl.style.color   = x ? x.color : progressColor;
       donutPctEl.textContent   = x ? x.value : progressPct + '%';
-      donutLblEl.textContent   = x ? x.label : 'Progress Selesai';
+      donutLblEl.textContent   = x ? x.label : 'Selesai';
     }
 
     function showDonutTip(key, e) {
@@ -476,10 +770,10 @@ function renderDashboard(d) {
       if (!x) return;
       const pct = Math.round((x.value / totalStatus) * 100);
       tip.innerHTML =
-        `<div style="font-weight:700;margin-bottom:4px;">${x.label}</div>` +
+        `<div style="font-weight:600;margin-bottom:3px;">${x.label}</div>` +
         `<div style="display:flex;align-items:center;gap:6px;">` +
-        `<span style="width:10px;height:10px;background:${x.color};border:1px solid #fff;display:inline-block;"></span>` +
-        `<b>${x.value}</b><span style="opacity:.7;">(${pct}%)</span></div>`;
+        `<span style="width:8px;height:8px;border-radius:99px;background:${x.color};display:inline-block;"></span>` +
+        `<b>${x.value}</b><span style="opacity:.75;">(${pct}%)</span></div>`;
       tip.style.left = (e.clientX + 14) + 'px';
       tip.style.top  = (e.clientY + 14) + 'px';
       tip.style.display = 'block';

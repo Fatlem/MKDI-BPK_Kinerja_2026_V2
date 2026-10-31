@@ -205,10 +205,15 @@ Sesuai arahan pengguna untuk menghadirkan antarmuka yang bersih, minimalis, mode
 1. **Sidebar & Frosted Glass Header** ([resources/views/partials/sidebar.blade.php](resources/views/partials/sidebar.blade.php), [resources/views/partials/header.blade.php](resources/views/partials/header.blade.php)):
    - Sidebar menggunakan latar *translucent* terang (`#FAFAFC/95`), menghapus teks *header* grup menu yang redundan, dan menggunakan *pill* aktif `#0071E3` serta avatar monokrom `#E5E5EA`.
    - Topbar disederhanakan menjadi *frosted-glass toolbar* setinggi `56px` (`backdrop-filter: saturate(180%) blur(20px)`), menghapus ikon *sparkles* kuning-biru, subjudul panjang, dan tombol lonceng notifikasi dekoratif.
-2. **Dashboard Minimalis** ([public/js/dashboard.js](public/js/dashboard.js)):
-   - Menghapus label `Filter Eksekutif:` dan mengganti kartu KPI gradien hijau mencolok menjadi **4 kartu metrik putih simetris** (`Temuan`, `Rekomendasi`, `Penyelesaian`, `Pemulihan Kas`) dengan *progress bar* `#0071E3`.
-   - Grafik *Donut* & *Horizontal Bar* menggunakan palet tenang (`#0071E3` Selesai, `#86868B` Proses, `#E5E5EA` Belum) di atas trek `#F5F5F7`.
-   - Kartu Unit Kerja disederhanakan hanya memuat nama singkat unit kerja, persentase, *progress bar* `#0071E3`, dan angka ringkas (`X temuan · Y/Z selesai`).
+2. **Dashboard Bento & Analitik Proses Bisnis** ([public/js/dashboard.js](public/js/dashboard.js)):
+   - **4 BAN (*Big Number*) Cards Kontekstual**:
+     1. `Dokumen Audit` (total dokumen, proporsi `LHP` vs `LHA`, serta rincian `BPK RI` vs `Inspektorat`).
+     2. `Kesiapan Renaksi` (persentase dan rasio Rencana Aksi yang sudah disusun Satker vs belum diisi, serta jumlah unit kerja aktif).
+     3. `Penyelesaian` (persentase rekomendasi tuntas, total berkas bukti terunggah, dan jumlah bukti yang menunggu review Auditor).
+     4. `Batas Waktu (60 Hari)` (jumlah dokumen yang masih dalam tenggang SLA 60 hari vs terlambat, rata-rata sisa hari kerja, atau realisasi kas negara bila ada temuan finansial).
+   - **Tahapan Tindak Lanjut (*Donut + 4-Stage Pipeline*)**: Memadukan grafik *Donut* dengan rincian posisi proses bisnis (`1. Belum Isi Renaksi`, `2. Menunggu Unggah Bukti`, `3. Review Bukti Auditor`, `4. Disetujui / Tuntas`) untuk mendeteksi *bottleneck* antara Satker dan Auditor.
+   - **Beban & Progres Unit Kerja (*Sorted Stacked Bar*)**: Mengurutkan unit kerja dari jumlah rekomendasi terbanyak ke paling sedikit membentuk piramida rapi, menggunakan *3-Color Stacked Bar* (`#0071E3` Selesai, `#86868B` Proses, `#D2D2D7` Belum) yang tidak lagi menipu mata saat progres masih 0%.
+   - **Tabel Pantauan Prioritas & Batas Waktu 60 Hari**: Menggantikan duplikasi 11 kartu Unit Kerja di bawah dengan tabel pantauan dokumen prioritas lengkap dengan tahapan saat ini, sisa hari SLA 60 hari, dan tombol 1-klik `Buka ›` (`openTemuanFromDashboard`) yang langsung membuka ruang kerja temuan terkait.
 3. **Daftar Temuan & Workspace Komponen** ([public/js/ruang-isian.js](public/js/ruang-isian.js), [public/js/core.js](public/js/core.js)):
    - Menghapus *banner* instruksional hijau `Alur Cepat` di atas tabel.
    - Mengubah tab status menjadi **Apple Segmented Control** (`bg-[#F5F5F7] p-1 rounded-[9px]`) dengan *pill* aktif putih.
