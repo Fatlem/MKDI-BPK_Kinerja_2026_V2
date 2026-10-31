@@ -5,90 +5,66 @@
   Varian custom (lihat head.blade.php): mini: = sidebar ciut | act: = .active | opened: = .open
 --}}
 <aside id="sidebar"
-  class="sidebar fixed inset-y-0 left-0 z-[100] flex w-[var(--sidebar-w)] flex-col border-r border-slate-200 bg-gradient-to-b from-white to-[#f3f6fd] transition-[transform,width] duration-300
-         max-[768px]:w-[min(280px,85vw)] max-[768px]:-translate-x-full max-[768px]:overflow-y-auto max-[768px]:[&.open]:translate-x-0 max-[768px]:[&.open]:shadow-2xl">
+  class="sidebar fixed inset-y-0 left-0 z-[100] flex w-[var(--sidebar-w)] flex-col border-r border-black/[0.06] bg-[#FAFAFC]/95 backdrop-blur-xl transition-[transform,width] duration-300
+         max-[768px]:w-[min(272px,85vw)] max-[768px]:-translate-x-full max-[768px]:overflow-y-auto max-[768px]:[&.open]:translate-x-0 max-[768px]:[&.open]:shadow-2xl">
 
   {{-- Tombol ciut / perluas (desktop) --}}
   <button type="button" id="sb-edge-toggle" onclick="toggleSidebarCollapse()" title="Ciutkan / perluas menu" aria-label="Ciutkan atau perluas menu"
-    class="absolute -right-[22px] top-1/2 flex h-[84px] w-[22px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-[14px] border border-l-0 border-slate-200 bg-white text-slate-500 shadow-[4px_0_12px_rgba(15,23,42,.06)] transition-colors hover:bg-[#f3f6fd] hover:text-blue-900 max-[768px]:hidden">
-    <i data-lucide="chevron-left" class="size-4 transition-transform mini:rotate-180"></i>
+    class="absolute -right-[13px] top-6 flex size-[26px] cursor-pointer items-center justify-center rounded-full border border-black/[0.08] bg-white text-[#6E6E73] shadow-[0_2px_6px_rgba(0,0,0,0.06)] transition-all hover:text-[#1D1D1F] max-[768px]:hidden">
+    <i data-lucide="chevron-left" class="size-3.5 transition-transform mini:rotate-180"></i>
   </button>
 
-  {{-- Brand: logo Kemenko Pangan (lengkap saat lebar, lambang saja saat sidebar ciut) --}}
-  <div class="flex min-h-[76px] items-center border-b border-slate-100 px-[18px] py-4 mini:justify-center mini:px-0">
+  {{-- Brand --}}
+  <div class="flex min-h-[64px] items-center px-5 py-3.5 mini:justify-center mini:px-0">
     <img src="{{ asset('images/logoheader.png') }}?v=1"
         alt="Kementerian Koordinator Bidang Pangan Republik Indonesia"
-        class="block h-auto w-full max-w-[214px] mini:hidden">
+        class="block h-auto w-full max-w-[196px] mini:hidden">
     <img src="{{ asset('images/logo.png') }}?v=1"
         alt="Kemenko Pangan"
-        class="hidden size-[42px] object-contain mini:block">
-</div>
+        class="hidden size-[36px] object-contain mini:block">
+  </div>
 
   {{-- Menu --}}
-  <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3.5 mini:px-2.5">
-    <div id="nav-section-main" class="group/sec">
-
-      <div onclick="toggleNavSection('nav-section-main')"
-        class="mb-1 flex cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 transition-colors hover:text-blue-900
-               mini:pointer-events-none mini:mx-3.5 mini:mb-3 mini:h-px mini:bg-slate-200 mini:p-0">
-        <span class="mini:hidden">Menu Utama</span>
-        <i data-lucide="chevron-down" class="size-4 transition-transform group-[.collapsed]/sec:-rotate-90 mini:hidden"></i>
+  <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 mini:px-2">
+    <div id="nav-section-main" class="space-y-1">
+      {{-- Dashboard --}}
+      <div id="nav-dashboard" onclick="navigate('dashboard')" title="Dashboard"
+        class="nav-item active flex cursor-pointer items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#6E6E73] transition-all hover:bg-black/[0.04] hover:text-[#1D1D1F] act:bg-[#0071E3] act:font-medium act:text-white act:shadow-[0_1px_3px_rgba(0,113,227,0.25)] mini:justify-center mini:px-0 mini:py-2.5">
+        <i data-lucide="layout-grid" class="size-[17px] shrink-0"></i>
+        <span class="mini:hidden">Dashboard</span>
       </div>
 
-      <div class="group-[.collapsed]/sec:hidden mini:!block">
+      {{-- Daftar Temuan --}}
+      <div id="nav-ruang-isian" onclick="if(window.S){S.activeLhaNo=null;} navigate('ruang-isian')" title="Daftar Temuan"
+        class="nav-item flex cursor-pointer items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#6E6E73] transition-all hover:bg-black/[0.04] hover:text-[#1D1D1F] act:bg-[#0071E3] act:font-medium act:text-white act:shadow-[0_1px_3px_rgba(0,113,227,0.25)] mini:justify-center mini:px-0 mini:py-2.5">
+        <i data-lucide="list-filter" class="size-[17px] shrink-0"></i>
+        <span class="mini:hidden">Daftar Temuan</span>
+      </div>
 
-        {{-- Dashboard --}}
-        <div id="nav-dashboard" onclick="navigate('dashboard')" title="Dashboard"
-          class="nav-item active mb-[3px] flex cursor-pointer items-center gap-3.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-600 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:bg-[#e3eaf8] act:font-semibold act:text-blue-900 mini:justify-center mini:px-0 mini:py-[11px]">
-          <i data-lucide="home" class="size-5 shrink-0"></i>
-          <span class="mini:hidden">Dashboard</span>
-        </div>
-
-        {{-- Ruang Isian (dropdown) --}}
-        <div id="nav-ruang-isian" onclick="toggleNavGroup('ruang-isian')" title="Ruang Isian"
-          class="nav-item nav-parent group/p mb-[3px] flex cursor-pointer items-center gap-3.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-600 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:bg-[#e3eaf8] act:font-semibold act:text-blue-900 mini:justify-center mini:px-0 mini:py-[11px]">
-          <i data-lucide="file-edit" class="size-5 shrink-0"></i>
-          <span class="mini:hidden">Ruang Isian</span>
-          <i data-lucide="chevron-down" class="ml-auto size-4 transition-transform group-[.open]/p:rotate-180 mini:hidden"></i>
-        </div>
-        <div id="nav-sub-ruang-isian" class="nav-sub-wrap max-h-0 overflow-hidden transition-[max-height] duration-300 opened:max-h-36 mini:hidden">
-          <div id="nav-ri-temuan" onclick="navigate('ruang-isian')"
-            class="nav-subitem group/s mb-[3px] ml-[18px] flex cursor-pointer items-center gap-3 rounded-[10px] border-l-[1.5px] border-slate-200 py-[9px] pl-[22px] pr-3.5 text-[13px] font-medium text-slate-500 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:border-blue-600 act:bg-[#eaf0fc] act:font-semibold act:text-blue-900">
-            <span class="size-1.5 shrink-0 rounded-full bg-slate-300 group-[.active]/s:bg-blue-600"></span>
-            <span>Temuan / Sub Temuan</span>
-          </div>
-          <div id="nav-ri-detail" onclick="navigate('ruang-isian-detail')"
-            class="nav-subitem group/s mb-[3px] ml-[18px] flex cursor-pointer items-center gap-3 rounded-[10px] border-l-[1.5px] border-slate-200 py-[9px] pl-[22px] pr-3.5 text-[13px] font-medium text-slate-500 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:border-blue-600 act:bg-[#eaf0fc] act:font-semibold act:text-blue-900">
-            <span class="size-1.5 shrink-0 rounded-full bg-slate-300 group-[.active]/s:bg-blue-600"></span>
-            <span>Detail</span>
-          </div>
-        </div>
-
-        {{-- Rekap --}}
-        <div id="nav-rekap" onclick="navigate('rekap')" title="Rekap & Laporan"
-          class="nav-item mb-[3px] flex cursor-pointer items-center gap-3.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-600 transition-colors hover:bg-[#edf2fc] hover:text-blue-900 act:bg-[#e3eaf8] act:font-semibold act:text-blue-900 mini:justify-center mini:px-0 mini:py-[11px]">
-          <i data-lucide="bar-chart-3" class="size-5 shrink-0"></i>
-          <span class="mini:hidden">Rekap &amp; Laporan</span>
-        </div>
+      {{-- Rekap --}}
+      <div id="nav-rekap" onclick="navigate('rekap')" title="Rekap & Laporan"
+        class="nav-item flex cursor-pointer items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#6E6E73] transition-all hover:bg-black/[0.04] hover:text-[#1D1D1F] act:bg-[#0071E3] act:font-medium act:text-white act:shadow-[0_1px_3px_rgba(0,113,227,0.25)] mini:justify-center mini:px-0 mini:py-2.5">
+        <i data-lucide="file-spreadsheet" class="size-[17px] shrink-0"></i>
+        <span class="mini:hidden">Rekap</span>
       </div>
     </div>
   </nav>
 
   {{-- Footer --}}
-  <div class="border-t border-slate-200 p-3 mini:px-2.5">
+  <div class="border-t border-black/[0.06] p-3 mini:px-2">
     <div title="Akun"
-      class="mb-1.5 flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 mini:justify-center mini:border-transparent mini:bg-transparent mini:px-0 mini:py-2">
-      <div id="sb-av" class="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-indigo-500 to-purple-500 text-sm font-extrabold text-white">A</div>
+      class="mb-1 flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 mini:justify-center mini:px-0">
+      <div id="sb-av" class="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#E5E5EA] text-xs font-semibold text-[#1D1D1F]">A</div>
       <div class="min-w-0 flex-1 mini:hidden">
-        <div id="sb-uname" class="truncate text-[12.5px] font-bold text-slate-900">Administrator</div>
-        <div id="sb-urole" class="text-[9.5px] font-bold uppercase text-slate-500">ADMINISTRATOR</div>
+        <div id="sb-uname" class="truncate text-[12.5px] font-semibold text-[#1D1D1F]">Administrator</div>
+        <div id="sb-urole" class="text-[10px] font-medium text-[#86868B]">Administrator</div>
       </div>
     </div>
 
-    <div onclick="doLogout()" title="Log Out"
-      class="nav-logout flex cursor-pointer items-center gap-3.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 mini:justify-center mini:px-0 mini:py-[11px]">
-      <i data-lucide="log-out" class="size-5 shrink-0"></i>
-      <span class="mini:hidden">Log Out</span>
+    <div onclick="doLogout()" title="Keluar"
+      class="nav-logout flex cursor-pointer items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#6E6E73] transition-colors hover:bg-black/[0.04] hover:text-[#D70015] mini:justify-center mini:px-0 mini:py-2">
+      <i data-lucide="log-out" class="size-[16px] shrink-0"></i>
+      <span class="mini:hidden">Keluar</span>
     </div>
   </div>
 </aside>

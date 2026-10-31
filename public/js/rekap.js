@@ -2,8 +2,10 @@
 let _rkGroups = [];
 
 function loadRekap() {
-  document.getElementById('hdr-title').textContent = 'Rekap & Laporan';
-  document.getElementById('hdr-sub').textContent   = 'Tinjauan lengkap data tindak lanjut BPK RI (hanya lihat)';
+  const hdrTitle = document.getElementById('hdr-title');
+  if (hdrTitle) hdrTitle.textContent = 'Rekap';
+  const hdrSub = document.getElementById('hdr-sub');
+  if (hdrSub) hdrSub.textContent = '';
   setBody(loadingHtml());
   refreshIcons();
 
@@ -28,33 +30,32 @@ function rkStats(rows) {
   return s;
 }
 
-function rkBarColor(pct) { return pct >= 100 ? '#10b981' : '#2563eb'; }
+function rkBarColor() { return '#0071E3'; }
 
 // Ringkasan progres di atas daftar (mengikuti filter yang sedang aktif)
 function rkSummaryHtml(rows) {
   if (!rows.length) return '';
   const s = rkStats(rows);
-  const tile = (n, lbl, bg, fg) => `
-    <div class="min-w-[88px] rounded-xl ${bg} px-4 py-2.5 text-center">
-      <div class="text-xl font-extrabold leading-none ${fg}">${n}</div>
-      <div class="mt-1 text-[11px] font-semibold ${fg} opacity-80">${lbl}</div>
+  const tile = (n, lbl, accent) => `
+    <div class="min-w-[84px] rounded-xl bg-[#F5F5F7] px-3.5 py-2.5 text-center">
+      <div class="text-lg font-semibold leading-none ${accent ? 'text-[#0071E3]' : 'text-[#1D1D1F]'}">${n}</div>
+      <div class="mt-1 text-[11px] font-medium text-[#86868B]">${lbl}</div>
     </div>`;
   return `
-    <div class="mb-4 grid grid-cols-[1fr_auto] items-center gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm max-[900px]:grid-cols-1 max-[900px]:gap-4">
+    <div class="mb-4 grid grid-cols-[1fr_auto] items-center gap-6 rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] max-[900px]:grid-cols-1 max-[900px]:gap-4">
       <div class="min-w-0">
-        <div class="mb-2.5 flex items-baseline justify-between">
-          <span class="text-[13px] font-bold text-slate-800">Progres Keseluruhan</span>
-          <span class="text-lg font-extrabold" style="color:${rkBarColor(s.pct)};">${s.pct}%</span>
+        <div class="mb-2 flex items-baseline justify-between">
+          <span class="text-xs font-medium text-[#6E6E73]">Penyelesaian (${s.selesai}/${s.total})</span>
+          <span class="text-base font-semibold text-[#1D1D1F]">${s.pct}%</span>
         </div>
-        <div class="h-2 overflow-hidden rounded-full bg-slate-200">
-          <div class="h-full rounded-full transition-[width] duration-500" style="width:${s.pct}%;background:${rkBarColor(s.pct)};"></div>
+        <div class="h-1.5 overflow-hidden rounded-full bg-[#F5F5F7]">
+          <div class="h-full rounded-full bg-[#0071E3] transition-[width] duration-500" style="width:${s.pct}%;"></div>
         </div>
-        <p class="mt-2 text-xs text-slate-500">${s.selesai} dari ${s.total} rincian selesai</p>
       </div>
-      <div class="flex gap-2.5 max-[900px]:[&>div]:flex-1">
-        ${tile(s.selesai, 'Selesai', 'bg-emerald-50', 'text-emerald-700')}
-        ${tile(s.proses, 'Proses', 'bg-amber-50', 'text-amber-700')}
-        ${tile(s.belum, 'Belum', 'bg-slate-100', 'text-slate-600')}
+      <div class="flex gap-2 max-[900px]:[&>div]:flex-1">
+        ${tile(s.selesai, 'Selesai', true)}
+        ${tile(s.proses, 'Proses', false)}
+        ${tile(s.belum, 'Belum', false)}
       </div>
     </div>`;
 }
@@ -84,7 +85,7 @@ function togRekapSub(headEl) {
 }
 
 function rkChevron(open) {
-  return `<span class="rk-chev" style="display:flex;align-items:center;color:#94a3b8;flex-shrink:0;transition:transform .2s;transform:rotate(${open ? 180 : 0}deg);"><i data-lucide="chevron-down" style="width:18px;height:18px;"></i></span>`;
+  return `<span class="rk-chev" style="display:flex;align-items:center;color:#86868B;flex-shrink:0;transition:transform .2s;transform:rotate(${open ? 180 : 0}deg);"><i data-lucide="chevron-down" style="width:16px;height:16px;"></i></span>`;
 }
 
 // Satu sub temuan: judulnya diklik -> isiannya keluar
@@ -95,17 +96,20 @@ function rekapSubHtml(sub, idx, total) {
   const picsFull = groupPicNames([sub]).join(', ') || '-';
   const pics = groupPicShort([sub]).join(', ') || '-';
 
+  const stBadge = st.lbl === 'Selesai'
+    ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0071E3]/10 text-[#0071E3] shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>Selesai</span>`
+    : st.lbl === 'Proses'
+      ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#1D1D1F] shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#86868B]"></span>Proses</span>`
+      : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#86868B] shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#D2D2D7]"></span>Belum</span>`;
+
   return `
-    <div class="ri-sub">
+    <div class="bg-white rounded-xl border border-black/[0.06] p-4 mb-2.5 last:mb-0">
       <div data-key="${esc(key)}" onclick="togRekapSub(this)" class="flex cursor-pointer items-center gap-3">
         <div class="min-w-0 flex-1">
-          <strong class="break-words text-sm font-semibold text-slate-900">${subLabel(total, idx)}${sub.SubTemuan ? ' - ' + esc(sub.SubTemuan) : ''}</strong>
-          <div class="mt-1 flex items-start gap-1.5 text-[11.5px] text-slate-500">
-            <i data-lucide="users" class="mt-px size-3.5 shrink-0"></i>
-            <span class="break-words" title="${esc(picsFull)}">${esc(pics)}</span>
-          </div>
+          <div class="break-words text-xs font-semibold text-[#1D1D1F]">${subLabel(total, idx)}${sub.SubTemuan ? ' · ' + esc(sub.SubTemuan) : ''}</div>
+          <div class="mt-0.5 text-[11px] text-[#86868B]" title="${esc(picsFull)}">${esc(pics)}</div>
         </div>
-        <span class="status-pill ${st.cls} shrink-0"><i data-lucide="${st.icon}" style="width:12px;"></i> ${st.lbl.toUpperCase()}</span>
+        ${stBadge}
         ${rkChevron(open)}
       </div>
       <div style="display:${open ? 'block' : 'none'};margin-top:14px;">
@@ -114,10 +118,7 @@ function rekapSubHtml(sub, idx, total) {
     </div>`;
 }
 
-// Satu kartu temuan (hanya lihat: tanpa tombol Tambah / Ubah / Hapus)
-//  - klik uraian temuan  -> keluar daftar sub temuan
-//  - klik sub temuan     -> keluar isiannya
-//  - temuan dengan 1 rincian (tanpa sub temuan) -> langsung menampilkan isiannya
+// Satu kartu temuan (hanya lihat)
 function rekapEntryHtml(g) {
   const items = g.items;
   const parent = items[0];
@@ -128,40 +129,38 @@ function rekapEntryHtml(g) {
     ? items.map((sub, idx) => rekapSubHtml(sub, idx, items.length)).join('')
     : riSubHtml(items[0], 0, false, 1, { readOnly: true });
 
-  // PIC ditampilkan sebagai chip singkat (sisanya jadi ikon "lainnya")
-  const pics = groupPicNames(items);
-  const chips = riPicChips(pics);
+  const pics = groupPicShort(items).join(', ') || '—';
 
   return `
-    <div class="mb-3.5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md">
+    <div class="mb-3 overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition hover:border-black/[0.12]">
       <div data-key="r:${esc(g.noKey)}" onclick="togRekapEntry(this)" class="flex cursor-pointer items-start gap-4 p-5 max-[768px]:p-4">
         <div class="min-w-0 flex-1">
-          <div class="mb-2 flex flex-wrap items-center gap-2">
-            <span class="whitespace-nowrap rounded-md bg-blue-50 px-2.5 py-1 text-[11.5px] font-bold tracking-wide text-blue-600">${esc(parent.No) || '-'}</span>
+          <div class="mb-1.5 flex flex-wrap items-center gap-2 text-xs text-[#6E6E73]">
+            <span class="font-mono font-semibold text-[#1D1D1F]">${esc(parent.No) || '-'}</span>
             ${dokumenBadge(parent)}
-            ${jenisAuditBadge(parent)}
-            <span class="whitespace-nowrap rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500">${subCountLabel(items.length)}</span>
+            <span>·</span>
+            <span>${esc(jenisAuditLabel(parent) || 'Audit Kinerja')}</span>
+            <span>·</span>
+            <span>${items.length} rincian</span>
           </div>
 
-          <h3 class="whitespace-pre-line break-words text-[15px] font-semibold leading-snug text-slate-900">${esc(parent.Temuan) || '—'}</h3>
+          <h3 class="whitespace-pre-line break-words text-sm font-semibold leading-snug text-[#1D1D1F]">${esc(parent.Temuan) || '—'}</h3>
 
-          <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <span class="mr-0.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-400">PIC</span>
-            ${chips}
-          </div>
+          <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <span class="text-xs text-[#86868B]">${esc(pics)}</span>
 
-          <div class="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span class="whitespace-nowrap text-xs font-bold" style="color:${rkBarColor(s.pct)};">Progres ${s.pct}%</span>
-            <div class="h-1.5 min-w-[90px] max-w-[260px] flex-1 overflow-hidden rounded-full bg-slate-200">
-              <div class="h-full rounded-full" style="width:${s.pct}%;background:${rkBarColor(s.pct)};"></div>
+            <div class="flex items-center gap-2.5">
+              <div class="h-1.5 w-24 overflow-hidden rounded-full bg-[#F5F5F7]">
+                <div class="h-full rounded-full bg-[#0071E3]" style="width:${s.pct}%;"></div>
+              </div>
+              <span class="text-xs font-medium text-[#1D1D1F]">${s.pct}%</span>
             </div>
-            <span class="text-[11.5px] text-slate-500">${s.selesai} dari ${s.total} selesai</span>
           </div>
         </div>
         ${rkChevron(open)}
       </div>
 
-      <div class="border-t border-slate-200 bg-slate-50 p-4 max-[768px]:p-3" style="display:${open ? 'block' : 'none'};">
+      <div class="border-t border-black/[0.05] bg-[#F5F5F7] p-4 max-[768px]:p-3" style="display:${open ? 'block' : 'none'};">
         ${inner}
       </div>
     </div>`;
@@ -188,45 +187,33 @@ function renderRekap(rows) {
     return { noKey, items, picTokens, q };
   });
 
-  const fieldCls = 'h-11 w-full rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10';
+  const fieldCls = 'h-8 rounded-[8px] border border-transparent bg-[#F5F5F7] text-xs font-medium text-[#1D1D1F] outline-none transition placeholder:text-[#86868B] focus:bg-white focus:border-[#0071E3]';
 
   setBody(`
-    <div class="mb-5 flex flex-wrap items-center gap-3">
+    <div class="mb-4 flex flex-wrap items-center gap-2.5 bg-white p-3.5 rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+      <select id="flt-pic" onchange="filterRekap()" class="${fieldCls} px-3 max-w-[220px] truncate">
+        <option value="">Semua Unit Kerja</option>${picOpts}
+      </select>
+
+      <select id="flt-tahun" onchange="filterRekap()" class="${fieldCls} px-3">
+        <option value="">Semua Tahun</option>${tahunOpts}
+      </select>
+
       <div class="relative w-60 max-[768px]:w-full">
-        <i data-lucide="building-2" class="rk-ico pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-amber-500"></i>
-        <select id="flt-pic" onchange="filterRekap()" class="${fieldCls} cursor-pointer appearance-none pl-10 pr-9">
-          <option value="">Semua PIC</option>${picOpts}
-        </select>
-        <i data-lucide="chevron-down" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
+        <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#86868B]"></i>
+        <input id="flt-q" oninput="filterRekap()" placeholder="Cari temuan..." class="${fieldCls} w-full pl-8 pr-3">
       </div>
 
-      <div class="relative w-44 max-[768px]:w-full">
-        <i data-lucide="calendar" class="rk-ico pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-emerald-500"></i>
-        <select id="flt-tahun" onchange="filterRekap()" class="${fieldCls} cursor-pointer appearance-none pl-10 pr-9">
-          <option value="">Semua Tahun</option>${tahunOpts}
-        </select>
-        <i data-lucide="chevron-down" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
-      </div>
-
-      <div class="relative w-72 max-[768px]:w-full">
-        <i data-lucide="search" class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"></i>
-        <input id="flt-q" oninput="filterRekap()" placeholder="Cari data temuan..." class="${fieldCls} pl-10 pr-3.5">
-      </div>
-
-      <span id="flt-count" class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"></span>
+      <span id="flt-count" class="text-xs text-[#86868B] ml-1"></span>
 
       <button id="rk-export-btn" onclick="exportExcel()"
-        class="ml-auto inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700 max-[768px]:ml-0 max-[768px]:w-full max-[768px]:justify-center">
-        <i data-lucide="download" class="size-4"></i> Ekspor Excel
+        class="ml-auto inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[8px] bg-[#F5F5F7] hover:bg-[#E5E5EA] px-3 text-xs font-medium text-[#1D1D1F] transition max-[768px]:ml-0">
+        <i data-lucide="download" class="size-3.5"></i> Ekspor Excel
       </button>
     </div>
 
     <div id="rk-summary"></div>
 
-    <p class="mb-3.5 flex items-center gap-1.5 px-1 text-xs text-slate-500">
-      <i data-lucide="info" class="size-3.5 shrink-0"></i>
-      Klik uraian temuan untuk melihat sub temuan, lalu klik sub temuan untuk melihat isiannya.
-    </p>
     <div id="rekap-list"></div>
   `);
 
@@ -259,19 +246,14 @@ function filterRekap() {
 
   if (!visible.length) {
     list.innerHTML = `
-      <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-        <div class="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-          <i data-lucide="folder-open" class="size-7"></i>
-        </div>
-        <h4 class="text-sm font-bold text-slate-800">${_rkGroups.length ? 'Tidak Ada Data yang Cocok' : 'Belum Ada Data'}</h4>
-        <p class="mt-1 text-xs text-slate-500">${_rkGroups.length ? 'Ubah filter PIC, tahun, atau kata pencarian.' : 'Data tindak lanjut belum diisi.'}</p>
+      <div class="rounded-2xl border border-black/[0.06] bg-white px-6 py-14 text-center">
+        <h4 class="text-sm font-medium text-[#1D1D1F]">${_rkGroups.length ? 'Tidak ada data yang cocok' : 'Belum ada data'}</h4>
+        <p class="mt-1 text-xs text-[#86868B]">${_rkGroups.length ? 'Sesuaikan filter atau kata pencarian.' : 'Data tindak lanjut belum diisi.'}</p>
       </div>`;
   } else {
     list.innerHTML = visible.map(rekapEntryHtml).join('');
   }
 
-  document.getElementById('flt-count').textContent = (!pf && !q && !tf)
-    ? `${visible.length} Temuan Utama`
-    : `${visible.length} Data Ditemukan`;
+  document.getElementById('flt-count').textContent = `${visible.length} temuan`;
   refreshIcons();
 }

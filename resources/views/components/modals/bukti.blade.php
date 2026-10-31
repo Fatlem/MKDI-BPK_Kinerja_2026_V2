@@ -18,38 +18,42 @@
     <div class="modal-body-area">
       <div id="bk-status-m" class="bk-status-slot-mobile"></div>
       <div id="bk-ctx" class="bk-ctx"></div>
+      <div id="bk-fin"></div>
       <div id="bk-batl"></div>
 
       <div id="bk-form">
       <div class="bk-card">
-        <div class="bk-label"><i data-lucide="calendar-days"></i> Rentang Tanggal Tindak Lanjut <span class="bk-req">*</span></div>
+        <div class="bk-label" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+          <span style="display:inline-flex;align-items:center;gap:6px;"><i data-lucide="calendar-days"></i> Tanggal Dokumen / Pelaksanaan Tindak Lanjut <span class="bk-req">*</span></span>
+          <span id="bk-deadline" style="font-size:11.5px;font-weight:600;color:#475569;"></span>
+        </div>
         <div class="bk-grid-2">
           <div class="bk-field">
-            <label for="bk-mulai">Tanggal Mulai Tindak Lanjut <span class="bk-req">*</span></label>
-            <input id="bk-mulai" type="date">
+            <label for="bk-mulai">Tanggal Mulai / Tanggal Dokumen <span class="bk-req">*</span></label>
+            <input id="bk-mulai" type="date" onchange="const s=document.getElementById('bk-selesai');if(s&&(!s.value||s.value<this.value))s.value=this.value;">
           </div>
           <div class="bk-field">
-            <label for="bk-selesai">Tanggal Selesai Tindak Lanjut <span class="bk-req">*</span></label>
+            <label for="bk-selesai">Tanggal Selesai Realisasi <span class="bk-req">*</span></label>
             <input id="bk-selesai" type="date">
           </div>
         </div>
       </div>
 
       <div class="bk-block">
-        <div class="bk-label"><i data-lucide="pencil-line"></i> Uraian Progres / Tindak Lanjut Aktual <span class="bk-req">*</span></div>
-        <textarea id="bk-uraian" class="bk-textarea" maxlength="5000" placeholder="Jelaskan secara rinci tindakan nyata atau dokumen penyelesaian yang telah dilaksanakan oleh Unit Kerja..."></textarea>
+        <div class="bk-label"><i data-lucide="pencil-line"></i> Uraian Progres / Capaian Tindak Lanjut Aktual <span class="bk-req">*</span></div>
+        <textarea id="bk-uraian" class="bk-textarea" maxlength="5000" placeholder="Jelaskan secara rinci tindakan nyata atau dokumen penyelesaian yang telah dilaksanakan oleh Unit Kerja (otomatis memperbarui Output tindak lanjut)..."></textarea>
       </div>
 
-      <div class="bk-block">
-        <div class="bk-label"><i data-lucide="landmark"></i> Validasi Setoran Kas Negara <span class="bk-opt">(isi bila tindak lanjut bersifat finansial)</span></div>
+      <div class="bk-block" id="bk-setoran-block">
+        <div class="bk-label"><i data-lucide="landmark"></i> Validasi Setoran Kas Negara <span id="bk-setoran-hint" class="bk-opt">(isi bila tindak lanjut bersifat finansial)</span></div>
         <div class="bk-grid-2">
           <div class="bk-field">
-            <label for="bk-ntpn">NTPN (16 karakter)</label>
-            <input id="bk-ntpn" type="text" maxlength="16" autocomplete="off" placeholder="mis. A1B2C3D4E5F6G7H8" style="text-transform:uppercase;">
+            <label for="bk-ntpn">NTPN (16 karakter) <span id="bk-ntpn-req" class="bk-req" style="display:none;">*</span></label>
+            <input id="bk-ntpn" type="text" maxlength="16" autocomplete="off" placeholder="mis. A1B2C3D4E5F6G7H8" style="text-transform:uppercase;font-family:monospace;font-weight:700;">
           </div>
           <div class="bk-field">
-            <label for="bk-nominal">Nominal Setoran (Rp)</label>
-            <input id="bk-nominal" type="text" inputmode="decimal" autocomplete="off" placeholder="mis. 1.500.000">
+            <label for="bk-nominal">Nominal Setoran / Realisasi (Rp) <span id="bk-nominal-req" class="bk-req" style="display:none;">*</span></label>
+            <input id="bk-nominal" type="text" inputmode="numeric" autocomplete="off" placeholder="mis. 1.500.000" oninput="formatRupiahInput(this)">
           </div>
         </div>
       </div>

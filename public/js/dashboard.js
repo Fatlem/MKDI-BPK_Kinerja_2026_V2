@@ -64,13 +64,14 @@ function _picShortLabel(p) {
 
 // ═══ FILTER: Sumber / Tahun / Unit PIC ═════════════════════════════════
 
-// ── Filter dashboard: Sumber / Tahun / Unit PIC (satu-satunya filter tahun di dashboard) ──
-if (!S.dbF) S.dbF = { sumber: '', tahun: '', pic: '' };
+// ── Filter dashboard: Sumber / Jenis Audit / Tahun / Unit PIC ──
+if (!S.dbF) S.dbF = { sumber: '', jenis: '', tahun: '', pic: '' };
 
 function dbFilteredRows(rows) {
   const f = S.dbF;
   return (rows || []).filter(r =>
     (!f.sumber || (r.Sumber || 'bpk') === f.sumber) &&
+    (!f.jenis  || (r.JenisAudit || 'kinerja') === f.jenis) &&
     (!f.tahun  || String(r.Tahun || '') === f.tahun) &&
     (!f.pic    || hasPic(splitPics(r.PIC), f.pic))
   );
@@ -78,29 +79,39 @@ function dbFilteredRows(rows) {
 
 function dbApplyFilter() {
   const v = id => (document.getElementById('db-flt-' + id) || {}).value || '';
-  S.dbF = { sumber: v('sumber'), tahun: v('tahun'), pic: v('pic') };
+  S.dbF = { sumber: v('sumber'), jenis: v('jenis'), tahun: v('tahun'), pic: v('pic') };
+  calculateAndRenderDashboard(S.allR || []);
+}
+
+function dbResetFilter() {
+  S.dbF = { sumber: '', jenis: '', tahun: '', pic: '' };
   calculateAndRenderDashboard(S.allR || []);
 }
 
 function dbFilterBarHtml() {
   const f = S.dbF;
   const optSumber = Object.keys(SUMBER_LABEL).map(k => `<option value="${esc(k)}" ${f.sumber === k ? 'selected' : ''}>${esc(SUMBER_LABEL[k])}</option>`).join('');
+  const optJenis  = Object.keys(JENIS_AUDIT_LABEL).map(k => `<option value="${esc(k)}" ${f.jenis === k ? 'selected' : ''}>${esc(JENIS_AUDIT_LABEL[k])}</option>`).join('');
   const optTahun  = tahunOptions(S.allR).map(y => `<option value="${esc(y)}" ${f.tahun === y ? 'selected' : ''}>${esc(y)}</option>`).join('');
   const optPic    = allPicOptions().map(p => `<option value="${esc(p.username)}" ${f.pic === p.username ? 'selected' : ''}>${esc(p.nama)}</option>`).join('');
+  const selCls    = 'h-8 px-3 text-xs bg-white border border-black/[0.08] rounded-[9px] focus:border-[#0071E3] focus:outline-none text-[#1D1D1F] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.02)]';
   return `
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:24px;">
-      <label class="flt-chip">
-        <i data-lucide="shield" class="flt-ico flt-violet"></i><span class="flt-lbl">Sumber:</span>
-        <select id="db-flt-sumber" onchange="dbApplyFilter()"><option value="">Semua Sumber</option>${optSumber}</select>
-      </label>
-      <label class="flt-chip">
-        <i data-lucide="calendar" class="flt-ico flt-green"></i><span class="flt-lbl">Tahun:</span>
-        <select id="db-flt-tahun" onchange="dbApplyFilter()"><option value="">Semua Tahun</option>${optTahun}</select>
-      </label>
-      <label class="flt-chip flt-chip-pic">
-        <i data-lucide="building-2" class="flt-ico flt-orange"></i><span class="flt-lbl">Unit PIC:</span>
-        <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''}><option value="">Semua PIC</option>${optPic}</select>
-      </label>
+    <div class="mb-5 flex flex-wrap items-center gap-2">
+      <select id="db-flt-sumber" onchange="dbApplyFilter()" class="${selCls}">
+        <option value="">Semua Sumber</option>${optSumber}
+      </select>
+      <select id="db-flt-jenis" onchange="dbApplyFilter()" class="${selCls}">
+        <option value="">Semua Jenis Audit</option>${optJenis}
+      </select>
+      <select id="db-flt-tahun" onchange="dbApplyFilter()" class="${selCls}">
+        <option value="">Semua Tahun</option>${optTahun}
+      </select>
+      <select id="db-flt-pic" onchange="dbApplyFilter()" ${isPicUser() ? 'disabled' : ''} class="${selCls} max-w-[220px] truncate">
+        <option value="">Semua Unit Kerja</option>${optPic}
+      </select>
+      <button type="button" onclick="dbResetFilter()" class="h-8 px-3 text-xs text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/[0.04] rounded-[9px] transition-colors flex items-center gap-1" title="Reset">
+        <span>Reset</span>
+      </button>
     </div>`;
 }
 
@@ -119,13 +130,13 @@ const centerTextPlugin = {
     
     ctx.textAlign = 'center'; 
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '800 22px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#1D1D1F';
+    ctx.font = '700 22px -apple-system, BlinkMacSystemFont, sans-serif';
     ctx.fillText(pct + '%', cx, cy - 6);
     
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '600 10px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('Progress Selesai', cx, cy + 12);
+    ctx.fillStyle = '#86868B';
+    ctx.font = '500 10px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('Selesai', cx, cy + 12);
     ctx.restore();
   }
 };
@@ -134,14 +145,11 @@ if (typeof Chart !== 'undefined') {
 }
 
 function loadDashboard() {
-  const nama = S.user?.nama || S.user?.username || 'Administrator';
-  
   const hdrTitle = document.getElementById('hdr-title');
-  if (hdrTitle) {
-    hdrTitle.innerHTML = `Selamat Datang, ${esc(nama)} <i data-lucide="sparkles" style="width:18px;height:18px;color:#FFCC00;display:inline-block;vertical-align:middle;margin-left:4px;"></i>`;
-  }
-  
-  document.getElementById('hdr-sub').textContent = 'Pantau dan kelola data kinerja dengan mudah dan cepat.';
+  if (hdrTitle) hdrTitle.textContent = 'Dashboard';
+  const hdrSub = document.getElementById('hdr-sub');
+  if (hdrSub) hdrSub.textContent = '';
+
   setBody(loadingHtml());
   refreshIcons();
 
@@ -157,7 +165,10 @@ function calculateAndRenderDashboard(rows) {
   rows = dbFilteredRows(rows);
   const picList = S.picList || [];
   const uniqueNos = new Set();
+  const lhaNos = new Set();
   let totalSelesai = 0, totalProses = 0, totalBelum = 0;
+  let totalSubTemuan = 0, totalRenaksi = 0;
+  let targetTotal = 0, realisasiTotal = 0, selisihTotal = 0;
   
   const picStatsMap = {};
   picList.forEach(p => {
@@ -165,11 +176,24 @@ function calculateAndRenderDashboard(rows) {
   });
 
   rows.forEach(r => {
-    if (r.No) uniqueNos.add(String(r.No).trim());
+    if (r.No) {
+      uniqueNos.add(String(r.No).trim());
+      if (r.StatusDokumen === 'lha') lhaNos.add(String(r.No).trim());
+    }
+    if (r.isSubRow || String(r.SubTemuan || '').trim()) totalSubTemuan++;
+    if (String(r.RencanaAksi || '').trim()) totalRenaksi++;
+
     const st = statusOf(r);
     if (st.lbl === 'Selesai') totalSelesai++;
     else if (st.lbl === 'Proses') totalProses++;
     else totalBelum++;
+
+    const nt = Number(r.NilaiTemuan) || 0;
+    const nr = Number(r.NilaiRealisasi) || 0;
+    const ns = r.Selisih != null ? Number(r.Selisih) : Math.max(0, nt - nr);
+    targetTotal    += nt;
+    realisasiTotal += nr;
+    selisihTotal   += ns;
 
     const keys = new Set();
     splitPics(r.PIC).forEach(t => keys.add(picKeyOf(t)));
@@ -194,11 +218,20 @@ function calculateAndRenderDashboard(rows) {
 
   renderDashboard({
     totalTemuan,
+    totalSubTemuan,
+    totalLha: lhaNos.size,
     totalTindakLanjut: total,
+    totalRenaksi,
     picMengisi: picMengisiCount,
     totalPic: picList.length,
     progressKeseluruhan: total > 0 ? Math.round((totalSelesai / total) * 100) : 0,
     status: { selesai: totalSelesai, proses: totalProses, belum: totalBelum },
+    financial: {
+      target: targetTotal,
+      realisasi: realisasiTotal,
+      selisih: selisihTotal,
+      pct: targetTotal > 0 ? Math.min(100, Math.round((realisasiTotal / targetTotal) * 100)) : 0
+    },
     picStats: picStatsArray,
   });
 }
@@ -209,56 +242,42 @@ function renderDashboard(d) {
   let picGrid = d.picStats || [];
   if (isPic) picGrid = picGrid.filter(p => picKeyOf(p.username) === picKeyOf(S.user.username) || picKeyOf(p.username) === picKeyOf(S.user.nama));
 
-  const picMengisiPct = d.totalPic > 0 ? Math.round((d.picMengisi / d.totalPic) * 100) : 0;
-
-  const statCards = [
-    { label: 'TOTAL TEMUAN',        value: d.totalTemuan || 0,                        icon: 'search',      badge: d.totalTemuan > 0 ? d.totalTemuan : null,      badgeUp: true  },
-    { label: 'TOTAL TINDAK LANJUT', value: d.totalTindakLanjut || 0,                  icon: 'file-check-2',badge: `${d.progressKeseluruhan || 0}%`,               badgeUp: (d.progressKeseluruhan || 0) > 0 },
-    { label: 'PIC SUDAH MENGISI',   value: `${d.picMengisi || 0}/${d.totalPic || 0}`, icon: 'users',       badge: `${picMengisiPct}%`,                            badgeUp: picMengisiPct > 0 },
-    { label: 'PROGRESS KESELURUHAN',value: `${d.progressKeseluruhan || 0}%`,          icon: 'trending-up', badge: `${d.progressKeseluruhan || 0}%`,               badgeUp: (d.progressKeseluruhan || 0) > 0 },
-  ];
-
   // Bar chart rows — use all picStats (not filtered by isPic)
   const barStats = d.picStats || [];
   const barMax   = barStats.reduce((m, p) => Math.max(m, p.jumlah), 0) || 1;
 
   // Bar rows start at width:0 — JS will animate them after DOM insert
-  const barRows = barStats.map((p, bi) => {
+  const barRows = barStats.map((p) => {
     const targetPct = Math.round((p.jumlah / barMax) * 100);
     const label     = _picShortLabel(p);
     const hasVal    = p.jumlah > 0;
     return `
       <div class="db-bar-row" data-pct="${targetPct}" data-nama="${esc(p.nama)}" data-jumlah="${p.jumlah}"
            style="display:flex;align-items:center;gap:10px;font-size:12px;border-radius:8px;padding:4px 6px;cursor:default;position:relative;transition:background 0.15s;">
-        <span style="width:44px;font-weight:700;color:#334155;flex-shrink:0;">${esc(label)}</span>
-        <div style="flex:1;background:#f1f5f9;border-radius:999px;height:14px;overflow:hidden;position:relative;">
-          <div class="db-bar-fill" style="width:0%;height:100%;border-radius:999px;background:${hasVal ? '#2563eb' : '#cbd5e1'};transition:width 0.55s cubic-bezier(.4,0,.2,1);"></div>
+        <span style="width:48px;font-weight:600;color:#6E6E73;flex-shrink:0;">${esc(label)}</span>
+        <div style="flex:1;background:#F5F5F7;border-radius:999px;height:10px;overflow:hidden;position:relative;">
+          <div class="db-bar-fill" style="width:0%;height:100%;border-radius:999px;background:${hasVal ? '#0071E3' : '#E5E5EA'};transition:width 0.55s cubic-bezier(.4,0,.2,1);"></div>
         </div>
-        <span style="width:20px;text-align:right;font-weight:${hasVal ? '700' : '600'};color:${hasVal ? '#1e293b' : '#94a3b8'};flex-shrink:0;">${p.jumlah}</span>
-        <div class="db-bar-tooltip" style="display:none;position:absolute;left:54px;top:-38px;background:#0f172a;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.25);">
-          ${esc(p.nama)}: <b>${p.jumlah}</b> tindak lanjut
-          <div style="position:absolute;bottom:-5px;left:16px;width:10px;height:10px;background:#0f172a;transform:rotate(45deg);border-radius:2px;"></div>
+        <span style="width:24px;text-align:right;font-weight:${hasVal ? '600' : '500'};color:${hasVal ? '#1D1D1F' : '#86868B'};flex-shrink:0;">${p.jumlah}</span>
+        <div class="db-bar-tooltip" style="display:none;position:absolute;left:54px;top:-36px;background:rgba(29,29,31,0.92);color:#fff;font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.16);">
+          ${esc(p.nama)}: <b>${p.jumlah}</b> (${p.selesai} selesai)
         </div>
       </div>`;
   }).join('');
 
-   // Donut interaktif (SVG) — satu sumber warna untuk donut, legenda, dan tooltip
+  // Donut interaktif (SVG) — Palet Apple UI Kit (Blue, Gray, Light Gray)
   const { selesai, proses, belum } = d.status;
   const totalStatus = selesai + proses + belum || 1;
   const progressPct = Math.round((selesai / totalStatus) * 100);
-  // Warna angka tengah menyesuaikan persen: 100% hijau, 1–99% oranye, 0% merah, tanpa data abu-abu
-  const progressColor = (selesai + proses + belum) === 0 ? '#94a3b8'
-                      : progressPct >= 100 ? '#10b981'
-                      : progressPct > 0    ? '#f59e0b'
-                      : '#ff1744';
+  const progressColor = '#1D1D1F';
   const DONUT = [
-    { key: 'selesai', label: 'Selesai', value: selesai, color: '#10b981' },
-    { key: 'proses',  label: 'Proses',  value: proses,  color: '#f59e0b' },
-    { key: 'belum',   label: 'Belum',   value: belum,   color: '#ff1744' },
+    { key: 'selesai', label: 'Selesai', value: selesai, color: '#0071E3' },
+    { key: 'proses',  label: 'Proses',  value: proses,  color: '#86868B' },
+    { key: 'belum',   label: 'Belum',   value: belum,   color: '#E5E5EA' },
   ];
-  const _donutR = 75, _donutC = 2 * Math.PI * _donutR;
+  const _donutR = 70, _donutC = 2 * Math.PI * _donutR;
   const _donutOn = DONUT.filter(x => x.value > 0);
-  const _donutGap = _donutOn.length > 1 ? 3 : 0;   // celah putih antar segmen
+  const _donutGap = _donutOn.length > 1 ? 2.5 : 0;
   let _donutAcc = 0;
   const donutSegs = _donutOn.length
     ? DONUT.map(x => {
@@ -266,146 +285,138 @@ function renderDashboard(d) {
         const len  = (x.value / totalStatus) * _donutC;
         const dash = Math.max(len - _donutGap, 0.5);
         const el = `<circle class="db-donut-seg" data-status="${x.key}" cx="90" cy="90" r="${_donutR}" fill="none"
-            stroke="${x.color}" stroke-width="28" stroke-dasharray="${dash} ${_donutC - dash}"
+            stroke="${x.color}" stroke-width="20" stroke-dasharray="${dash} ${_donutC - dash}"
             stroke-dashoffset="${-_donutAcc}" transform="rotate(-90 90 90)"/>`;
         _donutAcc += len;
         return el;
       }).join('')
-    : `<circle cx="90" cy="90" r="${_donutR}" fill="none" stroke="#e2e8f0" stroke-width="28"/>`;
-
+    : `<circle cx="90" cy="90" r="${_donutR}" fill="none" stroke="#E5E5EA" stroke-width="20"/>`;
 
   // PIC cards HTML
   const picCardsHtml = picGrid.length
     ? picGrid.map((p, i) => {
         const progressPctCard = p.progress || 0;
-        const progressColor   = progressPctCard >= 100 ? '#16a34a' : progressPctCard > 0 ? '#2563eb' : '#cbd5e1';
-        const progressTextColor = progressPctCard >= 100 ? 'color:#16a34a;' : 'color:#dc2626;';
+        const progressBarClr  = progressPctCard > 0 ? '#0071E3' : '#E5E5EA';
+        const progressTextClr = progressPctCard > 0 ? 'color:#0071E3;' : 'color:#86868B;';
         return `
-          <div class="db-pic-card" onclick="navigate('ruang-isian','${esc(jsq(p.username))}')">
+          <div class="db-pic-card" onclick="if(window.S){S.activeLhaNo=null;} navigate('ruang-isian','${esc(jsq(p.username))}')">
             <div class="db-pic-card-body">
-              <div class="db-pic-icon-wrap">${_picIconSvg(i)}</div>
-              <h4 class="db-pic-name">${esc(p.nama)}</h4>
+              <div class="db-pic-icon-wrap" style="background:#F5F5F7;color:#6E6E73;">${_picIconSvg(i)}</div>
+              <h4 class="db-pic-name" style="color:#1D1D1F;font-weight:600;font-size:12.5px;">${esc(p.nama)}</h4>
             </div>
-            <div class="db-pic-card-footer">
-              <span class="db-pic-tl-lbl">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#94a3b8;flex-shrink:0;"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-                Tindak Lanjut
-              </span>
-              <span style="font-size:12px;font-weight:700;${progressTextColor}">${progressPctCard}%</span>
+            <div class="db-pic-card-footer" style="border-top:1px solid rgba(0,0,0,0.05);">
+              <span class="db-pic-tl-lbl" style="color:#86868B;">${p.selesai}/${p.jumlah} selesai</span>
+              <span style="font-size:11.5px;font-weight:600;${progressTextClr}">${progressPctCard}%</span>
             </div>
-            <div class="db-pic-bar-track">
-              <div class="db-pic-bar-fill" style="width:${progressPctCard}%;background:${progressColor};"></div>
+            <div class="db-pic-bar-track" style="background:#F5F5F7;height:4px;">
+              <div class="db-pic-bar-fill" style="width:${progressPctCard}%;background:${progressBarClr};"></div>
             </div>
           </div>`;
       }).join('')
-    : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">Belum ada data PIC</div>`;
+    : `<div style="grid-column:1/-1;text-align:center;padding:36px;color:#86868B;">Belum ada data unit kerja</div>`;
+
+  const fin = d.financial || { target: 0, realisasi: 0, selisih: 0, pct: 0 };
+  const lhpCount = Math.max(0, (d.totalTemuan || 0) - (d.totalLha || 0));
 
   setBody(`
-    <!-- Stat Cards -->
-    <div class="stat-grid" style="margin-bottom:24px;">
-      ${statCards.map(c => `
-        <div class="db-stat-card">
-          <div class="db-stat-card-header">
-            <div class="db-stat-icon-wrap"><i data-lucide="${c.icon}"></i></div>
-            ${c.badge != null ? `
-            <span class="db-stat-badge ${c.badgeUp ? 'up' : 'neutral'}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
-              ${c.badge}
-            </span>` : ''}
-          </div>
-          <div class="db-stat-val">${c.value}</div>
-          <div class="db-stat-lbl">${c.label}</div>
-        </div>
-      `).join('')}
-    </div>
-
-    <!-- Charts Row -->
-    <div class="chart-grid" style="margin-bottom:28px;">
-
-      <!-- Bar Chart (Horizontal) -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="padding:8px;background:#eff6ff;color:#2563eb;border-radius:8px;display:flex;align-items:center;">
-              <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i>
-            </div>
-            <div>
-              <div style="font-size:16px;font-weight:800;color:#0f172a;">Jumlah Tindak Lanjut per PIC</div>
-              <div style="font-size:12px;color:#64748b;">Distribusi penyelesaian berdasarkan unit kerja</div>
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px;">
-          ${barRows || '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:20px 0;">Belum ada data</div>'}
-        </div>
-      </div>
-
-      <!-- Donut Chart (CSS) -->
-      <div class="chart-card" style="display:flex;flex-direction:column;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-          <div style="padding:8px;background:#eff6ff;color:#2563eb;border-radius:8px;display:flex;align-items:center;">
-            <i data-lucide="pie-chart" style="width:18px;height:18px;"></i>
-          </div>
-          <div>
-            <div style="font-size:16px;font-weight:800;color:#0f172a;">Status Tindak Lanjut</div>
-            <div style="font-size:12px;color:#64748b;">Persentase keseluruhan status</div>
-          </div>
-        </div>
-
-        <!-- Donut visual -->
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 0 12px;">
-          <div id="db-donut-ring" style="width:260px;max-width:100%;aspect-ratio:1/1;position:relative;">
-            <svg id="db-donut-svg" class="db-donut-svg" viewBox="0 0 180 180" style="display:block;width:100%;height:100%;overflow:visible;">${donutSegs}</svg>
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-              <span id="db-donut-pct" style="font-size:38px;font-weight:800;color:${progressColor};line-height:1;transition:color 0.2s;">${progressPct}%</span>
-              <span id="db-donut-lbl" style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">Progress Selesai</span>
-            </div>
-          </div>
-         </div>
-
-        <!-- Legend — pushed to bottom -->
-        <div style="margin-top:auto;border-top:1px solid #f1f5f9;padding-top:12px;display:flex;flex-direction:column;gap:6px;">
-          <div class="db-legend-row" data-status="selesai" data-val="${selesai}" data-pct="${Math.round((selesai/totalStatus)*100)}"
-               style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background 0.15s;">
-            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:${DONUT[0].color};display:inline-block;"></span><span style="color:#334155;">Selesai</span></span>
-            <b style="color:#0f172a;">${selesai}</b>
-          </div>
-          <div class="db-legend-row" data-status="proses" data-val="${proses}" data-pct="${Math.round((proses/totalStatus)*100)}"
-               style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background 0.15s;">
-            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:${DONUT[1].color};display:inline-block;"></span><span style="color:#334155;">Proses</span></span>
-            <b style="color:#0f172a;">${proses}</b>
-          </div>
-          <div class="db-legend-row" data-status="belum" data-val="${belum}" data-pct="${Math.round((belum/totalStatus)*100)}"
-               style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background 0.15s;">
-            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:${DONUT[2].color};display:inline-block;"></span><span style="color:#334155;">Belum</span></span>
-            <b style="color:#0f172a;">${belum}</b>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Filter: Sumber / Tahun / Unit PIC -->
     ${dbFilterBarHtml()}
 
-    <!-- PIC Section Header -->
-    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="padding:8px;background:#eff6ff;color:#2563eb;border-radius:8px;display:flex;align-items:center;">
-            <i data-lucide="layers" style="width:18px;height:18px;"></i>
+    <!-- 4 Minimalist Apple KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+      <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <span class="text-xs font-medium text-[#6E6E73]">Temuan</span>
+        <div class="mt-2">
+          <div class="text-3xl font-semibold text-[#1D1D1F] tracking-tight">${d.totalTemuan || 0}</div>
+          <div class="mt-2 text-xs text-[#86868B]">${lhpCount} LHP · ${d.totalLha || 0} LHA</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <span class="text-xs font-medium text-[#6E6E73]">Rekomendasi</span>
+        <div class="mt-2">
+          <div class="text-3xl font-semibold text-[#1D1D1F] tracking-tight">${d.totalTindakLanjut || 0}</div>
+          <div class="mt-2 text-xs text-[#86868B]">${d.totalRenaksi || 0} Rencana Aksi · ${d.picMengisi || 0}/${d.totalPic || 0} Unit</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-[#6E6E73]">Penyelesaian</span>
+          <span class="text-xs font-medium text-[#0071E3]">${selesai}/${d.totalTindakLanjut || 0}</span>
+        </div>
+        <div class="mt-2">
+          <div class="text-3xl font-semibold text-[#0071E3] tracking-tight">${d.progressKeseluruhan || 0}%</div>
+          <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden mt-2.5">
+            <div class="bg-[#0071E3] h-1.5 rounded-full transition-all duration-700" style="width:${d.progressKeseluruhan || 0}%"></div>
           </div>
-          <div>
-            <div style="font-size:16px;font-weight:800;color:#0f172a;">${isPic ? 'Informasi PIC Anda' : 'Daftar Progress PIC'}</div>
-            <div style="font-size:12px;color:#64748b;">Monitoring kinerja penanggung jawab unit</div>
+          <div class="mt-1.5 text-[11px] text-[#86868B]">${proses} proses · ${belum} belum</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-[#6E6E73]">Pemulihan Kas</span>
+          <span class="text-xs font-medium text-[#6E6E73]">${fin.pct || 0}%</span>
+        </div>
+        <div class="mt-2">
+          <div class="text-2xl font-semibold text-[#1D1D1F] tracking-tight truncate" title="Rp ${Number(fin.realisasi || 0).toLocaleString('id-ID')}">Rp ${formatIDR(fin.realisasi || 0)}</div>
+          <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden mt-2.5">
+            <div class="bg-[#0071E3] h-1.5 rounded-full transition-all duration-500" style="width:${fin.pct || 0}%"></div>
+          </div>
+          <div class="mt-1.5 text-[11px] text-[#86868B] truncate">Target Rp ${formatIDR(fin.target || 0)}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-5">
+      <div class="lg:col-span-2 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-5 flex flex-col">
+        <h3 class="text-[13px] font-semibold text-[#1D1D1F] mb-2">Status Tindak Lanjut</h3>
+        <div class="flex-1 flex flex-col items-center justify-center py-2">
+          <div id="db-donut-ring" style="width:196px;max-width:100%;aspect-ratio:1/1;position:relative;">
+            <svg id="db-donut-svg" class="db-donut-svg" viewBox="0 0 180 180" style="display:block;width:100%;height:100%;overflow:visible;">${donutSegs}</svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+              <span id="db-donut-pct" style="font-size:28px;font-weight:600;color:${progressColor};line-height:1;letter-spacing:-0.03em;transition:color 0.2s;">${progressPct}%</span>
+              <span id="db-donut-lbl" style="font-size:11px;font-weight:500;color:#86868B;margin-top:4px;">Selesai</span>
+            </div>
           </div>
         </div>
-        <a href="#" style="font-size:12px;color:#2563eb;font-weight:700;display:flex;align-items:center;gap:4px;" onclick="navigate('rekap'); return false;">
-          Lihat Semua
-          <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+        <div class="mt-auto border-t border-black/[0.05] pt-3 flex flex-col gap-1">
+          ${DONUT.map(item => `
+          <div class="db-legend-row flex items-center justify-between text-xs px-2 py-1 rounded-md cursor-pointer transition-colors"
+               data-status="${item.key}" data-val="${item.value}" data-pct="${Math.round((item.value/totalStatus)*100)}">
+            <span class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full inline-block" style="background:${item.color};"></span>
+              <span class="text-[#6E6E73]">${item.label}</span>
+            </span>
+            <span class="font-medium text-[#1D1D1F]">${item.value}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="lg:col-span-3 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-[13px] font-semibold text-[#1D1D1F]">Distribusi Unit Kerja</h3>
+          <button type="button" onclick="if(window.S){S.activeLhaNo=null;} navigate('ruang-isian')" class="text-xs font-medium text-[#0071E3] hover:underline flex items-center gap-0.5">
+            <span>Daftar Temuan</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <div class="flex flex-col gap-2 pt-1">
+          ${barRows || '<div class="text-[#86868B] text-xs text-center py-8">Belum ada data</div>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Unit Kerja Grid -->
+    <div class="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-[13px] font-semibold text-[#1D1D1F]">${isPic ? 'Unit Kerja Anda' : 'Unit Kerja'}</h3>
+        <a href="#" class="text-xs text-[#0071E3] hover:underline font-medium flex items-center gap-0.5" onclick="navigate('rekap'); return false;">
+          <span>Rekap</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
         </a>
       </div>
-      <!-- PIC Cards Grid -->
       <div class="db-pic-grid">${picCardsHtml}</div>
     </div>
   `);

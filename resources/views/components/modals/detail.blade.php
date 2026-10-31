@@ -37,11 +37,15 @@
       </div>
 
       <div id="det-edit-sec" style="display:none;">
-        <div class="form-field"><label>Kondisi</label><textarea id="det-e-Kondisi" placeholder="Fakta riil yang ditemukan di lapangan"></textarea></div>
-        <div class="form-field"><label>Kriteria</label><textarea id="det-e-Kriteria" placeholder="Kriteria/dasar aturan"></textarea></div>
-        <div class="form-field"><label>Sebab</label><textarea id="det-e-Sebab" placeholder="Penyebab temuan"></textarea></div>
-        <div class="form-field"><label>Akibat</label><textarea id="det-e-Akibat" placeholder="Dampak riil (mis. kerugian negara, pemborosan)"></textarea></div>
-        <div class="form-field"><label>Rekomendasi</label><textarea id="det-e-Rekomendasi" placeholder="Rekomendasi"></textarea></div>
+        <div class="form-field"><label>1. Kondisi (Fakta Riil di Lapangan)</label><textarea id="det-e-Kondisi" placeholder="Fakta riil yang ditemukan di lapangan"></textarea></div>
+        <div class="form-field"><label>2. Kriteria (Dasar Aturan / SOP)</label><textarea id="det-e-Kriteria" placeholder="Kriteria/dasar aturan"></textarea></div>
+        <div class="form-field"><label>3. Sebab (Akar Masalah)</label><textarea id="det-e-Sebab" placeholder="Penyebab temuan"></textarea></div>
+        <div class="form-field"><label>4. Akibat (Dampak / Kerugian)</label><textarea id="det-e-Akibat" placeholder="Dampak riil (mis. kerugian negara, pemborosan)"></textarea></div>
+        <div class="form-field"><label>Rekomendasi Audit</label><textarea id="det-e-Rekomendasi" placeholder="Rekomendasi"></textarea></div>
+        <div class="form-field">
+          <label>Target Nominal Penyetoran Kas Negara (Rp)</label>
+          <input id="det-e-NilaiTemuan" type="text" inputmode="numeric" placeholder="0 (isi 0 jika non-finansial)" oninput="formatRupiahInput(this)">
+        </div>
       </div>
     </div>
 

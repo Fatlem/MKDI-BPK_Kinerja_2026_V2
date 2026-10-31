@@ -11,6 +11,7 @@ use App\Http\Controllers\BatlController;
 
 Route::view('/',              'layouts.app');
 Route::view('/dashboard',     'layouts.app');
+Route::view('/temuan',        'layouts.app');
 Route::view('/ruang-isian',   'layouts.app');
 Route::view('/ruang-isian/detail', 'layouts.app');
 Route::view('/rekap-laporan', 'layouts.app');

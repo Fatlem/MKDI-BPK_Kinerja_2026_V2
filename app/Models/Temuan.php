@@ -15,6 +15,13 @@ class Temuan extends Model
         'sumber', 'created_by',
         'jenis_audit', 'kondisi', 'akibat',
         'status_dokumen', 'no_lha',
+        'nilai_temuan', 'nilai_realisasi', 'selisih',
+    ];
+
+    protected $casts = [
+        'nilai_temuan'    => 'float',
+        'nilai_realisasi' => 'float',
+        'selisih'         => 'float',
     ];
 
     public const SUMBER_BPK         = 'bpk';
@@ -162,12 +169,45 @@ class Temuan extends Model
     }
 
     /**
+     * Sinkronisasi realisasi setoran kas negara & sisa kewajiban (selisih)
+     * sesuai probis e-TLHP (Archive.zip):
+     * - Menghitung akumulasi nominal_setoran dari seluruh bukti yang tidak ditolak.
+     * - Jika status telah terverifikasi/BATL (TUNTAS) dan nilai_temuan > 0 tetapi belum ada
+     *   rincian nominal_setoran pada bukti, maka kewajiban dianggap lunas (realisasi = nilai_temuan).
+     */
+    public function syncFinancialRealisasi(): void
+    {
+        $target = max(0.0, (float) ($this->nilai_temuan ?? 0));
+        $sumSetoran = (float) $this->bukti()
+            ->where('status', '!=', BuktiTindakLanjut::STATUS_DITOLAK)
+            ->whereNotNull('nominal_setoran')
+            ->sum('nominal_setoran');
+
+        $tl = $this->tlStatus();
+        if ($target > 0 && $sumSetoran <= 0 && in_array($tl, [BuktiTindakLanjut::STATUS_TERVERIFIKASI, 'batl'], true)) {
+            $realisasi = $target;
+        } else {
+            $realisasi = $sumSetoran;
+        }
+
+        $selisih = max(0.0, $target - $realisasi);
+
+        $this->forceFill([
+            'nilai_temuan'    => $target,
+            'nilai_realisasi' => $realisasi,
+            'selisih'         => $selisih,
+        ])->saveQuietly();
+    }
+
+    /**
      * Sinkronisasi status dokumen (LHP Sementara -> LHA) pada Temuan Induk beserta seluruh sub-temuannya.
      * Berubah menjadi LHA hanya jika seluruh rekomendasi pada temuan induk sudah tuntas
      * dan BATL telah ditandatangani oleh kedua pihak (Auditor & Auditee).
      */
     public function syncStatusLha(): void
     {
+        $this->syncFinancialRealisasi();
+
         $root  = $this->rootTemuan();
         $items = self::with(['bukti:id,temuan_id,status', 'batl'])
             ->where(fn ($q) => $q->where('id', $root->id)->orWhere('parent_id', $root->id))

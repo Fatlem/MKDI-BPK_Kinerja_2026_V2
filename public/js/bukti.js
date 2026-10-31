@@ -110,12 +110,21 @@ function openBukti(rowId) {
   if (!r) { showToast('Data temuan tidak ditemukan', 'err'); return; }
 
   ensureBuktiModal();
-  _bk = { rowId: r._row, list: [], busy: false, dirty: false, no: r.No, batl: null, canBatl: false, tl: 'belum' };
+  _bk = {
+    rowId: r._row, list: [], busy: false, dirty: false, no: r.No,
+    batl: null, canBatl: false, tl: 'belum',
+    nilaiTemuan: Number(r.NilaiTemuan) || 0,
+    nilaiRealisasi: Number(r.NilaiRealisasi) || 0,
+    selisih: Number(r.Selisih) || 0,
+    tanggalInput: r.TanggalInput || '',
+    deadlineDate: r.DeadlineDate || ''
+  };
 
   document.getElementById('bk-ctx').textContent = bkRowLabel(r);
   bkReset();
   bkSetStatus(null);
   bkSubmitLabel(false);
+  bkRenderFinAndDeadline();
   bkRenderBatl();
   document.getElementById('bk-list').innerHTML = '<div class="bk-empty">Memuat riwayat...</div>';
 
@@ -183,6 +192,8 @@ async function bkSubmit() {
 
   const ntpn    = ((document.getElementById('bk-ntpn') || {}).value || '').trim().toUpperCase();
   const nominal = ((document.getElementById('bk-nominal') || {}).value || '').trim();
+  const isFin   = (_bk.nilaiTemuan || 0) > 0 && (_bk.selisih || 0) > 0;
+  if (isFin && !ntpn)                       { showToast('Rekomendasi ini memiliki kewajiban setoran kas negara. Nomor NTPN wajib diisi.', 'err'); return; }
   if (ntpn && !/^[A-Z0-9]{16}$/.test(ntpn)) { showToast('NTPN harus 16 karakter huruf/angka', 'err'); return; }
   if (ntpn && !nominal)                     { showToast('Nominal setoran wajib diisi bila NTPN diisi', 'err'); return; }
   if (nominal && !ntpn)                     { showToast('NTPN wajib diisi bila nominal setoran diisi', 'err'); return; }
@@ -227,15 +238,21 @@ async function bkLoad() {
     const res = await apiFetch('/api/bukti?temuan_id=' + encodeURIComponent(id));
     if (id !== _bk.rowId) return;                          // modal sudah pindah ke rincian lain
     if (!res || !res.success) throw new Error((res && res.message) ? res.message : 'Gagal memuat riwayat');
-    _bk.list          = res.data || [];
-    _bk.batl          = res.batl || null;
-    _bk.canBatl       = !!res.canBatl;
-    _bk.batlAlasan    = res.batlAlasan || null;
-    _bk.tl            = res.tlStatus || 'belum';
-    _bk.progress      = res.progress || { total: 1, tuntas: 0, semuaTuntas: false };
-    _bk.statusDokumen = res.statusDokumen || 'lhp_sementara';
-    _bk.noLha         = res.noLha || null;
+    _bk.list           = res.data || [];
+    _bk.batl           = res.batl || null;
+    _bk.canBatl        = !!res.canBatl;
+    _bk.batlAlasan     = res.batlAlasan || null;
+    _bk.tl             = res.tlStatus || 'belum';
+    _bk.progress       = res.progress || { total: 1, tuntas: 0, semuaTuntas: false };
+    _bk.statusDokumen  = res.statusDokumen || 'lhp_sementara';
+    _bk.noLha          = res.noLha || null;
+    _bk.nilaiTemuan    = Number(res.nilaiTemuan ?? _bk.nilaiTemuan) || 0;
+    _bk.nilaiRealisasi = Number(res.nilaiRealisasi ?? _bk.nilaiRealisasi) || 0;
+    _bk.selisih        = Number(res.selisih ?? _bk.selisih) || 0;
+    _bk.tanggalInput   = res.tanggalInput || _bk.tanggalInput || '';
+    _bk.deadlineDate   = res.deadlineDate || _bk.deadlineDate || '';
     bkSetStatus(_bk.tl === 'belum' ? null : _bk.tl);
+    bkRenderFinAndDeadline();
     bkRenderBatl();
     bkRenderList();
   } catch (e) {
@@ -243,6 +260,36 @@ async function bkLoad() {
     showToast('Error: ' + e.message, 'err');
   }
   bkSubmitLabel(_bk.busy);
+}
+
+function bkRenderFinAndDeadline() {
+  const finBox = document.getElementById('bk-fin');
+  if (finBox) {
+    finBox.innerHTML = financialStripHtml(_bk.nilaiTemuan, _bk.nilaiRealisasi, _bk.selisih);
+  }
+  const dlEl = document.getElementById('bk-deadline');
+  if (dlEl) {
+    const dl = getDeadlineInfo({
+      TanggalInput: _bk.tanggalInput,
+      DeadlineDate: _bk.deadlineDate,
+      TLStatus: _bk.tl
+    });
+    dlEl.innerHTML = `Batas Waktu 60 Hari: <strong style="color:#0f172a;">${esc(dl.deadlineFormatted)}</strong> <span style="font-weight:700;color:${dl.isOverdue ? '#be123c' : '#047857'};">(${esc(dl.statusBadgeText)})</span>`;
+  }
+
+  const isFin = (_bk.nilaiTemuan || 0) > 0;
+  const ntpnReq = document.getElementById('bk-ntpn-req');
+  const nomReq  = document.getElementById('bk-nominal-req');
+  const hint    = document.getElementById('bk-setoran-hint');
+  if (ntpnReq) ntpnReq.style.display = isFin ? 'inline' : 'none';
+  if (nomReq)  nomReq.style.display  = isFin ? 'inline' : 'none';
+  if (hint)    hint.textContent      = isFin ? '(wajib diisi — rekomendasi memiliki target setoran kas negara)' : '(isi bila tindak lanjut bersifat finansial)';
+
+  // Auto-prefill sisa kewajiban (selisih) ke kolom nominal setoran sesuai Archive.zip
+  const nm = document.getElementById('bk-nominal');
+  if (nm && isFin && (_bk.selisih || 0) > 0 && !nm.value) {
+    nm.value = formatRupiahNumber(_bk.selisih);
+  }
 }
 
 function bkItemHtml(b) {
@@ -263,38 +310,28 @@ function bkItemHtml(b) {
   const verifiedMeta = b.diverifikasiOleh
     ? ` · Diverifikasi ${esc(b.diverifikasiOleh)}${b.diverifikasiPada ? ' (' + esc(b.diverifikasiPada) + ')' : ''}` : '';
 
-  // Auditor dapat memutuskan (acc / pending / tolak) selama bukti masih menunggu atau ditahan
+  // Prinsip Less-Click Archive.zip:
+  // Evaluasi sebaris (1 kolom catatan + tombol 1-klik Setujui / Revisi / Pending tanpa buka-tutup akordeon)
   const canDecide = staff && !locked && (b.status === 'menunggu' || b.status === 'pending');
 
-  let actions = '';
-  if (canDecide) {
-    actions += `<button class="bk-btn bk-btn-sm bk-btn-ok" onclick="bkVerif(${id}, 'terverifikasi')"><i data-lucide="check" style="width:13px;height:13px;"></i> Acc</button>`;
-    if (b.status === 'menunggu') {
-      actions += `<button class="bk-btn bk-btn-sm bk-btn-hold" onclick="bkToggle('bk-pen-${id}')"><i data-lucide="pause" style="width:13px;height:13px;"></i> Pending</button>`;
-    }
-    actions += `<button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkToggle('bk-rej-${id}')"><i data-lucide="x" style="width:13px;height:13px;"></i> Tolak</button>`;
-  }
-  if (canDel) {
-    actions += `<button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkToggle('bk-del-${id}')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> Hapus</button>`;
-  }
-
-  const penBox = (canDecide && b.status === 'menunggu') ? `
-      <div id="bk-pen-${id}" class="bk-inline">
-        <textarea id="bk-pen-txt-${id}" class="bk-textarea" placeholder="Alasan ditahan / klarifikasi yang dibutuhkan (wajib)"></textarea>
-        <div class="bk-actions">
-          <button class="bk-btn bk-btn-sm" onclick="bkToggle('bk-pen-${id}')">Batal</button>
-          <button class="bk-btn bk-btn-sm bk-btn-hold" onclick="bkVerif(${id}, 'pending')">Tandai Pending</button>
+  const inlineEvalHtml = canDecide ? `
+      <div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11.5px;font-weight:700;color:#334155;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="user-check" style="width:14px;height:14px;color:#2563eb;"></i> Evaluasi Cepat Auditor (1-Klik):
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+          <input id="bk-eval-txt-${id}" type="text" value="${esc(b.catatan || '')}"
+            placeholder="Catatan evaluasi auditor (opsional saat Setujui, wajib saat Revisi/Pending)..."
+            style="flex:1;min-width:220px;height:34px;padding:0 10px;font-size:12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;">
+          <button class="bk-btn bk-btn-sm bk-btn-ok" onclick="bkVerif(${id}, 'terverifikasi')"><i data-lucide="check" style="width:13px;height:13px;"></i> Setujui (Tuntas)</button>
+          ${b.status === 'menunggu' ? `<button class="bk-btn bk-btn-sm bk-btn-hold" onclick="bkVerif(${id}, 'pending')"><i data-lucide="pause" style="width:13px;height:13px;"></i> Pending</button>` : ''}
+          <button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkVerif(${id}, 'ditolak')"><i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i> Revisi / Tolak</button>
         </div>
       </div>` : '';
 
-  const rejBox = canDecide ? `
-      <div id="bk-rej-${id}" class="bk-inline">
-        <textarea id="bk-rej-txt-${id}" class="bk-textarea" placeholder="Alasan penolakan / perbaikan yang diminta (wajib)"></textarea>
-        <div class="bk-actions">
-          <button class="bk-btn bk-btn-sm" onclick="bkToggle('bk-rej-${id}')">Batal</button>
-          <button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkVerif(${id}, 'ditolak')">Kirim Penolakan</button>
-        </div>
-      </div>` : '';
+  const delBtn = canDel
+    ? `<div class="bk-item-actions"><button class="bk-btn bk-btn-sm bk-btn-bad" onclick="bkToggle('bk-del-${id}')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> Hapus Bukti</button></div>`
+    : '';
 
   const delBox = canDel ? `
       <div id="bk-del-${id}" class="bk-inline">
@@ -316,8 +353,9 @@ function bkItemHtml(b) {
       <div class="bk-item-file">${file}</div>
       <div class="bk-item-meta">Dikirim oleh ${esc(b.diunggahOleh || '-')} · ${esc(b.dibuat || '')}${verifiedMeta}</div>
       ${note}
-      ${actions ? `<div class="bk-item-actions">${actions}</div>` : ''}
-      ${penBox}${rejBox}${delBox}
+      ${inlineEvalHtml}
+      ${delBtn}
+      ${delBox}
     </div>`;
 }
 
@@ -511,16 +549,19 @@ function bkToggle(id) {
 
 // ── Verifikasi (auditor) & hapus ─────────────────────────────────────
 async function bkVerif(id, status) {
-  let catatan = '';
+  const evalInp = document.getElementById('bk-eval-txt-' + id);
+  let catatan = evalInp ? evalInp.value.trim() : '';
   if (status === 'ditolak' || status === 'pending') {
-    const prefix = status === 'ditolak' ? 'bk-rej-txt-' : 'bk-pen-txt-';
-    catatan = ((document.getElementById(prefix + id) || {}).value || '').trim();
-    if (!catatan) { showToast('Catatan wajib diisi jika bukti ' + (status === 'ditolak' ? 'ditolak' : 'ditahan (pending)'), 'err'); return; }
+    if (!catatan) {
+      if (evalInp) evalInp.focus();
+      showToast('Isi kolom catatan evaluasi auditor terlebih dahulu jika bukti ' + (status === 'ditolak' ? 'direvisi/ditolak' : 'ditahan (pending)'), 'err');
+      return;
+    }
   }
   try {
     const res = await apiFetch('/api/bukti/' + id + '/verifikasi', 'PUT', { status: status, catatan: catatan });
     if (!res || !res.success) throw new Error((res && res.message) ? res.message : 'Gagal memperbarui status');
-    showToast(status === 'terverifikasi' ? 'Bukti di-acc (terverifikasi)' : (status === 'pending' ? 'Bukti ditandai pending' : 'Bukti ditolak, biro diminta mengunggah ulang'), 'ok');
+    showToast(status === 'terverifikasi' ? 'Bukti disetujui (Tuntas / Terverifikasi)' : (status === 'pending' ? 'Bukti ditandai pending' : 'Bukti diminta revisi, unit kerja diminta mengunggah ulang'), 'ok');
     _bk.dirty = true;
     bkLoad();
   } catch (e) {

@@ -84,6 +84,11 @@ class TemuanController extends Controller
                 'StatusDokumen'      => $root->status_dokumen ?: Temuan::DOKUMEN_LHP_SEMENTARA,
                 'NoLha'              => $root->no_lha ?? '',
                 'Tahun'              => $tahunOf($r),
+                'TanggalInput'       => $root->created_at?->format('Y-m-d') ?? '',
+                'DeadlineDate'       => $root->created_at?->copy()->addDays(60)->format('Y-m-d') ?? '',
+                'NilaiTemuan'        => (float) ($r->nilai_temuan ?? 0),
+                'NilaiRealisasi'     => (float) ($r->nilai_realisasi ?? 0),
+                'Selisih'            => (float) ($r->selisih ?? 0),
                 'CreatedBy'          => $r->created_by ?? '',
                 'TLStatus'           => $r->tlStatus(),
                 'BatlNomor'          => $r->batl?->nomor ?? '',
@@ -134,16 +139,18 @@ class TemuanController extends Controller
             }
         }
 
-        $sumber    = $isSub ? ($parent->sumber ?: Temuan::SUMBER_BPK) : $this->cleanSumber($fd['Sumber'] ?? null);
-        $createdBy = $isSub ? $parent->created_by : $this->username();
-        $sortOrder = $this->resolveSort($isSub ? $parentId : null);
+        $sumber      = $isSub ? ($parent->sumber ?: Temuan::SUMBER_BPK) : $this->cleanSumber($fd['Sumber'] ?? null);
+        $createdBy   = $isSub ? $parent->created_by : $this->username();
+        $sortOrder   = $this->resolveSort($isSub ? $parentId : null);
+        $nilaiTemuan = $this->cleanNominal($fd['NilaiTemuan'] ?? 0);
+        $judulTemuan = trim((string) ($fd['Temuan'] ?? '')) ?: trim((string) ($fd['Kondisi'] ?? ''));
 
-        $temuan = DB::transaction(function () use ($isSub, $fd, $sumber, $createdBy, $parentId, $sortOrder) {
+        $temuan = DB::transaction(function () use ($isSub, $fd, $sumber, $createdBy, $parentId, $sortOrder, $nilaiTemuan, $judulTemuan) {
             return Temuan::create([
                 'no'                  => $isSub ? null : $this->generateKode($sumber),
                 'sumber'              => $sumber,
                 'created_by'          => $createdBy,
-                'temuan'              => $isSub ? null : ($fd['Temuan']  ?? null),
+                'temuan'              => $isSub ? null : ($judulTemuan ?: null),
                 'jenis_audit'         => $isSub ? null : $this->cleanJenis($fd['JenisAudit'] ?? null),
                 'sub_temuan'          => $fd['SubTemuan']         ?? null,
                 'kondisi'             => $fd['Kondisi']           ?? null,
@@ -151,6 +158,9 @@ class TemuanController extends Controller
                 'sebab'               => $fd['Sebab']             ?? null,
                 'akibat'              => $fd['Akibat']            ?? null,
                 'rekomendasi'         => $fd['Rekomendasi']       ?? null,
+                'nilai_temuan'        => $nilaiTemuan,
+                'nilai_realisasi'     => 0,
+                'selisih'             => $nilaiTemuan,
                 'pic'                 => $fd['PIC']               ?? null,
                 'rencana_aksi'        => $fd['RencanaAksi']       ?? null,
                 'jadwal_pelaksanaan'  => $fd['JadwalPelaksanaan'] ?? null,
@@ -220,6 +230,9 @@ class TemuanController extends Controller
                 $extra[$column] = $fd[$key];
             }
         }
+        if (array_key_exists('NilaiTemuan', $fd)) {
+            $extra['nilai_temuan'] = $this->cleanNominal($fd['NilaiTemuan']);
+        }
         if ($temuan->parent_id === null && array_key_exists('JenisAudit', $fd)) {
             $jenis = $this->cleanJenis($fd['JenisAudit']);
             $extra['jenis_audit'] = $jenis;
@@ -228,6 +241,7 @@ class TemuanController extends Controller
             $temuan->update($extra);
         }
 
+        $temuan->syncFinancialRealisasi();
         $this->syncPics($fd['PIC'] ?? '');
 
         return response()->json(['success' => true]);
@@ -269,6 +283,21 @@ class TemuanController extends Controller
     {
         $v = strtolower(trim((string) $v));
         return array_key_exists($v, Temuan::JENIS_AUDIT_LABEL) ? $v : null;
+    }
+
+    /** Normalisasi string Rupiah ("3.000.000" / "3000000") menjadi float >= 0 */
+    private function cleanNominal($v): float
+    {
+        $s = trim(preg_replace('/[^\d.,-]/', '', (string) $v));
+        if ($s === '') {
+            return 0.0;
+        }
+        if (str_contains($s, ',')) {
+            $s = str_replace(['.', ','], ['', '.'], $s);
+        } elseif (preg_match('/^\d{1,3}(\.\d{3})+$/', $s)) {
+            $s = str_replace('.', '', $s);
+        }
+        return max(0.0, (float) $s);
     }
 
     private function generateKode(string $sumber): string

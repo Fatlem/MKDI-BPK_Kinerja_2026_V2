@@ -36,20 +36,26 @@ class BuktiController extends Controller
             ->map(fn ($b) => $this->present($b));
 
         $temuan->load(['bukti:id,temuan_id,status', 'batl']);
+        $temuan->syncFinancialRealisasi();
         $root = $temuan->rootTemuan();
 
         return response()->json([
-            'success'       => true,
-            'data'          => $rows,
-            'tlStatus'      => $temuan->tlStatus(),
-            'batl'          => $temuan->batl ? BatlController::present($temuan->batl) : null,
-            'canBatl'       => $this->canManageTemuan($temuan) && $this->bisaTerbitBatl($temuan),
+            'success'        => true,
+            'data'           => $rows,
+            'tlStatus'       => $temuan->tlStatus(),
+            'batl'           => $temuan->batl ? BatlController::present($temuan->batl) : null,
+            'canBatl'        => $this->canManageTemuan($temuan) && $this->bisaTerbitBatl($temuan),
             // Alasan BATL belum bisa terbit (mis. rekomendasi lain belum tuntas); hanya untuk sisi auditor
-            'batlAlasan'    => ($this->isStaff() && $temuan->tlStatus() === BuktiTindakLanjut::STATUS_TERVERIFIKASI)
+            'batlAlasan'     => ($this->isStaff() && $temuan->tlStatus() === BuktiTindakLanjut::STATUS_TERVERIFIKASI)
                 ? $temuan->batlBlocker() : null,
-            'progress'      => $temuan->rekomendasiProgress(),
-            'statusDokumen' => $root->status_dokumen ?: Temuan::DOKUMEN_LHP_SEMENTARA,
-            'noLha'         => $root->no_lha,
+            'progress'       => $temuan->rekomendasiProgress(),
+            'statusDokumen'  => $root->status_dokumen ?: Temuan::DOKUMEN_LHP_SEMENTARA,
+            'noLha'          => $root->no_lha,
+            'nilaiTemuan'    => (float) ($temuan->nilai_temuan ?? 0),
+            'nilaiRealisasi' => (float) ($temuan->nilai_realisasi ?? 0),
+            'selisih'        => (float) ($temuan->selisih ?? 0),
+            'tanggalInput'   => $root->created_at?->format('Y-m-d') ?? '',
+            'deadlineDate'   => $root->created_at?->copy()->addDays(60)->format('Y-m-d') ?? '',
         ]);
     }
 
@@ -57,7 +63,12 @@ class BuktiController extends Controller
     public function store(Request $request)
     {
         // Nominal boleh dikirim "1.500.000,50" atau "1500000.50"; dinormalkan ke angka murni
+        // Jika tanggal_selesai tidak diisi terpisah, samakan dengan tanggal_mulai (prinsip less-click Archive.zip)
+        $tglMulai   = $request->input('tanggal_mulai') ?: $request->input('tanggal_realisasi');
+        $tglSelesai = $request->input('tanggal_selesai') ?: $tglMulai;
         $request->merge([
+            'tanggal_mulai'   => $tglMulai,
+            'tanggal_selesai' => $tglSelesai,
             'ntpn'            => strtoupper(trim((string) $request->input('ntpn', ''))) ?: null,
             'nominal_setoran' => $this->normalNominal($request->input('nominal_setoran')),
         ]);
@@ -119,11 +130,13 @@ class BuktiController extends Controller
             $path = $file->storeAs('bukti/' . $temuan->id, Str::uuid() . '.' . $ext, 'local');
         }
 
+        $uraian = trim((string) $request->input('uraian'));
+
         $bukti = BuktiTindakLanjut::create([
             'temuan_id'       => $temuan->id,
             'tanggal_mulai'   => $request->input('tanggal_mulai'),
             'tanggal_selesai' => $request->input('tanggal_selesai'),
-            'uraian'          => trim((string) $request->input('uraian')),
+            'uraian'          => $uraian,
             'ntpn'            => $request->input('ntpn') ?: null,
             'nominal_setoran' => $request->input('nominal_setoran') !== null && $request->input('nominal_setoran') !== ''
                                     ? $request->input('nominal_setoran') : null,
@@ -134,6 +147,15 @@ class BuktiController extends Controller
             'status'          => BuktiTindakLanjut::STATUS_MENUNGGU,
             'diunggah_oleh'   => $this->currentUser()['username'] ?? null,
         ]);
+
+        // Otomatis sinkronkan Output Aktual pada temuan agar Satker tidak perlu isi Output manual dua kali
+        if ($uraian !== '') {
+            $existingOut = trim((string) ($temuan->output ?? ''));
+            if ($existingOut === '' || ! str_contains(mb_strtolower($existingOut), mb_strtolower($uraian))) {
+                $temuan->output = $existingOut !== '' ? ($existingOut . "\n" . $uraian) : $uraian;
+                $temuan->saveQuietly();
+            }
+        }
 
         $temuan->syncStatusLha();
 
@@ -220,8 +242,13 @@ class BuktiController extends Controller
             return $this->forbidden('Bukti yang sudah terverifikasi tidak dapat dihapus.');
         }
 
+        $temuan = $bukti->temuan;
         $bukti->hapusFile();
         $bukti->delete();
+
+        if ($temuan) {
+            $temuan->syncStatusLha();
+        }
 
         return response()->json(['success' => true]);
     }

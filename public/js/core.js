@@ -227,28 +227,28 @@ function jenisAuditLabel(r) {
 }
 function jenisAuditBadge(r) {
   const lbl = jenisAuditLabel(r);
-  return lbl ? `<span class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 border border-indigo-100">${esc(lbl)}</span>` : '';
+  return lbl ? `<span class="inline-flex items-center whitespace-nowrap rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[11px] font-medium text-[#6E6E73]">${esc(lbl)}</span>` : '';
 }
 function dokumenBadge(r) {
   if (r && r.StatusDokumen === 'lha') {
     const code = r.NoLha ? ' · ' + r.NoLha : '';
-    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200" title="LHP telah ditutup dan disepakati Auditor &amp; Auditee menjadi LHA Resmi"><i data-lucide="award" style="width:12px;height:12px;" class="icon-plain"></i> LHA Resmi${esc(code)}</span>`;
+    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#0071E3]/10 px-2 py-0.5 text-[10.5px] font-semibold text-[#0071E3]">LHA${esc(code)}</span>`;
   }
-  return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200" title="Masih berstatus LHP (Temuan Sementara) hingga seluruh rekomendasi tuntas dan ditandatangani Auditor &amp; Auditee"><i data-lucide="file-clock" style="width:12px;height:12px;" class="icon-plain"></i> LHP (Temuan Sementara)</span>`;
+  return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[10.5px] font-medium text-[#6E6E73]">LHP</span>`;
 }
 
 // Status tindak lanjut (alur kerja biro -> auditor), dikirim server di r.TLStatus
 const TL_STATUS = {
   belum:         { cls: 'bk-st-kosong',        icon: 'minus-circle',   lbl: 'Belum Ada Bukti' },
-  menunggu:      { cls: 'bk-st-menunggu',      icon: 'clock',          lbl: 'Menunggu Verifikasi' },
-  pending:       { cls: 'bk-st-pending',       icon: 'pause-circle',   lbl: 'Pending (Ditahan Auditor)' },
-  ditolak:       { cls: 'bk-st-ditolak',       icon: 'alert-triangle', lbl: 'Ditolak - Perlu Perbaikan' },
-  terverifikasi: { cls: 'bk-st-terverifikasi', icon: 'badge-check',    lbl: 'Terverifikasi - Menunggu BATL' },
-  batl:          { cls: 'bk-st-batl',          icon: 'file-check-2',   lbl: 'Selesai - BATL Terbit' }
+  menunggu:      { cls: 'bk-st-menunggu',      icon: 'clock',          lbl: 'Menunggu Review' },
+  pending:       { cls: 'bk-st-pending',       icon: 'pause-circle',   lbl: 'Pending' },
+  ditolak:       { cls: 'bk-st-ditolak',       icon: 'alert-triangle', lbl: 'Perlu Revisi' },
+  terverifikasi: { cls: 'bk-st-terverifikasi', icon: 'badge-check',    lbl: 'Disetujui' },
+  batl:          { cls: 'bk-st-batl',          icon: 'file-check-2',   lbl: 'BATL Terbit' }
 };
 function tlPill(key) {
   const t = TL_STATUS[key] || TL_STATUS.belum;
-  return `<span class="bk-pill ${t.cls}"><i data-lucide="${t.icon}"></i> ${t.lbl}</span>`;
+  return `<span class="inline-flex items-center gap-1 rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[11px] font-medium text-[#6E6E73]">${t.lbl}</span>`;
 }
 
 function isMyRow(r) {
@@ -294,6 +294,132 @@ function statusOf(r) {
 
   if (rec !== '' || jad !== '' || out !== '') return { cls: 'pill-prog', lbl: 'Proses', icon: 'clock' };
   return { cls: 'pill-empty', lbl: 'Belum', icon: 'minus-circle' };
+}
+
+// ── Helper Finansial Rupiah & Batas Waktu 60 Hari (Probis Archive.zip) ─────────
+function parseRupiahValue(raw) {
+  if (raw === null || raw === undefined) return 0;
+  const digitsOnly = String(raw).replace(/[^0-9]/g, '');
+  return digitsOnly ? parseFloat(digitsOnly) : 0;
+}
+
+function formatRupiahNumber(num) {
+  const val = parseRupiahValue(num);
+  if (!val) return '0';
+  return val.toLocaleString('id-ID');
+}
+
+function formatIDR(num) {
+  const n = Number(num) || 0;
+  if (n >= 1000000000) return (n / 1000000000).toFixed(2) + ' Miliar';
+  if (n >= 1000000)    return (n / 1000000).toFixed(2) + ' Juta';
+  return n.toLocaleString('id-ID');
+}
+
+function formatRupiahInput(inputEl, previewId) {
+  if (!inputEl) return;
+  const rawDigits = inputEl.value.replace(/[^0-9]/g, '');
+  if (!rawDigits) {
+    inputEl.value = '';
+    if (previewId) {
+      const previewEl = document.getElementById(previewId);
+      if (previewEl) {
+        previewEl.textContent = 'Rp 0 — Rekomendasi bersifat administratif (non-finansial)';
+        previewEl.style.color = '#64748b';
+      }
+    }
+    return;
+  }
+  const numericVal = parseInt(rawDigits, 10) || 0;
+  inputEl.value = numericVal === 0 ? '0' : numericVal.toLocaleString('id-ID');
+  if (previewId) {
+    const previewEl = document.getElementById(previewId);
+    if (previewEl) {
+      if (numericVal > 0) {
+        previewEl.innerHTML = `Target Finansial: <strong>Rp ${numericVal.toLocaleString('id-ID')}</strong> (${formatIDR(numericVal)})`;
+        previewEl.style.color = '#047857';
+      } else {
+        previewEl.textContent = 'Rp 0 — Rekomendasi bersifat administratif (non-finansial)';
+        previewEl.style.color = '#64748b';
+      }
+    }
+  }
+}
+
+function formatTemuanDate(dateStr) {
+  if (!dateStr) return '-';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr).split('T')[0];
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch (_) {
+    return String(dateStr);
+  }
+}
+
+// Perhitungan Batas Waktu Kepatuhan 60 Hari Kalender sesuai UU No. 15/2004 Pasal 20 (Archive.zip)
+function getDeadlineInfo(r) {
+  const baseStr = (r && (r.TanggalInput || r.tanggalInput)) || `${(r && r.Tahun) || new Date().getFullYear()}-01-01`;
+  const baseDate = new Date(baseStr);
+  const validBase = isNaN(baseDate.getTime()) ? new Date() : baseDate;
+
+  const dlStr = r && (r.DeadlineDate || r.deadlineDate);
+  const deadlineDate = dlStr && !isNaN(new Date(dlStr).getTime())
+    ? new Date(dlStr)
+    : new Date(validBase.getTime() + 60 * 24 * 60 * 60 * 1000);
+
+  const today = new Date();
+  const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const tl = (r && (r.TLStatus || r.tlStatus)) || '';
+  const stLbl = (r && r.Output) ? statusOf(r).lbl : '';
+  const isTuntas = tl === 'batl' || tl === 'terverifikasi' || stLbl === 'Selesai';
+  const isOverdue = diffDays < 0 && !isTuntas;
+
+  let statusBadgeText = '';
+  if (isTuntas) {
+    statusBadgeText = 'Tuntas';
+  } else if (isOverdue) {
+    statusBadgeText = `Lewat ${Math.abs(diffDays)} hari`;
+  } else {
+    statusBadgeText = `Sisa ${diffDays} hari`;
+  }
+
+  return {
+    deadlineDate,
+    deadlineFormatted: formatTemuanDate(deadlineDate.toISOString()),
+    diffDays,
+    isOverdue,
+    isTuntas,
+    statusBadgeText
+  };
+}
+
+function deadlineBadgeHtml(r) {
+  const dl = getDeadlineInfo(r);
+  if (dl.isTuntas) {
+    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[11px] font-medium text-[#6E6E73]">${esc(dl.deadlineFormatted)} · Selesai</span>`;
+  }
+  if (dl.isOverdue) {
+    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#FFF2F2] px-2 py-0.5 text-[11px] font-medium text-[#D70015]">${esc(dl.deadlineFormatted)} · ${esc(dl.statusBadgeText)}</span>`;
+  }
+  return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[11px] font-medium text-[#6E6E73]">${esc(dl.deadlineFormatted)} · ${esc(dl.statusBadgeText)}</span>`;
+}
+
+function financialStripHtml(nilaiTemuan, nilaiRealisasi, selisih) {
+  const target = Number(nilaiTemuan) || 0;
+  const real   = Number(nilaiRealisasi) || 0;
+  const sisa   = selisih != null ? Number(selisih) : Math.max(0, target - real);
+  if (target <= 0 && real <= 0) return '';
+  const pct = target > 0 ? Math.min(100, Math.round((real / target) * 100)) : 100;
+  return `
+    <div class="mt-3 pt-3 border-t border-black/[0.06] flex flex-wrap items-center justify-between gap-4 text-xs">
+      <div class="flex flex-wrap items-center gap-5">
+        <div><span class="text-[#86868B]">Target Setor:</span> <strong class="font-semibold text-[#1D1D1F] ml-1">Rp ${target.toLocaleString('id-ID')}</strong></div>
+        <div><span class="text-[#86868B]">Realisasi:</span> <strong class="font-semibold text-[#0071E3] ml-1">Rp ${real.toLocaleString('id-ID')}</strong></div>
+        <div><span class="text-[#86868B]">Sisa:</span> <strong class="font-semibold ${sisa > 0 ? 'text-[#D70015]' : 'text-[#1D1D1F]'} ml-1">Rp ${sisa.toLocaleString('id-ID')}</strong></div>
+      </div>
+      <span class="text-[11px] font-medium text-[#6E6E73]">${pct}% disetor</span>
+    </div>`;
 }
 
 window.addEventListener('DOMContentLoaded', () => {

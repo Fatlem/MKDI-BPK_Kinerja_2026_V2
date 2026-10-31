@@ -4,10 +4,10 @@
   var DETAIL = 'ruang-isian-detail';
 
   var ROUTES = {
-    'dashboard':   '/dashboard',
-    'ruang-isian': '/ruang-isian',
-    'ruang-isian-detail': '/ruang-isian/detail',
-    'rekap':       '/rekap-laporan'
+    'dashboard':          '/dashboard',
+    'ruang-isian':        '/ruang-isian',
+    'ruang-isian-detail': '/ruang-isian',
+    'rekap':              '/rekap-laporan'
   };
 
   var originalNavigate = window.navigate;
@@ -22,6 +22,9 @@
 
   function pageFromPath() {
     var path = normPath(location.pathname);
+    if (path === '/temuan' || path === '/ruang-isian' || path === '/ruang-isian/detail') {
+      return 'ruang-isian';
+    }
     var keys = Object.keys(ROUTES);
     for (var i = 0; i < keys.length; i++) {
       if (ROUTES[keys[i]] === path) return keys[i];
@@ -54,24 +57,14 @@
 
     var el = document.getElementById(inRI ? 'nav-ruang-isian' : 'nav-' + page);
     if (el) el.classList.add('active');
-
-    var t = document.getElementById('nav-ri-temuan');
-    var k = document.getElementById('nav-ri-detail');
-    if (t) t.classList.toggle('active', page === 'ruang-isian');
-    if (k) k.classList.toggle('active', page === DETAIL);
-
-    setGroup('ruang-isian', inRI);
   }
 
   function render(page, args) {
-    var result;
-    if (page === DETAIL && typeof window.loadDetail === 'function') {
-      S.page = DETAIL;
-      if (typeof window.toggleSidebar === 'function') window.toggleSidebar(false);
-      window.loadDetail();
-    } else {
-      result = originalNavigate.apply(window, args || [page]);
+    if (page === DETAIL) {
+      page = 'ruang-isian';
+      args = ['ruang-isian'];
     }
+    var result = originalNavigate.apply(window, args || [page]);
     syncNav(page);
     return result;
   }
