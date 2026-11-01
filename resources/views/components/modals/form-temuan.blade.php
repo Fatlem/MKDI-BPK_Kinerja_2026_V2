@@ -73,7 +73,7 @@
 
           <div class="form-field" id="m-jenis-wrap" style="margin-bottom:0;">
             <label class="block text-xs font-medium text-[#6E6E73] mb-1">Jenis Audit</label>
-            <select id="m-jenis" class="w-full h-9 px-3 text-xs font-medium bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
+            <select id="m-jenis" onchange="onJenisAuditChange()" class="w-full h-9 px-3 text-xs font-medium bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
               <option value="kinerja">Audit Kinerja (3E)</option>
               <option value="keuangan">Audit Keuangan</option>
               <option value="kepatuhan">Audit Kepatuhan</option>
@@ -121,10 +121,10 @@
             class="w-full px-3 py-2 text-xs bg-[#F5F5F7] focus:bg-white border border-transparent rounded-xl focus:outline-none focus:border-[#0071E3] text-[#1D1D1F] transition-colors"></textarea>
         </div>
 
-        <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
+        <div id="m-nilai-temuan-wrap" style="display:none;" class="bg-[#F5F5F7] p-3.5 rounded-xl">
           <div class="flex items-center justify-between mb-1.5">
-            <label class="text-xs font-medium text-[#1D1D1F]">Target Setoran Kas Negara (Opsional)</label>
-            <span id="m-nilai-preview" class="text-[11px] text-[#86868B]">Rp 0 (Non-finansial)</span>
+            <label class="text-xs font-medium text-[#1D1D1F]">Target Setoran Kas Negara (Finansial)</label>
+            <span id="m-nilai-preview" class="text-[11px] text-[#86868B]">Rp 0</span>
           </div>
           <div class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#86868B]">Rp</span>

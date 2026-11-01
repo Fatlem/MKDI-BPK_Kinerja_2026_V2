@@ -1719,6 +1719,21 @@ function onSumberChange() {
     .catch(() => { no.value = ''; showToast('Gagal mengambil kode temuan', 'err'); });
 }
 
+function onJenisAuditChange() {
+  const jenisEl = document.getElementById('m-jenis');
+  const wrap    = document.getElementById('m-nilai-temuan-wrap');
+  if (!wrap) return;
+  const isFinancial = jenisEl && jenisEl.value === 'keuangan';
+  wrap.style.display = isFinancial ? '' : 'none';
+  if (!isFinancial) {
+    const nilaiEl = document.getElementById('m-nilai-temuan');
+    if (nilaiEl) {
+      nilaiEl.value = '0';
+      formatRupiahInput(nilaiEl, 'm-nilai-preview');
+    }
+  }
+}
+
 function autoGenerateKodeInput() {
   const isSub = document.getElementById('m-is-sub').value === 'true';
   const kodeInp = document.getElementById('m-kode');
@@ -1770,6 +1785,7 @@ function openModal(pic, row, parentDocNo) {
   }
   const jenisEl = document.getElementById('m-jenis');
   if (jenisEl) jenisEl.value = 'kinerja';
+  onJenisAuditChange();
 
   const r = row ? S.allR.find(x => String(x._row) === String(row)) : null;
   renderPicChecklist(r ? splitPics(r.PIC) : (pic ? splitPics(pic) : []));
@@ -1806,6 +1822,11 @@ function openModal(pic, row, parentDocNo) {
       document.getElementById('m-output').value       = cleanOutput(r.Output);
       setSumberField(r.Sumber || 'bpk', true);
       if (jenisEl) jenisEl.value = r.JenisAudit || 'kinerja';
+      onJenisAuditChange();
+      if (r.JenisAudit === 'keuangan' && nilaiEl) {
+        nilaiEl.value = formatRupiahNumber(r.NilaiTemuan || 0);
+        formatRupiahInput(nilaiEl, 'm-nilai-preview');
+      }
     }
   } else {
     setSumberField('inspektorat', false);
@@ -1854,6 +1875,7 @@ function openAddSubModal(row) {
 
   const jenisEl = document.getElementById('m-jenis');
   if (jenisEl) jenisEl.value = parent.JenisAudit || 'kinerja';
+  onJenisAuditChange();
 
   const temuanInp = document.getElementById('m-temuan');
   temuanInp.readOnly = false;
@@ -1900,9 +1922,13 @@ function saveTemuan() {
   const sebabVal       = (document.getElementById('m-sebab')       || {}).value ? document.getElementById('m-sebab').value.trim()       : keep('Sebab');
   const akibatVal      = (document.getElementById('m-akibat')      || {}).value ? document.getElementById('m-akibat').value.trim()      : keep('Akibat');
   const rekomendasiVal = (document.getElementById('m-rekomendasi') || {}).value ? document.getElementById('m-rekomendasi').value.trim() : keep('Rekomendasi');
-  const nilaiTemuanVal = document.getElementById('m-nilai-temuan')
+  const jenisSel = document.getElementById('m-jenis');
+  const jenisAuditVal = (jenisSel && !isPicUser()) ? (jenisSel.value || 'kinerja') : ((origRow && origRow.JenisAudit) ? origRow.JenisAudit : 'kinerja');
+  const isFinancial = jenisAuditVal === 'keuangan';
+
+  const nilaiTemuanVal = isFinancial && document.getElementById('m-nilai-temuan')
     ? parseRupiahValue(document.getElementById('m-nilai-temuan').value)
-    : (origRow ? (origRow.NilaiTemuan || 0) : 0);
+    : (origRow && isFinancial ? (origRow.NilaiTemuan || 0) : 0);
 
   let judulTemuan = document.getElementById('m-temuan').value.trim();
   if (!judulTemuan && kondisiVal) {
@@ -1917,7 +1943,7 @@ function saveTemuan() {
     KodeTemuan: !isSub ? kodeVal : (origRow ? origRow.KodeTemuan : ''),
     KodeSubTemuan: isSub ? kodeVal : '',
     Sumber: (document.getElementById('m-sumber') || {}).value || 'bpk',
-    JenisAudit: (document.getElementById('m-jenis') || {}).value || 'kinerja',
+    JenisAudit: jenisAuditVal,
     PIC: getSelectedPics().join(PIC_SEP),
     Temuan: !isSub ? judulTemuan : (origRow ? origRow.Temuan : ''),
     SubTemuan: isSub ? judulTemuan : '',
@@ -1933,9 +1959,6 @@ function saveTemuan() {
     isSubAdd: isSub,
     parentRow: document.getElementById('m-parent-row').value,
   };
-
-  const jenisSel = document.getElementById('m-jenis');
-  if (jenisSel && !isPicUser()) fd.JenisAudit = jenisSel.value;
 
   if (isPicUser()) {
     const rowId = document.getElementById('m-row').value;

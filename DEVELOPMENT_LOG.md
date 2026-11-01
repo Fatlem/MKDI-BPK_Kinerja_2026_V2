@@ -309,6 +309,12 @@ Memperbaiki alur dan relasi data pemeriksaan menjadi 3 level hierarkis terpisah:
    - **Pencegahan Tumbukan Angka Progres**:
      - Memperlebar porsi kolom Progres dari `8%` menjadi `15%` pada tabel Daftar Temuan (dan `6%` menjadi `13%` pada dashboard).
      - Menetapkan `w-24 shrink-0 min-w-[96px]` (dan `w-20 shrink-0 min-w-[80px]` di dashboard) serta menambahkan `shrink-0` dan `gap-2` pada kontainer teks pecahan (`agg.selesai/agg.total`) dan persentase (`agg.pct%`), sehingga angka `0/1` dan `0%` duduk rapi di kedua sisi ujung bar tanpa saling menimpa (*no overlap*).
+5. **Kondisional Bidang Target Setoran Kas Negara (Hanya untuk Audit Finansial/Keuangan)** ([resources/views/components/modals/form-temuan.blade.php](resources/views/components/modals/form-temuan.blade.php), [public/js/ruang-isian.js](public/js/ruang-isian.js)):
+   - **Tampilan Dinamis**: Kontainer bidang input *Target Setoran Kas Negara* (`#m-nilai-temuan-wrap`) kini secara default disembunyikan (`display: none`).
+   - **Reaktivitas Dropdown**: Menambahkan fungsi `onJenisAuditChange()` pada event `onchange` dropdown `#m-jenis`. Bidang target setoran kas negara hanya ditampilkan saat memilih `Audit Keuangan` (`keuangan`). Apabila jenis audit lain dipilih (`kinerja`, `kepatuhan`, atau `khusus`), kontainer otomatis disembunyikan dan nilainya direset ke Rp 0.
+   - **Penanganan Mode Edit & Sub Temuan**: Fungsi `openModal()` dan `openAddSubModal()` secara otomatis mengevaluasi jenis audit yang sedang aktif. Jika data temuan/sub temuan bertipe `keuangan`, bidang target setoran ditampilkan beserta format nominal Rupiahnya; jika bertipe non-keuangan, bidang tetap tersembunyi.
+   - **Validasi Penyimpanan (`saveTemuan`)**: Pada saat proses simpan, sistem memastikan jika `JenisAudit !== 'keuangan'`, nilai `NilaiTemuan` dipaksa 0 sehingga database tetap bersih dari kewajiban finansial untuk temuan kinerja atau kepatuhan.
+
 
 
 
