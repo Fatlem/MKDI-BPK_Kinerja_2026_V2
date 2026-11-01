@@ -484,11 +484,12 @@ function renderDashboard(d) {
     ? priorityDocs.map(doc => {
         const p = doc.parent;
         const pics = groupPicShort(doc.items).join(', ') || '—';
+        const daysRem = doc.dl.daysRemaining != null ? doc.dl.daysRemaining : (doc.dl.diffDays != null ? doc.dl.diffDays : 0);
         const dlText = doc.isDone
           ? `<span class="text-xs font-medium text-[#0071E3]">Selesai</span>`
           : doc.dl.isOverdue
-            ? `<span class="text-xs font-medium text-[#D70015]">Lewat ${Math.abs(doc.dl.daysRemaining)} hari</span>`
-            : `<span class="text-xs font-medium ${doc.dl.daysRemaining <= 14 ? 'text-[#1D1D1F]' : 'text-[#6E6E73]'}">Sisa ${doc.dl.daysRemaining} hari</span>`;
+            ? `<span class="text-xs font-medium text-[#D70015]">Lewat ${Math.abs(daysRem)} hari</span>`
+            : `<span class="text-xs font-medium ${daysRem <= 14 ? 'text-[#1D1D1F]' : 'text-[#6E6E73]'}">Sisa ${daysRem} hari</span>`;
 
         const stagePill = doc.stageTone === 'blue'
           ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>${doc.stageLabel}</span>`
@@ -505,11 +506,13 @@ function renderDashboard(d) {
               </div>
               <div class="text-[11px] text-[#86868B] mt-0.5">${(p.Sumber || 'bpk') === 'bpk' ? 'BPK RI' : 'Inspektorat'} · ${esc(jenisAuditLabel(p) || 'Audit Kinerja')}</div>
             </td>
-            <td class="py-3 px-4 max-w-md">
-              <div class="text-xs font-medium text-[#1D1D1F] line-clamp-1">${esc(p.Temuan || '—')}</div>
-              <div class="text-[11px] text-[#86868B] mt-0.5">${doc.total} rincian · ${doc.renaksi}/${doc.total} Renaksi · ${doc.bukti} bukti</div>
+            <td class="py-3 px-4">
+              <div class="text-xs font-semibold text-[#1D1D1F] line-clamp-2 leading-relaxed" title="${esc(p.Temuan || '')}">${esc(p.Temuan || '—')}</div>
+              <div class="text-[11px] text-[#86868B] mt-1">${doc.total} rincian · ${doc.renaksi}/${doc.total} Renaksi · ${doc.bukti} bukti</div>
             </td>
-            <td class="py-3 px-4 whitespace-nowrap text-xs text-[#1D1D1F]">${esc(pics)}</td>
+            <td class="py-3 px-4">
+              <div class="text-xs text-[#475569] line-clamp-2 leading-snug" title="${esc(pics)}">${esc(pics)}</div>
+            </td>
             <td class="py-3 px-4 whitespace-nowrap">${stagePill}</td>
             <td class="py-3 px-4 whitespace-nowrap">
               ${dlText}
@@ -699,15 +702,15 @@ function renderDashboard(d) {
         </button>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[780px]">
+        <table class="w-full text-left border-collapse min-w-[860px] table-fixed">
           <thead>
             <tr class="border-b border-black/[0.05] text-[11px] text-[#86868B]">
-              <th class="py-2.5 px-4 font-medium">Dokumen</th>
-              <th class="py-2.5 px-4 font-medium">Temuan Utama</th>
-              <th class="py-2.5 px-4 font-medium">Unit Kerja</th>
-              <th class="py-2.5 px-4 font-medium">Tahap Saat Ini</th>
-              <th class="py-2.5 px-4 font-medium">Tenggat 60 Hari</th>
-              <th class="py-2.5 px-4 text-right font-medium">Progres</th>
+              <th class="py-2.5 px-4 font-medium w-[15%]">Dokumen</th>
+              <th class="py-2.5 px-4 font-medium w-[41%]">Temuan Utama</th>
+              <th class="py-2.5 px-4 font-medium w-[17%]">Unit Kerja</th>
+              <th class="py-2.5 px-4 font-medium w-[11%]">Tahap Saat Ini</th>
+              <th class="py-2.5 px-4 font-medium w-[10%]">Tenggat 60 Hari</th>
+              <th class="py-2.5 px-4 text-right font-medium w-[6%]">Progres</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-black/[0.04]">${priorityRowsHtml}</tbody>

@@ -449,15 +449,15 @@ function riTableHtml(groups, cfg) {
   return `
     <div class="bg-white rounded-b-2xl border border-t-0 border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[840px]">
+        <table class="w-full text-left border-collapse min-w-[840px] table-fixed">
           <thead>
             <tr class="border-b border-black/[0.06] text-[11px] text-[#86868B] font-medium">
-              <th class="py-3 px-5 font-medium">Dokumen</th>
-              <th class="py-3 px-4 font-medium">Temuan</th>
-              <th class="py-3 px-4 font-medium">Audit</th>
-              <th class="py-3 px-4 font-medium">Unit Kerja</th>
-              <th class="py-3 px-4 font-medium">Batas Waktu</th>
-              <th class="py-3 px-5 text-right font-medium">Progres</th>
+              <th class="py-3 px-5 font-medium w-[14%]">Dokumen</th>
+              <th class="py-3 px-4 font-medium w-[38%]">Temuan</th>
+              <th class="py-3 px-4 font-medium w-[12%]">Audit</th>
+              <th class="py-3 px-4 font-medium w-[16%]">Unit Kerja</th>
+              <th class="py-3 px-4 font-medium w-[12%]">Batas Waktu</th>
+              <th class="py-3 px-5 text-right font-medium w-[8%]">Progres</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-black/[0.05] text-sm">${body}</tbody>
@@ -1081,7 +1081,7 @@ function renderTopBatlBanner(rowId, res) {
         <form id="inl-batl-form-${rowId}" class="hidden mt-3 p-3.5 bg-[#F5F5F7] rounded-xl grid grid-cols-1 md:grid-cols-12 gap-2.5 items-end" onsubmit="submitInlineBatl(event, ${rowId})">
           <div class="md:col-span-3">
             <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Nomor BATL</label>
-            <input type="text" id="inl-batl-no-${rowId}" required placeholder="BATL-01/MKDI/2026"
+            <input type="text" id="inl-batl-no-${rowId}" required placeholder="BATL-01/ITJEN/2026"
               class="w-full h-8 px-2.5 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] font-mono">
           </div>
           <div class="md:col-span-2">

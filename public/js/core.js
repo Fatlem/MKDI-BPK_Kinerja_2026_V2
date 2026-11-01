@@ -388,6 +388,7 @@ function getDeadlineInfo(r) {
     deadlineDate,
     deadlineFormatted: formatTemuanDate(deadlineDate.toISOString()),
     diffDays,
+    daysRemaining: diffDays,
     isOverdue,
     isTuntas,
     statusBadgeText

@@ -221,5 +221,43 @@ Sesuai arahan pengguna untuk menghadirkan antarmuka yang bersih, minimalis, mode
    - Di halaman detail temuan (`showLhaDetail`), menghapus seluruh judul seksi panjang (`Komponen 1 — ...`), keterangan dalam kurung (`1. Kondisi (Fakta Riil)` menjadi `Kondisi`), dan *banner* peringatan kuning, digantikan dengan tata letak kartu putih dan *tile* `#F5F5F7` yang ringkas.
 4. **Rekap & Modal Formulir** ([public/js/rekap.js](public/js/rekap.js), [resources/views/components/modals/form-temuan.blade.php](resources/views/components/modals/form-temuan.blade.php), [resources/views/components/modals/confirm-delete.blade.php](resources/views/components/modals/confirm-delete.blade.php)):
    - Menghapus ikon filter warna-warni, kalimat petunjuk klik di atas daftar Rekap, serta *hint* panjang di setiap kolom modal formulir.
+5. **Halaman Login Bergaya Apple ID / iCloud** ([resources/views/auth/login.blade.php](resources/views/auth/login.blade.php), [public/css/mkdi.css](public/css/mkdi.css), [public/js/auth.js](public/js/auth.js)):
+   - Menghapus latar gelap navy bergaya *cyber*, foto gedung *stock* Unsplash, ikon neon cyan (`#38bdf8`), daftar promosi generik (*Transparan, Terintegrasi, Efisien*), serta garis pemisah `"atau"` yang tidak memiliki tombol alternatif di bawahnya.
+   - Menggantinya dengan **Centered Single-Column Frosted Card** (`max-width: 420px`, `border-radius: 26px`, `rgba(255,255,255,0.92)`, `backdrop-filter: saturate(180%) blur(24px)`) di atas kanvas terang Apple (`#F5F5F7` → `#FFFFFF`).
+   - Memperbarui input form menjadi *recessed well* `#F5F5F7` dengan *focus ring* Apple Blue (`#0071E3`), tombol masuk `#0071E3` tanpa bayangan neon, serta *dropdown combobox* pengguna dengan avatar monokrom `#E5E5EA` dan *pill* peran minimalis.
+
+---
+
+## 9. Sesi Development Lanjutan (1 November 2026): Portal Landing Page (`city-urban.png`), Split Login Page (`login-page.jpg`), & Rebranding Resmi e-TLHP Inspektorat Kemenko Pangan
+
+### A. Rebranding Nama Aplikasi (`e-TLHP`) & Footer Resmi Instansi
+- Mengganti penamaan aplikasi dari `"MKDI"` (yang sebelumnya merujuk pada satu biro) menjadi nama resmi aplikasi: **`e-TLHP` (Sistem Elektronik Tindak Lanjut Hasil Pemeriksaan) — Inspektorat Kementerian Koordinator Bidang Pangan Republik Indonesia** pada:
+  - Judul halaman ([resources/views/partials/head.blade.php](resources/views/partials/head.blade.php))
+  - Identitas *brand* di Sidebar ([resources/views/partials/sidebar.blade.php](resources/views/partials/sidebar.blade.php))
+  - Footer aplikasi resmi di dalam dashboard/workspace ([resources/views/partials/footer.blade.php](resources/views/partials/footer.blade.php)) dan di halaman portal/login ([resources/views/auth/login.blade.php](resources/views/auth/login.blade.php)).
+
+### B. Portal Landing Page & Split Login Page ([resources/views/auth/login.blade.php](resources/views/auth/login.blade.php), [public/css/mkdi.css](public/css/mkdi.css), [public/js/auth.js](public/js/auth.js))
+1. **Stage 1 — Portal Landing Page (`#landing-stage` menggunakan `public/images/city-urban.png`)**:
+   - Mengadopsi tata letak referensi *Citizen Portal*: bingkai kaca berlapis (*double glass frame*) di atas latar belakang arsitektur isometrik dengan *top navigation bar* (`logoheader.png`, *badge* `[e-TLHP]`, menu interaktif `PORTAL`, `ALUR TINDAK LANJUT`, `KETENTUAN & SLA`, serta tombol `LOG IN` & `PORTAL MASUK`).
+   - Kolom kiri menampilkan *headline* **`Mulai Pemantauan Portal e-TLHP Sekarang`**, deskripsi sistem Inspektorat Kemenko Pangan, dan tombol CTA utama **`Masuk ke Portal e-TLHP`** (`showAuthStage()`), sedangkan kolom kanan menampilkan ilustrasi isometrik 3D [`public/images/city-urban.png`](public/images/city-urban.png).
+2. **Stage 2 — Split Login Page (`#auth-stage` menggunakan `public/images/login-page.jpg`)**:
+   - Mengadopsi tata letak referensi *2-Column Split Login*:
+     - **Panel Kiri (`#F4F8FA`)**: Menampilkan identitas `e-TLHP · Inspektorat Kemenko Pangan`, tombol `<- Beranda` (`showLandingStage()`), serta ilustrasi otentikasi isometrik [`public/images/login-page.jpg`](public/images/login-page.jpg).
+     - **Panel Kanan (`#FFFFFF`)**: Menampilkan sapaan **`Selamat Datang di e-TLHP !!`**, subjudul resmi Inspektorat Kementerian Koordinator Bidang Pangan, *underline filter tabs* (`Semua Akun`, `Auditor / Admin`, `Unit Kerja` via `setLoginRoleTab`) untuk memfilter pilihan akun pada *combobox*, kolom input akun & kata sandi, opsi `Tetap masuk` & `Lupa kata sandi?`, tautan kembali ke beranda, serta tombol `Sign in` berwarna biru tua institusional (`#005A87`).
+
+### C. Restorasi Layout Landing Page & Penyeragaman Style Footer ([resources/views/auth/login.blade.php](resources/views/auth/login.blade.php), [public/css/mkdi.css](public/css/mkdi.css), [resources/views/partials/footer.blade.php](resources/views/partials/footer.blade.php))
+- Merapikan kotak biru pada teks **`e-TLHP`** di navbar atas (`.landing-portal-badge`) dengan bingkai 4 sisi lengkap (`border: 1.75px solid #0077CC; border-radius: 6px; padding: 3px 10px; background: rgba(0, 119, 204, 0.04)`) sehingga tidak terpotong garis atasnya.
+- Menyeragamkan footer halaman landing/login dengan style footer saat sudah login: meng-include langsung `resources/views/partials/footer.blade.php` (`.app-footer`) yang memuat teks resmi:
+  > **`e-TLHP © 2026 Inspektorat Kementerian Koordinator Bidang Pangan RI`**
+  dengan styling minimalis, centered, teks abu-abu elegan, dan garis pemisah halus di bagian bawah layar.
+
+### D. Redirection Pasca-Login ke Dashboard & Optimasi Kolom Temuan ([public/js/auth.js](public/js/auth.js), [public/js/router.js](public/js/router.js), [public/js/dashboard.js](public/js/dashboard.js), [public/js/core.js](public/js/core.js))
+- **Redirect Otomatis ke Dashboard**: Mengatur `doLogin()` agar memanggil `resetRouterToDashboard()` sehingga setelah user berhasil login, state routing dan URL selalu diarahkan langsung ke halaman `/dashboard` tanpa terintersepsi path sebelumnya.
+- **Hierarki Kolom Tabel Prioritas & Batas Waktu 60 Hari**:
+  - Menerapkan `table-fixed` dengan pembagian lebar kolom: **Temuan Utama diberikan porsi terbesar (41%)**, sedangkan Unit Kerja dipadatkan ke 17%.
+  - Menghapus `whitespace-nowrap` pada kolom Unit Kerja serta membatasi maksimal 2 baris (`line-clamp-2`) dengan tooltip nama lengkap agar tidak melebar berlebihan saat banyak satker terlibat.
+  - Memperluas keterbacaan judul Temuan (`line-clamp-2 leading-relaxed font-semibold`) agar teks temuan tidak terpotong menjadi satu kata.
+- **Perbaikan Kalkulasi Hari SLA**: Memperbaiki `getDeadlineInfo` di `core.js` dengan menyertakan alias `daysRemaining: diffDays` sehingga teks tenggat menampilkan hitungan sisa hari yang presisi (`Sisa X hari`) dan tidak lagi bertuliskan `Sisa undefined hari`.
+
 
 

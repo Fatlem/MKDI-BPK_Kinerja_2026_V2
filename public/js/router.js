@@ -104,5 +104,12 @@
     };
   }
 
+  window.resetRouterToDashboard = function () {
+    first = false;
+    if (history.replaceState) {
+      history.replaceState({ page: 'dashboard' }, '', '/dashboard');
+    }
+  };
+
   window.navigate = navigate;
 })();

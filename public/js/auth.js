@@ -1,8 +1,57 @@
+let _loginRoleFilter = 'all';
+
+function showLandingStage() {
+  const lnd = document.getElementById('landing-stage');
+  const auth = document.getElementById('auth-stage');
+  const bg = document.getElementById('landing-outer-bg');
+  if (lnd) lnd.style.display = 'block';
+  if (auth) auth.style.display = 'none';
+  if (bg) bg.style.display = 'block';
+  refreshIcons();
+}
+
+function showAuthStage() {
+  const lnd = document.getElementById('landing-stage');
+  const auth = document.getElementById('auth-stage');
+  const bg = document.getElementById('landing-outer-bg');
+  if (lnd) lnd.style.display = 'none';
+  if (auth) auth.style.display = 'flex';
+  if (bg) bg.style.display = 'none';
+  refreshIcons();
+  setTimeout(() => document.getElementById('lg-user')?.focus(), 60);
+}
+
+function setLandingTab(tab) {
+  ['portal', 'probis', 'sla'].forEach(k => {
+    const el = document.getElementById('lnd-tab-' + k);
+    if (el) {
+      el.className = (k === tab)
+        ? 'text-[#0077CC] transition-colors'
+        : 'hover:text-[#0077CC] transition-colors';
+    }
+  });
+  const boxProbis = document.getElementById('landing-info-probis');
+  const boxSla    = document.getElementById('landing-info-sla');
+  if (boxProbis) boxProbis.classList.toggle('hidden', tab !== 'probis');
+  if (boxSla)    boxSla.classList.toggle('hidden', tab !== 'sla');
+}
+
+function setLoginRoleTab(role) {
+  _loginRoleFilter = role || 'all';
+  ['all', 'staff', 'pic'].forEach(k => {
+    const btn = document.getElementById('lrt-' + k);
+    if (btn) btn.classList.toggle('active', k === _loginRoleFilter);
+  });
+  renderUserCombo();
+  openUserCombo();
+}
+
 function showLogin() {
   const av = document.getElementById('app-container');
   const lv = document.getElementById('login-view');
   if (av) av.style.display = 'none';
   if (lv) lv.style.display = 'flex';
+  showLandingStage();
 }
 
 function restoreSession() {
@@ -35,24 +84,27 @@ function doLogin() {
   if (err) err.style.display = 'none';
   if (!u || !p) {
     if (err) {
-      err.textContent = 'Username dan password wajib diisi.';
+      err.textContent = 'Akun pengguna dan kata sandi wajib diisi.';
       err.style.display = 'block';
     }
     return;
   }
 
-  btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;"></i> Signing in...';
+  btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:16px;height:16px;"></i> <span>Signing in...</span>';
   btn.disabled = true;
   refreshIcons();
 
   apiFetch('/api/auth/login', 'POST', { username: u, password: p })
     .then(res => {
-      btn.innerHTML = '<i data-lucide="log-in" style="width:18px;height:18px;"></i> Sign In';
+      btn.innerHTML = '<span>Sign in</span>';
       btn.disabled = false;
       refreshIcons();
 
       if (res && res.success) {
         S.user = res.user;
+        if (typeof window.resetRouterToDashboard === 'function') {
+          window.resetRouterToDashboard();
+        }
         enterApp();
       } else {
         if (err) {
@@ -62,7 +114,7 @@ function doLogin() {
       }
     })
     .catch(e => {
-      btn.innerHTML = '<i data-lucide="log-in" style="width:18px;height:18px;"></i> Sign In';
+      btn.innerHTML = '<span>Sign in</span>';
       btn.disabled = false;
       refreshIcons();
       if (err) {
@@ -79,6 +131,7 @@ function doLogout() {
     document.getElementById('login-view').style.display = 'flex';
     document.getElementById('lg-user').value = '';
     document.getElementById('lg-pass').value = '';
+    showAuthStage();
   });
 }
 
@@ -141,11 +194,18 @@ function renderUserCombo() {
   const list  = document.getElementById('user-combo-list');
   if (!input || !list) return;
 
+  const roleFiltered = _loginUsers.filter(u => {
+    const r = roleOf(u);
+    if (_loginRoleFilter === 'staff') return r === 'admin' || r === 'auditor';
+    if (_loginRoleFilter === 'pic')   return r !== 'admin' && r !== 'auditor';
+    return true;
+  });
+
   const q = _picNormKey(input.value);
-  const exact = _loginUsers.some(u => _picNormKey(u.username) === q);   
+  const exact = roleFiltered.some(u => _picNormKey(u.username) === q);   
   _comboItems = (!q || exact)
-    ? _loginUsers.slice()
-    : _loginUsers.filter(u => _picNormKey(u.username).includes(q) || _picNormKey(u.nama).includes(q));
+    ? roleFiltered.slice()
+    : roleFiltered.filter(u => _picNormKey(u.username).includes(q) || _picNormKey(u.nama).includes(q));
 
   list.innerHTML = _comboItems.map((u, i) => {
     const admin = roleOf(u) === 'admin';
@@ -157,7 +217,7 @@ function renderUserCombo() {
           <div class="cu-name">${esc(u.username)}</div>
           <div class="cu-sub">${esc(u.nama || '')}</div>
         </div>
-        <span class="cu-badge${(admin || auditor) ? ' admin' : ''}">${admin ? 'Admin' : (auditor ? 'Auditor' : 'PIC')}</span>
+        <span class="cu-badge${(admin || auditor) ? ' admin' : ''}">${admin ? 'Admin' : (auditor ? 'Auditor' : 'Unit Kerja')}</span>
       </div>`;
   }).join('') || '<div class="combo-empty">Tidak ada di daftar. Anda tetap bisa mengetik manual.</div>';
 }

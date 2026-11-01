@@ -1,7 +1,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>BPK Kinerja 2026 - Dashboard Monitoring MKDI</title>
+<title>e-TLHP — Inspektorat Kementerian Koordinator Bidang Pangan RI</title>
 <meta name="theme-color" content="#ffffff">
 
 <!-- Google Fonts -->

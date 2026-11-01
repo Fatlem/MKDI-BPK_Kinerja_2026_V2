@@ -15,13 +15,19 @@
   </button>
 
   {{-- Brand --}}
-  <div class="flex min-h-[64px] items-center px-5 py-3.5 mini:justify-center mini:px-0">
-    <img src="{{ asset('images/logoheader.png') }}?v=1"
-        alt="Kementerian Koordinator Bidang Pangan Republik Indonesia"
-        class="block h-auto w-full max-w-[196px] mini:hidden">
+  <div class="border-b border-black/[0.05] px-5 py-3.5 mini:flex mini:justify-center mini:px-0">
+    <div class="mini:hidden">
+      <img src="{{ asset('images/logoheader.png') }}?v=1"
+          alt="Kementerian Koordinator Bidang Pangan Republik Indonesia"
+          class="block h-auto w-full max-w-[190px]">
+      <div class="mt-2 flex items-center gap-1.5">
+        <span class="rounded bg-[#0071E3]/10 px-1.5 py-0.5 text-[10px] font-bold tracking-tight text-[#0071E3]">e-TLHP</span>
+        <span class="truncate text-[10.5px] font-medium text-[#6E6E73]">Inspektorat Kemenko Pangan</span>
+      </div>
+    </div>
     <img src="{{ asset('images/logo.png') }}?v=1"
-        alt="Kemenko Pangan"
-        class="hidden size-[36px] object-contain mini:block">
+        alt="e-TLHP Kemenko Pangan"
+        class="hidden size-[34px] object-contain mini:block">
   </div>
 
   {{-- Menu --}}
