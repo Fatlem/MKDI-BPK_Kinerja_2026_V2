@@ -373,6 +373,12 @@ function riTableHtml(groups, cfg) {
   const body = Object.keys(groups).map(noKey => {
     const items = groups[noKey];
     const parent = items[0];
+    const temuanItems = items.filter(r => !r.isSubRow && !r.ParentId);
+    const subItems    = items.filter(r => r.isSubRow || r.ParentId);
+    const tCount      = temuanItems.length;
+    const sCount      = subItems.length;
+    const totalCount  = items.length;
+
     const key = cfg.prefix + ':' + noKey;
     const open = !!S.riOpen[key];
     const agg = groupStatusKey(items);
@@ -399,16 +405,23 @@ function riTableHtml(groups, cfg) {
     return `
       <tr data-key="${esc(key)}" onclick="${rowClick}"
         class="hover:bg-[#F5F5F7]/70 transition-colors group cursor-pointer align-top ${open ? 'bg-[#F5F5F7]/60' : ''}">
-        <td class="px-5 py-3.5 whitespace-nowrap">
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-xs font-semibold text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors">${esc(parent.No) || '-'}</span>
+        <td class="px-5 py-3.5 align-top min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-mono text-xs font-semibold text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors whitespace-nowrap">${esc(parent.No) || '-'}</span>
             ${dokumenBadge(parent)}
           </div>
-          <div class="text-[11px] text-[#86868B] mt-0.5">${esc(parent.Tahun || new Date().getFullYear())}</div>
+          <div class="text-[11px] text-[#86868B] mt-0.5 flex items-center gap-1.5 truncate">
+            <span>${esc(parent.Tahun || new Date().getFullYear())}</span>
+            ${parent.NoLha ? `<span class="font-mono text-[#0071E3] font-semibold" title="${esc(parent.NoLha)}">· ${esc(parent.NoLha)}</span>` : ''}
+          </div>
         </td>
         <td class="px-4 py-3.5 max-w-sm">
           <div class="font-medium text-[#1D1D1F] line-clamp-2 leading-snug text-[13px]" title="${esc(parent.Temuan || '')}">${esc(parent.Temuan) || '—'}</div>
-          <div class="text-[11px] text-[#86868B] mt-0.5">${items.length} rincian</div>
+          <div class="flex items-center gap-1.5 text-[11px] text-[#86868B] mt-1">
+            <span class="inline-flex items-center font-medium text-[#1D1D1F] bg-[#F5F5F7] px-2 py-0.5 rounded-md">${tCount} Temuan</span>
+            ${sCount > 0 ? `<span class="inline-flex items-center font-medium text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded-md">${sCount} Sub Temuan</span>` : ''}
+            <span>· ${totalCount} total</span>
+          </div>
         </td>
         <td class="px-4 py-3.5 whitespace-nowrap">
           <div class="text-xs font-medium text-[#1D1D1F]">${sumberLbl}</div>
@@ -422,17 +435,17 @@ function riTableHtml(groups, cfg) {
         </td>
         <td class="px-5 py-3.5 whitespace-nowrap">
           <div class="flex items-center justify-end gap-3.5">
-            <div class="w-24">
-              <div class="flex justify-between text-[11px] mb-1">
-                <span class="text-[#86868B]">${agg.selesai}/${agg.total}</span>
-                <span class="font-medium text-[#1D1D1F]">${agg.pct}%</span>
+            <div class="w-24 shrink-0 min-w-[96px]">
+              <div class="flex items-center justify-between text-[11px] mb-1 gap-2">
+                <span class="text-[#86868B] shrink-0 font-medium">${agg.selesai}/${agg.total}</span>
+                <span class="font-semibold text-[#1D1D1F] shrink-0">${agg.pct}%</span>
               </div>
               <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden">
                 <div class="bg-[#0071E3] h-1.5 rounded-full transition-all duration-300" style="width:${agg.pct}%"></div>
               </div>
             </div>
             ${isMainRI ? `
-              <span class="inline-flex items-center gap-0.5 text-xs font-medium text-[#0071E3] group-hover:translate-x-0.5 transition-transform">
+              <span class="inline-flex items-center gap-0.5 text-xs font-medium text-[#0071E3] group-hover:translate-x-0.5 transition-transform shrink-0">
                 <span>Buka</span>
                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
               </span>
@@ -452,12 +465,12 @@ function riTableHtml(groups, cfg) {
         <table class="w-full text-left border-collapse min-w-[840px] table-fixed">
           <thead>
             <tr class="border-b border-black/[0.06] text-[11px] text-[#86868B] font-medium">
-              <th class="py-3 px-5 font-medium w-[14%]">Dokumen</th>
-              <th class="py-3 px-4 font-medium w-[38%]">Temuan</th>
-              <th class="py-3 px-4 font-medium w-[12%]">Audit</th>
-              <th class="py-3 px-4 font-medium w-[16%]">Unit Kerja</th>
+              <th class="py-3 px-5 font-medium w-[16%]">Dokumen</th>
+              <th class="py-3 px-4 font-medium w-[32%]">Temuan</th>
+              <th class="py-3 px-4 font-medium w-[11%]">Audit</th>
+              <th class="py-3 px-4 font-medium w-[14%]">Unit Kerja</th>
               <th class="py-3 px-4 font-medium w-[12%]">Batas Waktu</th>
-              <th class="py-3 px-5 text-right font-medium w-[8%]">Progres</th>
+              <th class="py-3 px-5 text-right font-medium w-[15%]">Progres</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-black/[0.05] text-sm">${body}</tbody>
@@ -593,8 +606,10 @@ function renderEntryList() {
     groups[k].push(r);
   });
 
+  let totalT = 0, totalS = 0;
+  filteredRows.forEach(r => (r.isSubRow || r.ParentId) ? totalS++ : totalT++);
   const cnt = document.getElementById('ri-count');
-  if (cnt) cnt.textContent = `${Object.keys(groups).length} temuan`;
+  if (cnt) cnt.textContent = `${Object.keys(groups).length} Dokumen LHP · ${totalT} Temuan${totalS > 0 ? ` · ${totalS} Sub Temuan` : ''}`;
 
   list.innerHTML = riTableHtml(groups, {
     prefix: 't',
@@ -611,6 +626,7 @@ function renderEntryList() {
 
 function closeLhaDetail() {
   S.activeLhaNo = null;
+  S.activeItemRowId = null;
   const master = document.getElementById('ri-master-section');
   const detail = document.getElementById('lha-detail-section');
   if (detail) {
@@ -632,6 +648,12 @@ function showLhaDetail(noKey) {
   detail.classList.remove('hidden');
 
   const parent = items[0];
+  const temuanItems = items.filter(r => !r.isSubRow && !r.ParentId);
+  const subItems    = items.filter(r => r.isSubRow || r.ParentId);
+  const tCount      = temuanItems.length || 1;
+  const sCount      = subItems.length;
+  const totalItems  = items.length;
+
   const agg = groupStatusKey(items);
   const dl  = getDeadlineInfo({
     TanggalInput: parent.TanggalInput,
@@ -641,223 +663,522 @@ function showLhaDetail(noKey) {
   const isBpk = (parent.Sumber || 'bpk') === 'bpk';
   const sumberText = isBpk ? 'BPK RI' : 'Inspektorat';
   const canAdmin = !isPicUser();
-  const todayStr = typeof bkToday === 'function' ? bkToday() : new Date().toISOString().split('T')[0];
 
-  const temuanCardsHtml = items.map((sub, idx) => {
-    const st = statusOf(sub);
-    const pics = groupPicShort([sub]).join(', ') || '-';
-    const picsFull = groupPicNames([sub]).join(', ') || '-';
-    const hasRenaksi = !!String(sub.RencanaAksi || '').trim();
-    const isTuntas = st.lbl === 'Selesai';
-    const isFin = (Number(sub.NilaiTemuan) || 0) > 0;
-    const sisaNominal = Number(sub.Selisih ?? sub.NilaiTemuan) || 0;
-    const canEditRenaksi = !isAuditorUser() && sub.TLStatus !== 'batl';
-    const showRenaksiFormInitial = canEditRenaksi && !hasRenaksi;
-
-    const itemBadge = isTuntas
-      ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>Selesai</span>`
-      : st.lbl === 'Proses'
-        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#1D1D1F]"><span class="w-1.5 h-1.5 rounded-full bg-[#86868B]"></span>Proses</span>`
-        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#86868B]"><span class="w-1.5 h-1.5 rounded-full bg-[#D2D2D7]"></span>Belum</span>`;
-
-    return `
-      <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden">
-        <!-- Rincian Header -->
-        <div class="px-6 py-4 border-b border-black/[0.05] flex flex-wrap items-center justify-between gap-2">
-          <div class="flex flex-wrap items-center gap-2.5">
-            <span class="text-[13px] font-semibold text-[#1D1D1F]">${items.length > 1 ? `Rincian #${idx + 1}` : 'Rincian Temuan'}</span>
-            ${sub.SubTemuan ? `<span class="text-xs text-[#6E6E73]">· ${esc(sub.SubTemuan)}</span>` : ''}
-            ${itemBadge}
-            <span class="text-xs text-[#86868B]" title="${esc(picsFull)}">· ${esc(pics)}</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            ${canAdmin ? `
-            <button type="button" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})" class="px-3 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-lg transition-colors">
-              Edit
-            </button>` : ''}
-            ${isAdminUser() ? `
-            <button type="button" onclick="openDelete(${sub._row}, ${sub.isSubRow ? 'false' : 'true'}, ${Math.max(items.length - 1, 0)})" class="px-2.5 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-lg transition-colors">
-              Hapus
-            </button>` : ''}
-          </div>
-        </div>
-
-        <div class="p-6 space-y-6">
-          <!-- 1. Pokok Temuan (4 Unsur) & Rekomendasi -->
-          <div class="space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div class="bg-[#F5F5F7] p-4 rounded-xl">
-                <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kondisi</span>
-                <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kondisi || sub.Temuan), '') || '<span class="text-[#86868B]">—</span>'}</div>
-              </div>
-              <div class="bg-[#F5F5F7] p-4 rounded-xl">
-                <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kriteria</span>
-                <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kriteria), '') || '<span class="text-[#86868B]">—</span>'}</div>
-              </div>
-              <div class="bg-[#F5F5F7] p-4 rounded-xl">
-                <span class="text-[11px] font-medium text-[#86868B] block mb-1">Sebab</span>
-                <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Sebab), '') || '<span class="text-[#86868B]">—</span>'}</div>
-              </div>
-              <div class="bg-[#F5F5F7] p-4 rounded-xl">
-                <span class="text-[11px] font-medium text-[#86868B] block mb-1">Akibat</span>
-                <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Akibat), '') || '<span class="text-[#86868B]">—</span>'}</div>
-              </div>
-            </div>
-
-            <div class="bg-[#F5F5F7] rounded-xl p-4">
-              <span class="text-[11px] font-medium text-[#86868B] block mb-1">Rekomendasi</span>
-              <div class="text-xs font-medium text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Rekomendasi), '') || '<span class="text-[#86868B]">—</span>'}</div>
-              ${financialStripHtml(sub.NilaiTemuan, sub.NilaiRealisasi, sub.Selisih)}
-            </div>
-          </div>
-
-          <!-- 2. Rencana Aksi (Inline) -->
-          <div class="pt-5 border-t border-black/[0.06]">
-            <div class="flex items-center justify-between mb-2.5">
-              <span class="text-xs font-semibold text-[#1D1D1F]">Rencana Aksi</span>
-              ${(canEditRenaksi && hasRenaksi) ? `
-              <button type="button" onclick="toggleInlineRenaksi(${sub._row})" class="text-xs font-medium text-[#0071E3] hover:underline">
-                Ubah
-              </button>` : ''}
-            </div>
-
-            <div id="inl-renaksi-view-${sub._row}" class="${showRenaksiFormInitial ? 'hidden' : ''} grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[#F5F5F7] rounded-xl p-4">
-              <div class="sm:col-span-2">
-                <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Uraian</span>
-                <p class="text-xs ${hasRenaksi ? 'text-[#1D1D1F]' : 'text-[#86868B]'} leading-relaxed whitespace-pre-line">${hasRenaksi ? esc(sub.RencanaAksi) : 'Belum diisi'}</p>
-              </div>
-              <div>
-                <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Target Waktu</span>
-                <p class="text-xs font-medium text-[#1D1D1F]">${esc(sub.JadwalPelaksanaan || '—')}</p>
-              </div>
-            </div>
-
-            ${canEditRenaksi ? `
-            <form id="inl-renaksi-form-${sub._row}" onsubmit="saveInlineRenaksi(event, ${sub._row})" class="${showRenaksiFormInitial ? '' : 'hidden'} bg-[#F5F5F7] rounded-xl p-4 space-y-3">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div class="md:col-span-2">
-                  <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Rencana Aksi</label>
-                  <textarea id="inl-ra-text-${sub._row}" rows="2" required placeholder="Langkah tindak lanjut unit kerja..."
-                    class="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">${esc(sub.RencanaAksi || '')}</textarea>
-                </div>
-                <div class="flex flex-col justify-between">
-                  <div>
-                    <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Target Waktu</label>
-                    <input type="text" id="inl-ra-jadwal-${sub._row}" required value="${esc(sub.JadwalPelaksanaan || '')}" placeholder="Contoh: Triwulan II 2026"
-                      class="w-full h-8 px-3 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
-                  </div>
-                  <div class="flex items-center justify-end gap-2 mt-2">
-                    ${hasRenaksi ? `<button type="button" onclick="toggleInlineRenaksi(${sub._row})" class="h-8 px-3 text-xs font-medium text-[#6E6E73] hover:text-[#1D1D1F]">Batal</button>` : ''}
-                    <button type="submit" id="inl-ra-btn-${sub._row}" class="h-8 px-4 bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium rounded-lg transition-colors">
-                      Simpan
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </form>` : ''}
-          </div>
-
-          <!-- 3. Bukti Tindak Lanjut & Evaluasi -->
-          <div class="pt-5 border-t border-black/[0.06]">
-            <div class="flex items-center justify-between mb-2.5">
-              <span class="text-xs font-semibold text-[#1D1D1F]">Bukti Tindak Lanjut</span>
-            </div>
-
-            <div id="lha-ev-list-${sub._row}">
-              <div class="text-xs text-[#86868B] py-3 text-center bg-[#F5F5F7] rounded-xl">Memuat...</div>
-            </div>
-
-            ${(!isAuditorUser() && !isTuntas && sub.TLStatus !== 'batl') ? `
-            <div class="mt-3">
-              <form onsubmit="submitInlineBukti(event, ${sub._row}, ${isFin ? 1 : 0}, ${sisaNominal})" class="bg-[#F5F5F7] p-4 rounded-xl space-y-3">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div>
-                    <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Tanggal</label>
-                    <input type="date" id="inl-tgl-${sub._row}" value="${todayStr}" required
-                      class="w-full h-8 px-2.5 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
-                  </div>
-                  <div class="md:col-span-3">
-                    <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Uraian Progres</label>
-                    <input type="text" id="inl-uraian-${sub._row}" required placeholder="Uraikan progres penyelesaian..."
-                      class="w-full h-8 px-3 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
-                  </div>
-                </div>
-
-                ${isFin ? `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Nomor NTPN (16 Karakter)</label>
-                    <input type="text" id="inl-ntpn-${sub._row}" maxlength="16" ${sisaNominal > 0 ? 'required' : ''} placeholder="A1B2C3D4E5F6G7H8"
-                      class="w-full h-8 px-2.5 text-xs font-mono uppercase bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Nominal Setoran (Rp)</label>
-                    <input type="text" id="inl-nominal-${sub._row}" inputmode="numeric" value="${sisaNominal > 0 ? formatRupiahNumber(sisaNominal) : ''}" oninput="formatRupiahInput(this)" ${sisaNominal > 0 ? 'required' : ''} placeholder="0"
-                      class="w-full h-8 px-2.5 text-xs font-medium bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
-                  </div>
-                </div>` : ''}
-
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                  <input type="file" id="inl-file-${sub._row}" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" required
-                    class="block flex-1 text-xs text-[#6E6E73] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-white file:text-[#1D1D1F] hover:file:bg-[#E5E5EA] cursor-pointer">
-                  <button type="submit" id="inl-btn-${sub._row}" class="h-8 px-4 bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium rounded-lg transition-colors shrink-0">
-                    Unggah Bukti
-                  </button>
-                </div>
-              </form>
-            </div>` : ''}
-          </div>
-        </div>
-      </div>`;
-  }).join('');
+  const hierarchicalTableHtml = renderHierarchicalTable(items, canAdmin);
 
   detail.innerHTML = `
-    <!-- Minimalist Top Navigation -->
-    <div class="mb-4 flex items-center justify-between gap-3">
-      <button type="button" onclick="closeLhaDetail()" class="inline-flex items-center gap-1 text-xs font-medium text-[#0071E3] hover:underline">
-        <i data-lucide="chevron-left" class="w-4 h-4"></i>
-        <span>Daftar Temuan</span>
-      </button>
+    <div id="lha-hierarchy-view" class="space-y-4">
+      <!-- Minimalist Top Navigation -->
+      <div class="flex items-center justify-between gap-3">
+        <button type="button" onclick="closeLhaDetail()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0071E3] hover:underline cursor-pointer">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          <span>Daftar Dokumen LHP</span>
+        </button>
 
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-[#6E6E73]">${agg.selesai}/${agg.total} selesai (${agg.pct}%)</span>
-        ${canAdmin ? `
-        <button type="button" onclick="openAddSubModal(${items[items.length - 1]._row})" class="h-8 px-3 text-xs font-medium text-[#1D1D1F] bg-white hover:bg-[#F5F5F7] border border-black/[0.08] rounded-lg transition-colors">
-          + Sub Temuan
-        </button>` : ''}
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-[#6E6E73] font-medium px-2.5 py-1 bg-white rounded-lg border border-black/[0.06] shadow-xs">
+            ${agg.selesai}/${agg.total} Selesai (${agg.pct}%)
+          </span>
+          ${canAdmin ? `
+          <button type="button" onclick="openModal('', null, '${esc(jsq(noKey))}')" class="h-8 flex items-center gap-1.5 px-3 bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium rounded-lg transition-colors shadow-xs cursor-pointer">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Tambah Temuan</span>
+          </button>` : ''}
+        </div>
       </div>
-    </div>
 
-    <!-- Clean Document Header -->
-    <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6 mb-4">
-      <div class="flex flex-wrap items-center gap-2 text-xs text-[#6E6E73] mb-2">
-        <span class="font-mono font-semibold text-[#1D1D1F]">${esc(parent.No)}</span>
-        ${dokumenBadge(parent)}
-        <span>·</span>
-        <span>${sumberText}</span>
-        <span>·</span>
-        <span>${esc(jenisAuditLabel(parent) || 'Audit Kinerja')}</span>
-        <span>·</span>
-        <span>${esc(parent.Tahun || new Date().getFullYear())}</span>
-        <span>·</span>
-        <span class="${dl.isOverdue && agg.key !== 'selesai' ? 'text-[#D70015] font-medium' : ''}">Batas waktu ${esc(dl.deadlineFormatted)}</span>
+      <!-- Clean Document Header Card -->
+      <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6">
+        <div class="flex flex-wrap items-center gap-2 text-xs text-[#6E6E73] mb-2">
+          <span class="font-mono font-bold text-[#1D1D1F] text-sm">${esc(parent.No)}</span>
+          ${dokumenBadge(parent)}
+          <span>·</span>
+          <span class="font-medium text-[#1D1D1F]">${sumberText}</span>
+          <span>·</span>
+          <span>${esc(parent.Tahun || new Date().getFullYear())}</span>
+          <span>·</span>
+          <span class="${dl.isOverdue && agg.key !== 'selesai' ? 'text-[#D70015] font-semibold' : 'text-[#6E6E73]'}">Batas waktu ${esc(dl.deadlineFormatted)} (${esc(dl.statusBadgeText)})</span>
+        </div>
+        <h2 class="text-base font-semibold text-[#1D1D1F] leading-snug">${esc(parent.Temuan || '-')}</h2>
+
+        <!-- Progress and Metrics Strip -->
+        <div class="mt-4 pt-4 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#F5F5F7] rounded-lg text-xs font-medium text-[#1D1D1F]">
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-[#0071E3]"></i>
+              <b>${tCount}</b> Temuan Pokok
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#F5F5F7] rounded-lg text-xs font-medium text-[#1D1D1F]">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-[#0071E3]"></i>
+              <b>${sCount}</b> Sub Temuan
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#F5F5F7] rounded-lg text-xs font-medium text-[#6E6E73]">
+              Total <b>${totalItems}</b> Item Tindak Lanjut
+            </span>
+          </div>
+
+          <div class="flex items-center gap-3 w-48">
+            <div class="w-full">
+              <div class="flex justify-between text-[11px] mb-1">
+                <span class="text-[#86868B]">${agg.selesai}/${agg.total} Item</span>
+                <span class="font-semibold text-[#1D1D1F]">${agg.pct}%</span>
+              </div>
+              <div class="w-full bg-[#F5F5F7] rounded-full h-2 overflow-hidden">
+                <div class="bg-[#0071E3] h-2 rounded-full transition-all duration-300" style="width:${agg.pct}%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="lha-top-batl-banner" class="mt-3"></div>
       </div>
-      <h2 class="text-base font-semibold text-[#1D1D1F] leading-snug">${esc(parent.Temuan || '-')}</h2>
-      <p class="text-xs text-[#86868B] mt-1">${esc(groupPicNames(items).join(', ') || '-')}</p>
 
-      <div id="lha-top-batl-banner"></div>
+      <!-- Hierarchical Table Section -->
+      ${hierarchicalTableHtml}
     </div>
 
-    <div class="space-y-4">
-      ${temuanCardsHtml}
-    </div>
+    <!-- Focused Item Workspace View -->
+    <div id="lha-item-workspace-view" class="hidden space-y-4"></div>
   `;
 
   refreshIcons();
+  loadLhaDetailEvidence(parent._row, true);
 
-  items.forEach((sub, idx) => {
-    loadLhaDetailEvidence(sub._row, idx === 0);
-  });
+  if (S.activeItemRowId && items.some(x => String(x._row) === String(S.activeItemRowId))) {
+    openItemWorkspace(S.activeItemRowId);
+  }
+}
+
+function renderHierarchicalTable(items, canAdmin) {
+  let temuanList = items.filter(r => !r.isSubRow && !r.ParentId);
+  if (!temuanList.length) temuanList = [items[0]];
+
+  const rowsHtml = temuanList.map(tItem => {
+    const childSubs = items.filter(sub => {
+      if (!sub.isSubRow && !sub.ParentId) return false;
+      if (sub.ParentId && (String(sub.ParentId) === String(tItem.Id) || String(sub.ParentId) === String(tItem._row))) return true;
+      if (temuanList.length === 1 && String(sub._row) !== String(tItem._row)) return true;
+      return false;
+    });
+
+    const st = statusOf(tItem);
+    const isTuntas = st.lbl === 'Selesai';
+    const statusPill = isTuntas
+      ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>Selesai</span>`
+      : st.lbl === 'Proses'
+        ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#1D1D1F]"><span class="w-1.5 h-1.5 rounded-full bg-[#86868B]"></span>Proses</span>`
+        : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#86868B]"><span class="w-1.5 h-1.5 rounded-full bg-[#D2D2D7]"></span>Belum</span>`;
+
+    const subBadgeHtml = childSubs.length > 0
+      ? `<button type="button" onclick="event.stopPropagation(); toggleSubHierarchy(${tItem._row})" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#0071E3]/10 hover:bg-[#0071E3]/20 text-[#0071E3] transition-colors cursor-pointer">
+          <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+          <span>${childSubs.length} Sub Temuan</span>
+          <i data-lucide="chevron-down" id="sub-arrow-${tItem._row}" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+        </button>`
+      : `<span class="text-xs text-[#86868B] italic">—</span>`;
+
+    const finText = Number(tItem.NilaiTemuan) > 0
+      ? `<div class="font-medium text-[#1D1D1F]">Rp ${formatRupiahNumber(tItem.NilaiTemuan)}</div>`
+      : `<span class="text-[#86868B]">—</span>`;
+
+    const childRowsHtml = childSubs.map(sub => {
+      const subSt = statusOf(sub);
+      const subIsTuntas = subSt.lbl === 'Selesai';
+      const subStatusPill = subIsTuntas
+        ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>Selesai</span>`
+        : subSt.lbl === 'Proses'
+          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F5F5F7] text-[#1D1D1F]"><span class="w-1.5 h-1.5 rounded-full bg-[#86868B]"></span>Proses</span>`
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F5F5F7] text-[#86868B]"><span class="w-1.5 h-1.5 rounded-full bg-[#D2D2D7]"></span>Belum</span>`;
+
+      const subFinText = Number(sub.NilaiTemuan) > 0
+        ? `<span class="font-medium text-[#1D1D1F]">Rp ${formatRupiahNumber(sub.NilaiTemuan)}</span>`
+        : `<span class="text-[#86868B]">—</span>`;
+
+      return `
+        <tr class="hover:bg-[#F0F2F5]/70 transition-colors">
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-[#6E6E73]/10 text-[#1D1D1F]">${esc(sub.KodeSubTemuan || sub.Kode || 'ST-001')}</span>
+          </td>
+          <td class="py-2.5 px-3">
+            <div class="font-medium text-[#1D1D1F] line-clamp-2 leading-relaxed text-xs" title="${esc(sub.SubTemuan || sub.Temuan || '')}">${esc(sub.SubTemuan || sub.Temuan || '—')}</div>
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap text-xs text-[#1D1D1F]">
+            ${esc(sub.JenisAuditLabel || jenisAuditLabel(sub) || 'Audit Kinerja')}
+          </td>
+          <td class="py-2.5 px-3">
+            ${riPicChips(groupPicNames([sub]))}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap text-xs">
+            ${subFinText}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            ${subStatusPill}
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap text-right">
+            <div class="inline-flex items-center justify-end gap-1.5">
+              <button type="button" onclick="openItemWorkspace(${sub._row})" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-[#0071E3] text-white hover:bg-[#0077ED] transition-colors shadow-xs cursor-pointer">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span>Lihat Detail</span>
+              </button>
+              ${canAdmin ? `
+              <button type="button" onclick="openModal('${esc(jsq(sub.PIC))}', ${sub._row})" class="px-2 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-lg transition-colors cursor-pointer">
+                Edit
+              </button>` : ''}
+              ${isAdminUser() ? `
+              <button type="button" onclick="openDelete(${sub._row}, false, 0)" class="px-2 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-lg transition-colors cursor-pointer">
+                Hapus
+              </button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <!-- Row Temuan Pokok -->
+      <tr class="hover:bg-[#F5F5F7]/80 transition-colors">
+        <td class="py-3.5 px-4 whitespace-nowrap">
+          <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-[#0071E3]/10 text-[#0071E3]">${esc(tItem.KodeTemuan || tItem.Kode || 'T-001')}</span>
+        </td>
+        <td class="py-3.5 px-4">
+          <div class="font-medium text-[#1D1D1F] line-clamp-2 leading-relaxed text-xs" title="${esc(tItem.Temuan || '')}">${esc(tItem.Temuan || '—')}</div>
+        </td>
+        <td class="py-3.5 px-3 whitespace-nowrap">
+          ${subBadgeHtml}
+        </td>
+        <td class="py-3.5 px-3 whitespace-nowrap text-xs text-[#1D1D1F]">
+          ${esc(tItem.JenisAuditLabel || jenisAuditLabel(tItem) || 'Audit Kinerja')}
+        </td>
+        <td class="py-3.5 px-3">
+          ${riPicChips(groupPicNames([tItem]))}
+        </td>
+        <td class="py-3.5 px-3 whitespace-nowrap text-xs">
+          ${finText}
+        </td>
+        <td class="py-3.5 px-3 whitespace-nowrap">
+          ${statusPill}
+        </td>
+        <td class="py-3.5 px-4 whitespace-nowrap text-right">
+          <div class="inline-flex items-center justify-end gap-1.5">
+            <button type="button" onclick="openItemWorkspace(${tItem._row})" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg bg-[#0071E3] text-white hover:bg-[#0077ED] transition-colors shadow-xs cursor-pointer">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              <span>Lihat Detail</span>
+            </button>
+            ${canAdmin ? `
+            <button type="button" title="Tambah Sub Temuan" onclick="openAddSubModal(${tItem._row})" class="px-2 py-1 text-xs font-medium text-[#1D1D1F] hover:bg-[#F5F5F7] border border-black/[0.08] rounded-lg transition-colors cursor-pointer">
+              + Sub
+            </button>
+            <button type="button" onclick="openModal('${esc(jsq(tItem.PIC))}', ${tItem._row})" class="px-2 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-lg transition-colors cursor-pointer">
+              Edit
+            </button>` : ''}
+            ${isAdminUser() ? `
+            <button type="button" onclick="openDelete(${tItem._row}, false, ${childSubs.length})" class="px-2 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-lg transition-colors cursor-pointer">
+              Hapus
+            </button>` : ''}
+          </div>
+        </td>
+      </tr>
+
+      ${childSubs.length > 0 ? `
+      <!-- Accordion Sub Temuan -->
+      <tr id="subs-wrap-${tItem._row}" class="hidden bg-[#FBFBFC]">
+        <td colspan="8" class="p-0 border-b border-black/[0.06]">
+          <div class="py-3.5 px-6 pl-10 border-l-4 border-[#0071E3]/40 bg-[#F8F9FA]/80 space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-semibold text-[#6E6E73]">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-[#0071E3]"></i>
+                <span>Sub Temuan dari ${esc(tItem.KodeTemuan || tItem.Kode || 'T-001')} (${childSubs.length} sub)</span>
+              </span>
+              ${canAdmin ? `
+              <button type="button" onclick="openAddSubModal(${tItem._row})" class="inline-flex items-center gap-1 text-xs font-medium text-[#0071E3] hover:underline cursor-pointer">
+                <i data-lucide="plus" class="w-3 h-3"></i>
+                <span>Tambah Sub Temuan</span>
+              </button>` : ''}
+            </div>
+            <div class="overflow-x-auto bg-white rounded-xl border border-black/[0.06] shadow-xs">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-black/[0.06] bg-[#F5F5F7] text-[11px] text-[#86868B] font-medium">
+                    <th class="py-2.5 px-3 w-[11%]">Kode Sub</th>
+                    <th class="py-2.5 px-3 w-[33%]">Uraian Sub Temuan</th>
+                    <th class="py-2.5 px-3 w-[14%]">Audit</th>
+                    <th class="py-2.5 px-3 w-[14%]">Unit Kerja</th>
+                    <th class="py-2.5 px-3 w-[12%]">Nilai Finansial</th>
+                    <th class="py-2.5 px-3 w-[8%]">Status</th>
+                    <th class="py-2.5 px-3 text-right w-[12%]">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-black/[0.04]">
+                  ${childRowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </td>
+      </tr>` : ''}
+    `;
+  }).join('');
+
+  return `
+    <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden">
+      <div class="px-6 py-4 border-b border-black/[0.05] flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-[#1D1D1F]">Daftar Hirarki Temuan &amp; Sub Temuan</h3>
+          <p class="text-xs text-[#86868B] mt-0.5">Tinjau daftar temuan dan sub temuan di bawah ini, lalu klik "Lihat Detail" untuk membuka workspace tindak lanjut</p>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs table-fixed min-w-[940px]">
+          <thead>
+            <tr class="border-b border-black/[0.06] bg-[#F5F5F7]/80 text-[11px] text-[#86868B] font-medium">
+              <th class="py-3 px-4 w-[11%]">Kode</th>
+              <th class="py-3 px-4 w-[28%]">Temuan / Pokok Masalah</th>
+              <th class="py-3 px-3 w-[14%]">Sub Temuan</th>
+              <th class="py-3 px-3 w-[12%]">Audit</th>
+              <th class="py-3 px-3 w-[13%]">Unit Kerja</th>
+              <th class="py-3 px-3 w-[10%]">Nilai Finansial</th>
+              <th class="py-3 px-3 w-[7%]">Status</th>
+              <th class="py-3 px-4 text-right w-[11%]">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-black/[0.05]">
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function openItemWorkspace(rowId) {
+  const sub = (S.allR || []).find(x => String(x._row) === String(rowId));
+  if (!sub) { showToast('Data temuan tidak ditemukan', 'err'); return; }
+  S.activeItemRowId = rowId;
+
+  const isSub = sub.isSubRow || !!sub.ParentId;
+  const parentTemuan = isSub ? (S.allR || []).find(x => String(x._row) === String(sub.ParentId) || String(x.Id) === String(sub.ParentId)) : null;
+
+  const hView = document.getElementById('lha-hierarchy-view');
+  const wView = document.getElementById('lha-item-workspace-view');
+  if (!wView) return;
+
+  const st = statusOf(sub);
+  const pics = groupPicShort([sub]).join(', ') || '-';
+  const picsFull = groupPicNames([sub]).join(', ') || '-';
+  const hasRenaksi = !!String(sub.RencanaAksi || '').trim();
+  const isTuntas = st.lbl === 'Selesai';
+  const isFin = (Number(sub.NilaiTemuan) || 0) > 0;
+  const sisaNominal = Number(sub.Selisih ?? sub.NilaiTemuan) || 0;
+  const canEditRenaksi = !isAuditorUser() && sub.TLStatus !== 'batl';
+  const showRenaksiFormInitial = canEditRenaksi && !hasRenaksi;
+  const canAdmin = !isPicUser();
+  const todayStr = typeof bkToday === 'function' ? bkToday() : new Date().toISOString().split('T')[0];
+
+  const itemBadge = isTuntas
+    ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>Selesai</span>`
+    : st.lbl === 'Proses'
+      ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#F5F5F7] text-[#1D1D1F]"><span class="w-1.5 h-1.5 rounded-full bg-[#86868B]"></span>Proses</span>`
+      : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#F5F5F7] text-[#86868B]"><span class="w-1.5 h-1.5 rounded-full bg-[#D2D2D7]"></span>Belum TL</span>`;
+
+  const itemKode = isSub ? (sub.KodeSubTemuan || sub.Kode || 'ST-001') : (sub.KodeTemuan || sub.Kode || 'T-001');
+  const itemTitle = isSub ? (sub.SubTemuan || sub.Temuan || '-') : (sub.Temuan || '-');
+
+  wView.innerHTML = `
+    <!-- Top Workspace Navigation & Breadcrumbs -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <button type="button" onclick="closeItemWorkspace()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0071E3] hover:underline cursor-pointer">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>Kembali ke Tabel Temuan</span>
+      </button>
+
+      <div class="flex items-center gap-2 text-xs text-[#86868B]">
+        <span class="font-mono font-medium">${esc(sub.No)}</span>
+        <span>›</span>
+        ${isSub && parentTemuan ? `<span class="font-mono font-medium text-[#1D1D1F]">${esc(parentTemuan.KodeTemuan || 'T-001')}</span><span>›</span>` : ''}
+        <span class="font-mono font-bold text-[#0071E3]">${esc(itemKode)}</span>
+      </div>
+    </div>
+
+    <!-- Focused Item Header Card -->
+    <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-[#0071E3]/10 text-[#0071E3]">${esc(itemKode)}</span>
+          ${isSub ? `<span class="text-xs font-medium px-2 py-0.5 rounded-md bg-[#6E6E73]/10 text-[#1D1D1F]">Sub Temuan${parentTemuan ? ' dari ' + esc(parentTemuan.KodeTemuan || 'T-001') : ''}</span>` : `<span class="text-xs font-medium px-2 py-0.5 rounded-md bg-[#0071E3]/10 text-[#0071E3]">Temuan Pokok</span>`}
+          ${itemBadge}
+        </div>
+        <div class="flex items-center gap-2">
+          ${canAdmin ? `
+          <button type="button" onclick="openModal('${esc(jsq(sub.PIC))}', ${sub._row})" class="px-3 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-lg transition-colors cursor-pointer">
+            Edit
+          </button>` : ''}
+          ${isAdminUser() ? `
+          <button type="button" onclick="openDelete(${sub._row}, false, 0)" class="px-2.5 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-lg transition-colors cursor-pointer">
+            Hapus
+          </button>` : ''}
+        </div>
+      </div>
+
+      <h2 class="text-base font-semibold text-[#1D1D1F] leading-snug">${esc(itemTitle)}</h2>
+
+      <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#86868B]">
+        <span>Jenis Audit: <strong class="text-[#1D1D1F] font-medium">${esc(sub.JenisAuditLabel || jenisAuditLabel(sub) || 'Audit Kinerja')}</strong></span>
+        <span>·</span>
+        <span>Unit Kerja (PIC): <strong class="text-[#1D1D1F] font-medium" title="${esc(picsFull)}">${esc(pics)}</strong></span>
+        ${isFin ? `<span>·</span><span>Nilai Temuan: <strong class="text-[#1D1D1F] font-semibold">Rp ${formatRupiahNumber(sub.NilaiTemuan)}</strong></span>` : ''}
+      </div>
+    </div>
+
+    <!-- Workspace Detail Sections -->
+    <div class="space-y-4">
+      <!-- 1. Pokok Temuan (4 Unsur) & Rekomendasi -->
+      <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6 space-y-4">
+        <h3 class="text-xs font-semibold text-[#1D1D1F] uppercase tracking-wider text-[#86868B]">Pokok Temuan &amp; Rekomendasi</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="bg-[#F5F5F7] p-4 rounded-xl">
+            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kondisi</span>
+            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kondisi || sub.Temuan), '') || '<span class="text-[#86868B]">—</span>'}</div>
+          </div>
+          <div class="bg-[#F5F5F7] p-4 rounded-xl">
+            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kriteria</span>
+            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kriteria), '') || '<span class="text-[#86868B]">—</span>'}</div>
+          </div>
+          <div class="bg-[#F5F5F7] p-4 rounded-xl">
+            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Sebab</span>
+            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Sebab), '') || '<span class="text-[#86868B]">—</span>'}</div>
+          </div>
+          <div class="bg-[#F5F5F7] p-4 rounded-xl">
+            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Akibat</span>
+            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Akibat), '') || '<span class="text-[#86868B]">—</span>'}</div>
+          </div>
+        </div>
+
+        <div class="bg-[#F5F5F7] rounded-xl p-4">
+          <span class="text-[11px] font-medium text-[#86868B] block mb-1">Rekomendasi</span>
+          <div class="text-xs font-medium text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Rekomendasi), '') || '<span class="text-[#86868B]">—</span>'}</div>
+          ${financialStripHtml(sub.NilaiTemuan, sub.NilaiRealisasi, sub.Selisih)}
+        </div>
+      </div>
+
+      <!-- 2. Rencana Aksi (Inline) -->
+      <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs font-semibold text-[#1D1D1F] uppercase tracking-wider text-[#86868B]">Rencana Aksi Unit Kerja</h3>
+          ${(canEditRenaksi && hasRenaksi) ? `
+          <button type="button" onclick="toggleInlineRenaksi(${sub._row})" class="text-xs font-medium text-[#0071E3] hover:underline cursor-pointer">
+            Ubah
+          </button>` : ''}
+        </div>
+
+        <div id="inl-renaksi-view-${sub._row}" class="${showRenaksiFormInitial ? 'hidden' : ''} grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[#F5F5F7] rounded-xl p-4">
+          <div class="sm:col-span-2">
+            <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Uraian</span>
+            <p class="text-xs ${hasRenaksi ? 'text-[#1D1D1F]' : 'text-[#86868B]'} leading-relaxed whitespace-pre-line">${hasRenaksi ? esc(sub.RencanaAksi) : 'Belum diisi'}</p>
+          </div>
+          <div>
+            <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Target Waktu</span>
+            <p class="text-xs font-medium text-[#1D1D1F]">${esc(sub.JadwalPelaksanaan || '—')}</p>
+          </div>
+        </div>
+
+        ${canEditRenaksi ? `
+        <form id="inl-renaksi-form-${sub._row}" onsubmit="saveInlineRenaksi(event, ${sub._row})" class="${showRenaksiFormInitial ? '' : 'hidden'} bg-[#F5F5F7] rounded-xl p-4 space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="md:col-span-2">
+              <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Rencana Aksi</label>
+              <textarea id="inl-ra-text-${sub._row}" rows="2" required placeholder="Langkah tindak lanjut unit kerja..."
+                class="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">${esc(sub.RencanaAksi || '')}</textarea>
+            </div>
+            <div class="flex flex-col justify-between">
+              <div>
+                <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Target Waktu</label>
+                <input type="text" id="inl-ra-jadwal-${sub._row}" required value="${esc(sub.JadwalPelaksanaan || '')}" placeholder="Contoh: Triwulan II 2026"
+                  class="w-full h-8 px-3 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
+              </div>
+              <div class="flex items-center justify-end gap-2 mt-2">
+                ${hasRenaksi ? `<button type="button" onclick="toggleInlineRenaksi(${sub._row})" class="h-8 px-3 text-xs font-medium text-[#6E6E73] hover:text-[#1D1D1F] cursor-pointer">Batal</button>` : ''}
+                <button type="submit" id="inl-ra-btn-${sub._row}" class="h-8 px-4 bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium rounded-lg transition-colors cursor-pointer">
+                  Simpan
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>` : ''}
+      </div>
+
+      <!-- 3. Bukti Tindak Lanjut & Evaluasi -->
+      <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6">
+        <h3 class="text-xs font-semibold text-[#1D1D1F] uppercase tracking-wider text-[#86868B] mb-3">Bukti Tindak Lanjut &amp; Telaah Auditor</h3>
+
+        <div id="lha-ev-list-${sub._row}">
+          <div class="text-xs text-[#86868B] py-3 text-center bg-[#F5F5F7] rounded-xl">Memuat...</div>
+        </div>
+
+        ${(!isAuditorUser() && !isTuntas && sub.TLStatus !== 'batl') ? `
+        <div class="mt-4 pt-4 border-t border-black/[0.05]">
+          <span class="text-xs font-semibold text-[#1D1D1F] block mb-2">Unggah Bukti Tindak Lanjut Baru</span>
+          <form onsubmit="submitInlineBukti(event, ${sub._row}, ${isFin ? 1 : 0}, ${sisaNominal})" class="bg-[#F5F5F7] p-4 rounded-xl space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Tanggal</label>
+                <input type="date" id="inl-tgl-${sub._row}" value="${todayStr}" required
+                  class="w-full h-8 px-2.5 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
+              </div>
+              <div class="md:col-span-3">
+                <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Uraian Progres</label>
+                <input type="text" id="inl-uraian-${sub._row}" required placeholder="Uraikan progres penyelesaian..."
+                  class="w-full h-8 px-3 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
+              </div>
+            </div>
+
+            ${isFin ? `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Nomor NTPN (16 Karakter)</label>
+                <input type="text" id="inl-ntpn-${sub._row}" maxlength="16" ${sisaNominal > 0 ? 'required' : ''} placeholder="A1B2C3D4E5F6G7H8"
+                  class="w-full h-8 px-2.5 text-xs font-mono uppercase bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-[#6E6E73] mb-1">Nominal Setoran (Rp)</label>
+                <input type="text" id="inl-nominal-${sub._row}" inputmode="numeric" value="${sisaNominal > 0 ? formatRupiahNumber(sisaNominal) : ''}" oninput="formatRupiahInput(this)" ${sisaNominal > 0 ? 'required' : ''} placeholder="0"
+                  class="w-full h-8 px-2.5 text-xs font-medium bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
+              </div>
+            </div>` : ''}
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <input type="file" id="inl-file-${sub._row}" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" required
+                class="block flex-1 text-xs text-[#6E6E73] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-white file:text-[#1D1D1F] hover:file:bg-[#E5E5EA] cursor-pointer">
+              <button type="submit" id="inl-btn-${sub._row}" class="h-8 px-4 bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium rounded-lg transition-colors shrink-0 cursor-pointer">
+                Unggah Bukti
+              </button>
+            </div>
+          </form>
+        </div>` : ''}
+      </div>
+    </div>
+  `;
+
+  if (hView) hView.classList.add('hidden');
+  wView.classList.remove('hidden');
+  refreshIcons();
+  loadLhaDetailEvidence(sub._row, true);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function closeItemWorkspace() {
+  S.activeItemRowId = null;
+  const hView = document.getElementById('lha-hierarchy-view');
+  const wView = document.getElementById('lha-item-workspace-view');
+  if (wView) wView.classList.add('hidden');
+  if (hView) hView.classList.remove('hidden');
+  refreshIcons();
+}
+
+function toggleSubHierarchy(parentRowId) {
+  const wrap = document.getElementById('subs-wrap-' + parentRowId);
+  const arrow = document.getElementById('sub-arrow-' + parentRowId);
+  if (!wrap) return;
+  const isHidden = wrap.classList.contains('hidden');
+  wrap.classList.toggle('hidden', !isHidden);
+  if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
 function toggleInlineRenaksi(rowId) {
@@ -899,7 +1220,10 @@ async function saveInlineRenaksi(ev, rowId) {
     JadwalPelaksanaan: jadwal,
     Output:            r.Output || ''
   };
-  if (!r.isSubRow && r.JenisAudit) payload.JenisAudit = r.JenisAudit;
+  if (r.JenisAudit) payload.JenisAudit = r.JenisAudit;
+  if (r.KodeTemuan) payload.KodeTemuan = r.KodeTemuan;
+  if (r.KodeSubTemuan) payload.KodeSubTemuan = r.KodeSubTemuan;
+  if (r.Kode) payload.Kode = r.Kode;
 
   if (btn) {
     btn.disabled = true;
@@ -1388,23 +1712,54 @@ function onSumberChange() {
   if (!sel || !no || document.getElementById('m-row').value || document.getElementById('m-is-sub').value === 'true') return;
   no.value = '...';
   apiFetch('/api/temuan/next-no?sumber=' + encodeURIComponent(sel.value))
-    .then(n => { no.value = n; })
+    .then(n => {
+      no.value = n;
+      autoGenerateKodeInput();
+    })
     .catch(() => { no.value = ''; showToast('Gagal mengambil kode temuan', 'err'); });
 }
 
-function openModal(pic, row) {
+function autoGenerateKodeInput() {
+  const isSub = document.getElementById('m-is-sub').value === 'true';
+  const kodeInp = document.getElementById('m-kode');
+  if (!kodeInp) return;
+
+  if (isSub) {
+    const parentRow = document.getElementById('m-parent-row').value;
+    kodeInp.value = '...';
+    apiFetch('/api/temuan/next-kode-sub?parent_id=' + encodeURIComponent(parentRow))
+      .then(k => { kodeInp.value = k || 'ST-001'; })
+      .catch(() => { kodeInp.value = 'ST-001'; });
+  } else {
+    const docNo = document.getElementById('m-no').value;
+    kodeInp.value = '...';
+    apiFetch('/api/temuan/next-kode-temuan?no=' + encodeURIComponent(docNo))
+      .then(k => { kodeInp.value = k || 'T-001'; })
+      .catch(() => { kodeInp.value = 'T-001'; });
+  }
+}
+
+function openModal(pic, row, parentDocNo) {
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = '';
   document.getElementById('m-is-sub').value = 'false';
 
-  document.getElementById('modal-title').textContent = row ? 'Edit Temuan & Rekomendasi' : 'Tambah Temuan & Rekomendasi Baru';
-  document.getElementById('modal-sub').textContent   = row ? 'Perbarui 4 unsur pokok temuan, rekomendasi, PIC, dan target finansial' : 'Formulir terpadu 4 unsur pokok temuan standar BPK-RI & APIP';
+  document.getElementById('modal-title').textContent = row ? 'Edit Temuan & Rekomendasi' : 'Tambah Temuan Baru';
+  document.getElementById('modal-sub').textContent   = row ? 'Perbarui pokok temuan, rekomendasi, PIC, dan target finansial' : 'Formulir pokok temuan pemeriksaan standar BPK-RI & APIP';
+
+  const parentBanner = document.getElementById('m-parent-banner');
+  if (parentBanner) parentBanner.style.display = 'none';
+
+  const kodeLabel = document.getElementById('m-kode-label');
+  if (kodeLabel) kodeLabel.textContent = 'Kode Temuan';
+  const judulLabel = document.getElementById('m-judul-label');
+  if (judulLabel) judulLabel.innerHTML = 'Judul / Pokok Temuan <span class="text-[#D70015]">*</span>';
 
   const temuanInp = document.getElementById('m-temuan');
   temuanInp.readOnly = false;
   temuanInp.style.background = '#f8fafc';
 
-  ['m-no', 'm-temuan', 'm-subtemuan', 'm-kondisi', 'm-kriteria', 'm-sebab', 'm-akibat', 'm-rekomendasi', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
+  ['m-no', 'm-kode', 'm-temuan', 'm-subtemuan', 'm-kondisi', 'm-kriteria', 'm-sebab', 'm-akibat', 'm-rekomendasi', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1424,8 +1779,18 @@ function openModal(pic, row) {
   if (row) {
     document.getElementById('m-row').value = row;
     if (r) {
-      document.getElementById('m-no').value           = r.No || '';
-      document.getElementById('m-temuan').value       = r.Temuan || '';
+      document.getElementById('m-no').value = r.No || '';
+      const kodeInp = document.getElementById('m-kode');
+      if (kodeInp) {
+        kodeInp.value = r.isSubRow ? (r.KodeSubTemuan || r.Kode || 'ST-001') : (r.KodeTemuan || r.Kode || 'T-001');
+      }
+      if (r.isSubRow) {
+        document.getElementById('m-is-sub').value = 'true';
+        document.getElementById('m-parent-row').value = r.ParentId || '';
+        if (kodeLabel) kodeLabel.textContent = 'Kode Sub Temuan';
+        if (judulLabel) judulLabel.innerHTML = 'Judul / Uraian Sub Temuan <span class="text-[#D70015]">*</span>';
+      }
+      document.getElementById('m-temuan').value       = r.isSubRow ? (r.SubTemuan || r.Temuan || '') : (r.Temuan || '');
       document.getElementById('m-subtemuan').value    = r.SubTemuan || '';
       if (document.getElementById('m-kondisi'))     document.getElementById('m-kondisi').value     = r.Kondisi || '';
       if (document.getElementById('m-kriteria'))    document.getElementById('m-kriteria').value    = r.Kriteria || '';
@@ -1444,39 +1809,57 @@ function openModal(pic, row) {
     }
   } else {
     setSumberField('inspektorat', false);
-    onSumberChange();
+    if (parentDocNo) {
+      document.getElementById('m-no').value = parentDocNo;
+      const existDoc = S.allR.find(x => String(x.No) === String(parentDocNo));
+      if (existDoc) setSumberField(existDoc.Sumber || 'bpk', true);
+      autoGenerateKodeInput();
+    } else {
+      onSumberChange();
+    }
   }
 
-  // Jenis audit: hanya sisi auditor/admin, dan hanya pada temuan induk (sub temuan mengikuti induk)
   const jw = document.getElementById('m-jenis-wrap');
-  if (jw) jw.style.display = (isPicUser() || (r && r.isSubRow)) ? 'none' : '';
+  if (jw) jw.style.display = isPicUser() ? 'none' : '';
   refreshIcons();
 }
 
 function openAddSubModal(row) {
-  const r = S.allR.find(x => String(x._row) === String(row));
-  if (!r) return;
+  const parent = S.allR.find(x => String(x._row) === String(row));
+  if (!parent) return;
 
   document.getElementById('m-row').value = '';
   document.getElementById('m-parent-row').value = row;
   document.getElementById('m-is-sub').value = 'true';
 
-  document.getElementById('modal-title').textContent = 'Tambah Sub Temuan & Rekomendasi';
-  document.getElementById('modal-sub').textContent   = 'Menambahkan rincian sub temuan, 4 unsur, dan rekomendasi untuk Temuan No. ' + r.No;
+  document.getElementById('modal-title').textContent = 'Tambah Sub Temuan Baru';
+  document.getElementById('modal-sub').textContent   = 'Rincian sub temuan untuk ' + (parent.KodeTemuan || 'T-001') + ' (' + parent.No + ')';
 
-  document.getElementById('m-no').value = r.No || '';
-  setSumberField(r.Sumber || 'bpk', true);
+  const parentBanner = document.getElementById('m-parent-banner');
+  if (parentBanner) {
+    parentBanner.style.display = 'flex';
+    const b1 = document.getElementById('m-parent-kode-badge');
+    const b2 = document.getElementById('m-parent-title-text');
+    if (b1) b1.textContent = parent.KodeTemuan || 'T-001';
+    if (b2) b2.textContent = parent.Temuan || '';
+  }
+
+  const kodeLabel = document.getElementById('m-kode-label');
+  if (kodeLabel) kodeLabel.textContent = 'Kode Sub Temuan';
+  const judulLabel = document.getElementById('m-judul-label');
+  if (judulLabel) judulLabel.innerHTML = 'Judul / Uraian Sub Temuan <span class="text-[#D70015]">*</span>';
+
+  document.getElementById('m-no').value = parent.No || '';
+  setSumberField(parent.Sumber || 'bpk', true);
+
+  const jenisEl = document.getElementById('m-jenis');
+  if (jenisEl) jenisEl.value = parent.JenisAudit || 'kinerja';
+
   const temuanInp = document.getElementById('m-temuan');
-  temuanInp.value = r.Temuan || '';
-  temuanInp.readOnly = true;
-  temuanInp.style.background = '#eef2ff';
+  temuanInp.readOnly = false;
+  temuanInp.style.background = '#f8fafc';
 
-  renderPicChecklist(splitPics(r.PIC));
-  applyModalRole(null);
-  const jwSub = document.getElementById('m-jenis-wrap');
-  if (jwSub) jwSub.style.display = 'none';          // sub temuan mengikuti jenis audit induknya
-
-  ['m-subtemuan', 'm-kondisi', 'm-kriteria', 'm-sebab', 'm-akibat', 'm-rekomendasi', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
+  ['m-temuan', 'm-subtemuan', 'm-kondisi', 'm-kriteria', 'm-sebab', 'm-akibat', 'm-rekomendasi', 'm-rencanaaksi', 'm-jadwal', 'm-output'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1485,6 +1868,15 @@ function openAddSubModal(row) {
     nilaiEl.value = '0';
     formatRupiahInput(nilaiEl, 'm-nilai-preview');
   }
+
+  // Pre-check parent's PICs, tapi fleksibel dapat diubah/ditambah PIC berbeda
+  renderPicChecklist(splitPics(parent.PIC));
+  applyModalRole(null);
+
+  const jw = document.getElementById('m-jenis-wrap');
+  if (jw) jw.style.display = isPicUser() ? 'none' : '';
+
+  autoGenerateKodeInput();
 
   document.getElementById('modal-bg').classList.add('open');
   refreshIcons();
@@ -1517,12 +1909,18 @@ function saveTemuan() {
     judulTemuan = kondisiVal;
   }
 
+  const kodeVal = (document.getElementById('m-kode') || {}).value ? document.getElementById('m-kode').value.trim() : '';
+
   const fd = {
-    No: document.getElementById('m-no').value,
+    No: document.getElementById('m-no').value.trim(),
+    Kode: kodeVal,
+    KodeTemuan: !isSub ? kodeVal : (origRow ? origRow.KodeTemuan : ''),
+    KodeSubTemuan: isSub ? kodeVal : '',
     Sumber: (document.getElementById('m-sumber') || {}).value || 'bpk',
+    JenisAudit: (document.getElementById('m-jenis') || {}).value || 'kinerja',
     PIC: getSelectedPics().join(PIC_SEP),
-    Temuan: judulTemuan,
-    SubTemuan: document.getElementById('m-subtemuan').value.trim(),
+    Temuan: !isSub ? judulTemuan : (origRow ? origRow.Temuan : ''),
+    SubTemuan: isSub ? judulTemuan : '',
     Kondisi: kondisiVal,
     Kriteria: kriteriaVal,
     Sebab: sebabVal,
@@ -1537,19 +1935,19 @@ function saveTemuan() {
   };
 
   const jenisSel = document.getElementById('m-jenis');
-  if (jenisSel && !isPicUser() && !isSub && !(origRow && origRow.isSubRow)) fd.JenisAudit = jenisSel.value;
+  if (jenisSel && !isPicUser()) fd.JenisAudit = jenisSel.value;
 
   if (isPicUser()) {
     const rowId = document.getElementById('m-row').value;
     const orig = rowId ? S.allR.find(x => String(x._row) === String(rowId)) : null;
     if (!orig) { showToast('Akun PIC hanya dapat mengisi temuan yang ditugaskan kepadanya', 'err'); return; }
-    ['No', 'Temuan', 'SubTemuan', 'Kondisi', 'Kriteria', 'Sebab', 'Akibat', 'Rekomendasi', 'NilaiTemuan', 'PIC'].forEach(k => { fd[k] = orig[k] == null ? '' : orig[k]; });
+    ['No', 'Temuan', 'SubTemuan', 'Kondisi', 'Kriteria', 'Sebab', 'Akibat', 'Rekomendasi', 'NilaiTemuan', 'PIC', 'KodeTemuan', 'KodeSubTemuan'].forEach(k => { fd[k] = orig[k] == null ? '' : orig[k]; });
     fd.isSubAdd = false;
     fd.parentRow = '';
     if (!fd.RencanaAksi) { showToast('Uraian Rencana Aksi (Renaksi) wajib diisi', 'err'); return; }
     if (!fd.JadwalPelaksanaan) { showToast('Target Jadwal Pelaksanaan wajib diisi', 'err'); return; }
   } else {
-    if (!fd.Temuan) { showToast('Judul / Uraian Temuan atau Kondisi wajib diisi', 'err'); return; }
+    if (!judulTemuan) { showToast('Judul / Uraian Temuan atau Kondisi wajib diisi', 'err'); return; }
     if (!fd.PIC) { showToast('Pilih minimal 1 PIC penanggung jawab', 'err'); return; }
   }
 
@@ -1562,30 +1960,27 @@ function saveTemuan() {
     refreshIcons();
   }
 
-  const url = row ? '/api/temuan/' + row : '/api/temuan';
-  const method = row ? 'PUT' : 'POST';
+  const apiCall = row
+    ? apiFetch('/api/temuan/' + row, 'PUT', fd)
+    : apiFetch('/api/temuan', 'POST', fd);
 
-  apiFetch(url, method, fd)
+  apiCall
     .then(res => {
-      if (btn) {
-        btn.innerHTML = '<i data-lucide="save" style="width:16px"></i> Simpan Data';
-        btn.disabled = false;
-      }
       if (res && res.success) {
         if (fd.No) S.riOpen['t:' + fd.No] = true;
         closeModal();
-        showToast('Data berhasil disimpan!', 'ok');
+        showToast(row ? 'Temuan berhasil diperbarui' : 'Temuan baru berhasil disimpan', 'ok');
         refreshCurrentPage();
       } else {
         showToast((res && res.message) ? res.message : 'Gagal menyimpan data', 'err');
       }
     })
-    .catch(e => {
+    .catch(e => showToast('Error: ' + e.message, 'err'))
+    .finally(() => {
       if (btn) {
-        btn.innerHTML = '<i data-lucide="save" style="width:16px"></i> Simpan Data';
+        btn.innerHTML = '<span id="m-save-lbl">Simpan</span>';
         btn.disabled = false;
       }
-      showToast('Error: ' + e.message, 'err');
     });
 }
 

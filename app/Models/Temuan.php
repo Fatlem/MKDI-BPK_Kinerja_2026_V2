@@ -9,7 +9,7 @@ class Temuan extends Model
     protected $table = 'temuan';
 
     protected $fillable = [
-        'no', 'temuan', 'sub_temuan', 'kriteria', 'sebab',
+        'no', 'kode_temuan', 'kode_sub_temuan', 'temuan', 'sub_temuan', 'kriteria', 'sebab',
         'rekomendasi', 'pic', 'rencana_aksi', 'jadwal_pelaksanaan',
         'output', 'parent_id', 'sort_order',
         'sumber', 'created_by',

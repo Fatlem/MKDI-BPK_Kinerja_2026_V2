@@ -312,6 +312,8 @@ function calculateAndRenderDashboard(rows) {
       noKey,
       parent,
       items,
+      tCount: items.filter(r => !r.isSubRow && !r.ParentId).length || 1,
+      sCount: items.filter(r => r.isSubRow || r.ParentId).length,
       total: dTotal,
       selesai: dSelesai,
       renaksi: dRenaksi,
@@ -499,16 +501,19 @@ function renderDashboard(d) {
 
         return `
           <tr onclick="openTemuanFromDashboard('${esc(jsq(doc.noKey))}')" class="hover:bg-[#F5F5F7]/70 transition-colors cursor-pointer group">
-            <td class="py-3 px-4 whitespace-nowrap">
-              <div class="flex items-center gap-2">
-                <span class="font-mono text-xs font-semibold text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors">${esc(doc.noKey)}</span>
+            <td class="py-3 px-4 align-top">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-mono text-xs font-semibold text-[#1D1D1F] group-hover:text-[#0071E3] transition-colors whitespace-nowrap">${esc(doc.noKey)}</span>
                 ${dokumenBadge(p)}
               </div>
-              <div class="text-[11px] text-[#86868B] mt-0.5">${(p.Sumber || 'bpk') === 'bpk' ? 'BPK RI' : 'Inspektorat'} · ${esc(jenisAuditLabel(p) || 'Audit Kinerja')}</div>
+              ${p.NoLha ? `<div class="font-mono text-[11px] text-[#0071E3] font-semibold mt-0.5 truncate" title="${esc(p.NoLha)}">${esc(p.NoLha)}</div>` : ''}
+              <div class="text-[11px] text-[#86868B] mt-0.5 truncate" title="${(p.Sumber || 'bpk') === 'bpk' ? 'BPK RI' : 'Inspektorat'} · ${esc(jenisAuditLabel(p) || 'Audit Kinerja')}">
+                ${(p.Sumber || 'bpk') === 'bpk' ? 'BPK RI' : 'Inspektorat'} · ${esc(jenisAuditLabel(p) || 'Audit Kinerja')}
+              </div>
             </td>
             <td class="py-3 px-4">
               <div class="text-xs font-semibold text-[#1D1D1F] line-clamp-2 leading-relaxed" title="${esc(p.Temuan || '')}">${esc(p.Temuan || '—')}</div>
-              <div class="text-[11px] text-[#86868B] mt-1">${doc.total} rincian · ${doc.renaksi}/${doc.total} Renaksi · ${doc.bukti} bukti</div>
+              <div class="text-[11px] text-[#86868B] mt-1">${doc.tCount} temuan${doc.sCount > 0 ? ` · ${doc.sCount} sub temuan` : ''} · ${doc.total} item · ${doc.renaksi}/${doc.total} Renaksi · ${doc.bukti} bukti</div>
             </td>
             <td class="py-3 px-4">
               <div class="text-xs text-[#475569] line-clamp-2 leading-snug" title="${esc(pics)}">${esc(pics)}</div>
@@ -520,16 +525,16 @@ function renderDashboard(d) {
             </td>
             <td class="py-3 px-4 whitespace-nowrap text-right">
               <div class="inline-flex items-center gap-3">
-                <div class="w-20">
-                  <div class="flex justify-between text-[11px] mb-1">
-                    <span class="text-[#86868B]">${doc.selesai}/${doc.total}</span>
-                    <span class="font-medium text-[#1D1D1F]">${doc.pct}%</span>
+                <div class="w-20 shrink-0 min-w-[80px]">
+                  <div class="flex items-center justify-between text-[11px] mb-1 gap-2">
+                    <span class="text-[#86868B] shrink-0 font-medium">${doc.selesai}/${doc.total}</span>
+                    <span class="font-semibold text-[#1D1D1F] shrink-0">${doc.pct}%</span>
                   </div>
                   <div class="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden">
                     <div class="bg-[#0071E3] h-1.5 rounded-full" style="width:${doc.pct}%"></div>
                   </div>
                 </div>
-                <span class="inline-flex items-center gap-0.5 text-xs font-medium text-[#0071E3] group-hover:translate-x-0.5 transition-transform">
+                <span class="inline-flex items-center gap-0.5 text-xs font-medium text-[#0071E3] group-hover:translate-x-0.5 transition-transform shrink-0">
                   <span>Buka</span>
                   <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
                 </span>
@@ -705,12 +710,12 @@ function renderDashboard(d) {
         <table class="w-full text-left border-collapse min-w-[860px] table-fixed">
           <thead>
             <tr class="border-b border-black/[0.05] text-[11px] text-[#86868B]">
-              <th class="py-2.5 px-4 font-medium w-[15%]">Dokumen</th>
-              <th class="py-2.5 px-4 font-medium w-[41%]">Temuan Utama</th>
-              <th class="py-2.5 px-4 font-medium w-[17%]">Unit Kerja</th>
+              <th class="py-2.5 px-4 font-medium w-[17%]">Dokumen</th>
+              <th class="py-2.5 px-4 font-medium w-[34%]">Temuan Utama</th>
+              <th class="py-2.5 px-4 font-medium w-[16%]">Unit Kerja</th>
               <th class="py-2.5 px-4 font-medium w-[11%]">Tahap Saat Ini</th>
-              <th class="py-2.5 px-4 font-medium w-[10%]">Tenggat 60 Hari</th>
-              <th class="py-2.5 px-4 text-right font-medium w-[6%]">Progres</th>
+              <th class="py-2.5 px-4 font-medium w-[9%]">Tenggat 60 Hari</th>
+              <th class="py-2.5 px-4 text-right font-medium w-[13%]">Progres</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-black/[0.04]">${priorityRowsHtml}</tbody>

@@ -231,8 +231,7 @@ function jenisAuditBadge(r) {
 }
 function dokumenBadge(r) {
   if (r && r.StatusDokumen === 'lha') {
-    const code = r.NoLha ? ' · ' + r.NoLha : '';
-    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#0071E3]/10 px-2 py-0.5 text-[10.5px] font-semibold text-[#0071E3]">LHA${esc(code)}</span>`;
+    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#0071E3]/10 px-2 py-0.5 text-[10.5px] font-semibold text-[#0071E3]" title="${esc(r.NoLha ? 'LHA: ' + r.NoLha : 'LHA Resmi')}">LHA</span>`;
   }
   return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[10.5px] font-medium text-[#6E6E73]">LHP</span>`;
 }

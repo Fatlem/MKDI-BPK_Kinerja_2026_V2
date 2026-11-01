@@ -40,13 +40,35 @@
 
       {{-- Form Auditor / Admin --}}
       <div id="m-auditor-fields" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#F5F5F7] p-3.5 rounded-xl">
+        {{-- Parent Temuan Banner (saat menambah/mengedit Sub Temuan) --}}
+        <div id="m-parent-banner" style="display:none;" class="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-3 text-xs text-[#1E40AF] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold px-2 py-0.5 rounded bg-white text-[#0071E3]" id="m-parent-kode-badge">T-001</span>
+            <span id="m-parent-title-text" class="font-medium line-clamp-1">Temuan Induk</span>
+          </div>
+          <span class="text-[11px] text-[#3B82F6] font-semibold">Sub Temuan</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-[#F5F5F7] p-3.5 rounded-xl">
           <div class="form-field" id="m-sumber-wrap" style="margin-bottom:0;">
             <label class="block text-xs font-medium text-[#6E6E73] mb-1">Sumber Audit</label>
             <select id="m-sumber" onchange="onSumberChange()" class="w-full h-9 px-3 text-xs font-medium bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
               <option value="inspektorat">Inspektorat</option>
               <option value="bpk">BPK RI</option>
             </select>
+          </div>
+
+          <div class="form-field" id="m-no-wrap" style="margin-bottom:0;">
+            <label class="block text-xs font-medium text-[#6E6E73] mb-1">Dokumen LHP</label>
+            <input id="m-no" type="text" placeholder="LHP-001" class="w-full h-9 px-3 text-xs font-mono font-semibold bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]">
+          </div>
+
+          <div class="form-field" id="m-kode-wrap" style="margin-bottom:0;">
+            <label id="m-kode-label" class="block text-xs font-medium text-[#6E6E73] mb-1">Kode Temuan</label>
+            <div class="flex items-center gap-1.5">
+              <input id="m-kode" type="text" placeholder="T-001" class="w-full h-9 px-3 text-xs font-mono font-semibold bg-white border border-black/[0.08] rounded-lg text-[#1D1D1F] focus:outline-none focus:border-[#0071E3]">
+              <button type="button" onclick="autoGenerateKodeInput()" class="px-2.5 h-9 text-[11px] font-semibold text-[#0071E3] bg-white border border-black/[0.08] rounded-lg hover:bg-[#F5F5F7] whitespace-nowrap transition-colors" title="Generate otomatis">Auto</button>
+            </div>
           </div>
 
           <div class="form-field" id="m-jenis-wrap" style="margin-bottom:0;">
@@ -58,23 +80,12 @@
               <option value="khusus">Audit Khusus / Investigatif</option>
             </select>
           </div>
-
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="block text-xs font-medium text-[#6E6E73] mb-1">Kode Dokumen</label>
-            <input id="m-no" type="text" placeholder="Otomatis" readonly class="w-full h-9 px-3 text-xs font-mono font-semibold bg-white/60 border border-black/[0.06] rounded-lg text-[#1D1D1F]">
-          </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="block text-xs font-medium text-[#1D1D1F] mb-1">Temuan Utama <span class="text-[#D70015]">*</span></label>
-            <textarea id="m-temuan" rows="2" placeholder="Pokok temuan pemeriksaan..." class="w-full px-3 py-2 text-xs bg-[#F5F5F7] focus:bg-white border border-transparent rounded-xl focus:outline-none focus:border-[#0071E3] text-[#1D1D1F] transition-colors"></textarea>
-          </div>
-
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="block text-xs font-medium text-[#1D1D1F] mb-1">Sub Temuan (Opsional)</label>
-            <textarea id="m-subtemuan" rows="2" placeholder="Rincian sub temuan..." class="w-full px-3 py-2 text-xs bg-[#F5F5F7] focus:bg-white border border-transparent rounded-xl focus:outline-none focus:border-[#0071E3] text-[#1D1D1F] transition-colors"></textarea>
-          </div>
+        <div class="form-field" style="margin-bottom:0;">
+          <label id="m-judul-label" class="block text-xs font-medium text-[#1D1D1F] mb-1">Judul / Pokok Temuan <span class="text-[#D70015]">*</span></label>
+          <textarea id="m-temuan" rows="2" placeholder="Uraian pokok temuan atau sub temuan..." class="w-full px-3 py-2 text-xs bg-[#F5F5F7] focus:bg-white border border-transparent rounded-xl focus:outline-none focus:border-[#0071E3] text-[#1D1D1F] transition-colors"></textarea>
+          <input type="hidden" id="m-subtemuan">
         </div>
 
         {{-- 4 Unsur Pokok Temuan --}}

@@ -16,7 +16,7 @@ class TemuanController extends Controller
     // ── GET /api/temuan ───────────────────────────────────────────
     public function index(Request $request)
     {
-        $query = Temuan::with(['bukti:id,temuan_id,status', 'batl'])
+        $query = Temuan::with(['bukti:id,temuan_id,status', 'batl', 'parent'])
             ->withCount('bukti');
 
         // Filter berdasarkan Sumber jika dikirimkan dari frontend / pencarian
@@ -54,16 +54,24 @@ class TemuanController extends Controller
 
         $data = $rows->map(function ($r) use (&$lastNo, &$lastTemuan, $rootOf, $tahunOf, $jenisOf) {
             $root  = $rootOf($r);
-            $jenis = $jenisOf($r);
+            $jenis = $r->jenis_audit ?: ($jenisOf($r) ?: Temuan::JENIS_KINERJA);
             $rawNo     = $r->no     ?? '';
             $rawTemuan = $r->temuan ?? '';
 
             if ($rawNo)     $lastNo     = $rawNo;
             if ($rawTemuan) $lastTemuan = $rawTemuan;
 
+            $isSub = ($r->parent_id !== null);
+            $parent = $isSub ? $r->parent : null;
+
             return [
                 '_row'               => $r->id,
+                'Id'                 => $r->id,
+                'ParentId'           => $r->parent_id,
                 'No'                 => $rawNo     ?: $lastNo,
+                'KodeTemuan'         => $isSub ? ($parent?->kode_temuan ?: 'T-001') : ($r->kode_temuan ?: 'T-001'),
+                'KodeSubTemuan'      => $isSub ? ($r->kode_sub_temuan ?: 'ST-001') : '',
+                'Kode'               => $isSub ? ($r->kode_sub_temuan ?: 'ST-001') : ($r->kode_temuan ?: 'T-001'),
                 'Temuan'             => $rawTemuan ?: $lastTemuan,
                 'SubTemuan'          => $r->sub_temuan          ?? '',
                 'Kondisi'            => $r->kondisi             ?? '',
@@ -71,16 +79,16 @@ class TemuanController extends Controller
                 'Sebab'              => $r->sebab               ?? '',
                 'Akibat'             => $r->akibat              ?? '',
                 'Rekomendasi'        => $r->rekomendasi         ?? '',
-                'PIC'                => $r->pic                 ?? '',
+                'PIC'                => $r->pic ?: ($isSub ? ($parent?->pic ?? '') : ''),
                 'RencanaAksi'        => $r->rencana_aksi        ?? '',
                 'JadwalPelaksanaan'  => $r->jadwal_pelaksanaan  ?? '',
                 'Output'             => $r->output              ?? '',
-                'isSubRow'           => ($r->parent_id !== null),
+                'isSubRow'           => $isSub,
                 'BuktiCount'         => (int) $r->bukti_count,
                 'JenisAudit'         => $jenis,
                 'JenisAuditLabel'    => Temuan::JENIS_AUDIT_LABEL[$jenis] ?? '',
-                'Sumber'             => $r->sumber ?: Temuan::SUMBER_BPK,
-                'SumberLabel'        => Temuan::SUMBER_LABEL[$r->sumber ?: Temuan::SUMBER_BPK] ?? '',
+                'Sumber'             => $r->sumber ?: ($root->sumber ?: Temuan::SUMBER_BPK),
+                'SumberLabel'        => Temuan::SUMBER_LABEL[$r->sumber ?: ($root->sumber ?: Temuan::SUMBER_BPK)] ?? '',
                 'StatusDokumen'      => $root->status_dokumen ?: Temuan::DOKUMEN_LHP_SEMENTARA,
                 'NoLha'              => $root->no_lha ?? '',
                 'Tahun'              => $tahunOf($r),
@@ -91,9 +99,9 @@ class TemuanController extends Controller
                 'Selisih'            => (float) ($r->selisih ?? 0),
                 'CreatedBy'          => $r->created_by ?? '',
                 'TLStatus'           => $r->tlStatus(),
-                'BatlNomor'          => $r->batl?->nomor ?? '',
-                'BatlTanggal'        => $r->batl?->tanggal?->format('Y-m-d') ?? '',
-                'BatlSignedBoth'     => $r->batl ? $r->batl->isSignedBoth() : false,
+                'BatlNomor'          => $root->batl?->nomor ?? '',
+                'BatlTanggal'        => $root->batl?->tanggal?->format('Y-m-d') ?? '',
+                'BatlSignedBoth'     => $root->batl ? $root->batl->isSignedBoth() : false,
             ];
         });
 
@@ -117,6 +125,20 @@ class TemuanController extends Controller
         return response()->json($this->generateKode($sumber));
     }
 
+    // ── GET /api/temuan/next-kode-temuan?no=LHP-INS-001 ───────────
+    public function nextKodeTemuan(Request $request)
+    {
+        $no = trim((string) $request->query('no'));
+        return response()->json($this->generateKodeTemuan($no));
+    }
+
+    // ── GET /api/temuan/next-kode-sub?parent_id=12 ────────────────
+    public function nextKodeSub(Request $request)
+    {
+        $parentId = (int) $request->query('parent_id');
+        return response()->json($this->generateKodeSub($parentId));
+    }
+
     // ── POST /api/temuan ──────────────────────────────────────────
     public function store(Request $request)
     {
@@ -126,7 +148,7 @@ class TemuanController extends Controller
 
         $fd       = $request->all();
         $isSub    = filter_var($fd['isSubAdd'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $parentId = $fd['parentRow'] ?? null;
+        $parentId = $fd['parentRow'] ?? ($fd['parentId'] ?? null);
 
         $parent = null;
         if ($isSub) {
@@ -145,14 +167,47 @@ class TemuanController extends Controller
         $nilaiTemuan = $this->cleanNominal($fd['NilaiTemuan'] ?? 0);
         $judulTemuan = trim((string) ($fd['Temuan'] ?? '')) ?: trim((string) ($fd['Kondisi'] ?? ''));
 
-        $temuan = DB::transaction(function () use ($isSub, $fd, $sumber, $createdBy, $parentId, $sortOrder, $nilaiTemuan, $judulTemuan) {
+        // Dokumen No (LHP No)
+        $docNo = $isSub ? $parent->no : (trim((string) ($fd['No'] ?? '')) ?: $this->generateKode($sumber));
+
+        // Kode Temuan (T-001) / Kode Sub Temuan (ST-001)
+        if ($isSub) {
+            $kodeSub = trim((string) ($fd['KodeSubTemuan'] ?? ($fd['Kode'] ?? '')));
+            if (!$kodeSub) {
+                $kodeSub = $this->generateKodeSub((int) $parentId);
+            }
+            $kodeTemuan = $parent->kode_temuan;
+        } else {
+            $kodeTemuan = trim((string) ($fd['KodeTemuan'] ?? ($fd['Kode'] ?? '')));
+            if (!$kodeTemuan) {
+                $kodeTemuan = $this->generateKodeTemuan($docNo);
+            }
+            $kodeSub = null;
+        }
+
+        $jenisAudit = $this->cleanJenis($fd['JenisAudit'] ?? null);
+        if (!$jenisAudit && $isSub) {
+            $jenisAudit = $parent->jenis_audit ?: Temuan::JENIS_KINERJA;
+        }
+
+        $subJudul = $isSub ? (trim((string) ($fd['SubTemuan'] ?? '')) ?: ($judulTemuan ?: null)) : null;
+        $picVal = trim((string) ($fd['PIC'] ?? ''));
+        if (!$picVal && $isSub && $parent) {
+            $picVal = $parent->pic ?? '';
+        }
+
+        $temuan = DB::transaction(function () use (
+            $isSub, $fd, $docNo, $kodeTemuan, $kodeSub, $sumber, $createdBy, $parentId, $sortOrder, $nilaiTemuan, $judulTemuan, $subJudul, $jenisAudit, $picVal
+        ) {
             return Temuan::create([
-                'no'                  => $isSub ? null : $this->generateKode($sumber),
+                'no'                  => $docNo,
+                'kode_temuan'         => $kodeTemuan,
+                'kode_sub_temuan'     => $kodeSub,
                 'sumber'              => $sumber,
                 'created_by'          => $createdBy,
                 'temuan'              => $isSub ? null : ($judulTemuan ?: null),
-                'jenis_audit'         => $isSub ? null : $this->cleanJenis($fd['JenisAudit'] ?? null),
-                'sub_temuan'          => $fd['SubTemuan']         ?? null,
+                'jenis_audit'         => $jenisAudit ?: Temuan::JENIS_KINERJA,
+                'sub_temuan'          => $subJudul,
                 'kondisi'             => $fd['Kondisi']           ?? null,
                 'kriteria'            => $fd['Kriteria']          ?? null,
                 'sebab'               => $fd['Sebab']             ?? null,
@@ -161,7 +216,7 @@ class TemuanController extends Controller
                 'nilai_temuan'        => $nilaiTemuan,
                 'nilai_realisasi'     => 0,
                 'selisih'             => $nilaiTemuan,
-                'pic'                 => $fd['PIC']               ?? null,
+                'pic'                 => $picVal ?: null,
                 'rencana_aksi'        => $fd['RencanaAksi']       ?? null,
                 'jadwal_pelaksanaan'  => $fd['JadwalPelaksanaan'] ?? null,
                 'output'              => $fd['Output']            ?? null,
@@ -171,7 +226,7 @@ class TemuanController extends Controller
         });
 
         $temuan->syncStatusLha();
-        $this->syncPics($fd['PIC'] ?? '');
+        $this->syncPics($picVal);
 
         return response()->json(['success' => true, 'row' => $temuan->id, 'no' => $temuan->no]);
     }
@@ -230,12 +285,17 @@ class TemuanController extends Controller
                 $extra[$column] = $fd[$key];
             }
         }
+        if (array_key_exists('KodeTemuan', $fd)) {
+            $extra['kode_temuan'] = trim((string) $fd['KodeTemuan']) ?: null;
+        }
+        if (array_key_exists('KodeSubTemuan', $fd)) {
+            $extra['kode_sub_temuan'] = trim((string) $fd['KodeSubTemuan']) ?: null;
+        }
         if (array_key_exists('NilaiTemuan', $fd)) {
             $extra['nilai_temuan'] = $this->cleanNominal($fd['NilaiTemuan']);
         }
-        if ($temuan->parent_id === null && array_key_exists('JenisAudit', $fd)) {
-            $jenis = $this->cleanJenis($fd['JenisAudit']);
-            $extra['jenis_audit'] = $jenis;
+        if (array_key_exists('JenisAudit', $fd)) {
+            $extra['jenis_audit'] = $this->cleanJenis($fd['JenisAudit']);
         }
         if ($extra) {
             $temuan->update($extra);
@@ -310,6 +370,32 @@ class TemuanController extends Controller
             }
         }
         return $prefix . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
+    }
+
+    public function generateKodeTemuan(?string $docNo): string
+    {
+        $max = 0;
+        $query = Temuan::whereNull('parent_id');
+        if ($docNo) {
+            $query->where('no', $docNo);
+        }
+        foreach ($query->whereNotNull('kode_temuan')->pluck('kode_temuan') as $k) {
+            if (preg_match('/(\d+)$/', $k, $m)) {
+                $max = max($max, (int) $m[1]);
+            }
+        }
+        return 'T-' . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
+    }
+
+    public function generateKodeSub(int $parentId): string
+    {
+        $max = 0;
+        foreach (Temuan::where('parent_id', $parentId)->whereNotNull('kode_sub_temuan')->pluck('kode_sub_temuan') as $k) {
+            if (preg_match('/(\d+)$/', $k, $m)) {
+                $max = max($max, (int) $m[1]);
+            }
+        }
+        return 'ST-' . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
     }
 
     private function resolveSort(?int $parentId): int

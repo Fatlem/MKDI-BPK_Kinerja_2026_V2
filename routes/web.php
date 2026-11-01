@@ -25,9 +25,11 @@ $apiRoutes = function () {
         Route::get('/users/list',     [UserController::class,  'listForLogin']);
         Route::get('/pic',            [PicController::class,   'index']);
         Route::post('/pic',           [PicController::class,   'store']);   // BARU: tambah PIC ke tabel pic
-        Route::get('/temuan',         [TemuanController::class, 'index']);
-        Route::get('/temuan/next-no', [TemuanController::class, 'nextNo']);
-        Route::post('/temuan',        [TemuanController::class, 'store']);
+        Route::get('/temuan',                  [TemuanController::class, 'index']);
+        Route::get('/temuan/next-no',          [TemuanController::class, 'nextNo']);
+        Route::get('/temuan/next-kode-temuan', [TemuanController::class, 'nextKodeTemuan']);
+        Route::get('/temuan/next-kode-sub',    [TemuanController::class, 'nextKodeSub']);
+        Route::post('/temuan',                 [TemuanController::class, 'store']);
         Route::put('/temuan/{id}',    [TemuanController::class, 'update']);
         Route::delete('/temuan/{id}', [TemuanController::class, 'destroy']);
 

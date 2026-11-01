@@ -259,5 +259,57 @@ Sesuai arahan pengguna untuk menghadirkan antarmuka yang bersih, minimalis, mode
   - Memperluas keterbacaan judul Temuan (`line-clamp-2 leading-relaxed font-semibold`) agar teks temuan tidak terpotong menjadi satu kata.
 - **Perbaikan Kalkulasi Hari SLA**: Memperbaiki `getDeadlineInfo` di `core.js` dengan menyertakan alias `daysRemaining: diffDays` sehingga teks tenggat menampilkan hitungan sisa hari yang presisi (`Sisa X hari`) dan tidak lagi bertuliskan `Sisa undefined hari`.
 
+---
+
+## 10. Sesi Development Lanjutan (1 November 2026): Pembaruan Probis & Struktur Data 3-Level (LHP -> Temuan -> Sub Temuan) Sesuai Standar Pemeriksaan
+
+### A. Rekonstruksi Proses Bisnis (Probis) & Hirarki Data
+Memperbaiki alur dan relasi data pemeriksaan menjadi 3 level hierarkis terpisah:
+1. **Level 1 — Dokumen LHP (Laporan Hasil Pemeriksaan)**:
+   - Dokumen induk resmi (misal `LHP-BPK-001`, `LHP-INS-001`). Memiliki sumber audit, nomor LHP, tahun, dan batas waktu 60 hari kalender.
+2. **Level 2 — Temuan Pokok**:
+   - Pokok permasalahan temuan (misal `T-001`, `T-002`). Memiliki 4 unsur temuan (`Kondisi`, `Kriteria`, `Sebab`, `Akibat`), Rekomendasi resmi, PIC (unit kerja penanggung jawab), Rencana Aksi, dan Bukti Tindak Lanjut.
+3. **Level 3 — Sub Temuan (Opsional)**:
+   - Rincian turunan di bawah temuan pokok (misal `ST-001`, `ST-002`). Memiliki 4 unsur mandiri, Rekomendasi mandiri, Rencana Aksi mandiri, Bukti Tindak Lanjut mandiri, **Nilai Finansial mandiri**, **Jenis Audit mandiri** (contoh: temuan induk adalah Audit Kinerja, namun sub temuan berupa temuan finansial dengan Jenis Audit Keuangan), dan **PIC yang dapat disesuaikan** (default mewarisi PIC induk namun dapat diubah jika penanggung jawab berbeda).
+4. **Kalkulasi Progres Agregat**:
+   - Jika 1 LHP memiliki 1 Temuan dan 2 Sub Temuan, total item tindak lanjut dihitung sebanyak **3 item**.
+   - Pada tabel utama LHP ditampilkan keterangan: `1 Temuan · 2 Sub Temuan · 3 total`, dan progress bar menghitung penyelesaian agregat dari total 3 item tersebut (`X/3 (pct%)`).
+
+### B. Database Migration, Model, & Controller API
+1. **Database Migration** ([database/migrations/2026_11_01_000001_add_kode_temuan_and_kode_sub_temuan_to_temuan.php](database/migrations/2026_11_01_000001_add_kode_temuan_and_kode_sub_temuan_to_temuan.php)):
+   - Menambahkan kolom `kode_temuan` (misal `T-001`) dan `kode_sub_temuan` (misal `ST-001`) ke tabel `temuan`.
+   - Dilengkapi *backfill logic* otomatis untuk baris data yang sudah ada sebelumnya.
+2. **Model Temuan** ([app/Models/Temuan.php](app/Models/Temuan.php)):
+   - Menambahkan `kode_temuan` dan `kode_sub_temuan` ke dalam array `$fillable`.
+3. **Controller & Endpoint Penomoran Otomatis** ([app/Http/Controllers/TemuanController.php](app/Http/Controllers/TemuanController.php), [routes/web.php](routes/web.php)):
+   - Menambahkan endpoint `GET /api/temuan/next-kode-temuan?no=LHP-001` untuk menghasilkan kode temuan otomatis berikutnya (`T-001`, `T-002`, dst.) per dokumen LHP.
+   - Menambahkan endpoint `GET /api/temuan/next-kode-sub?parent_id=X` untuk menghasilkan kode sub temuan otomatis berikutnya (`ST-001`, `ST-002`, dst.) per temuan induk.
+   - Memperbarui `index()` untuk mengembalikan relasi `parent`, `KodeTemuan`, `KodeSubTemuan`, `Kode`, jenis audit mandiri, dan PIC mandiri.
+   - Memperbarui `store()` dan `update()` untuk mendukung penyimpanan kode yang dapat diedit secara fleksibel (*editable & automatic*), PIC mandiri, nilai finansial mandiri, dan jenis audit mandiri.
+
+### C. Antarmuka Hirarkis Apple Design & Workspace Mandiri ([public/js/ruang-isian.js](public/js/ruang-isian.js), [resources/views/components/modals/form-temuan.blade.php](resources/views/components/modals/form-temuan.blade.php))
+1. **Tabel Hirarki LHP Bersih (Bukan Kartu Bertumpuk)**:
+   - Saat membuka dokumen LHP (`showLhaDetail`), seluruh temuan ditampilkan dalam **tabel terstruktur yang rapi**.
+   - Jika suatu temuan memiliki sub temuan, ditampilkan tombol/badge interaktif `${childSubs.length} Sub Temuan ▼` (`toggleSubHierarchy`) yang membuka baris akordeon anak di bawahnya dengan sub-tabel indentasi bergaris aksen biru.
+   - User dapat melihat seluruh peta konten temuan dan sub temuan di dalam dokumen LHP secara komprehensif sebelum memilih item mana yang ingin ditelaah atau diisi.
+2. **Tombol "Lihat Detail" & Workspace Pengisian Mandiri (`openItemWorkspace`)**:
+   - Baik pada baris Temuan maupun baris Sub Temuan, disediakan tombol **`Lihat Detail`** yang membuka ruang kerja terfokus (*dedicated workspace*) untuk item terpilih.
+   - Di dalam workspace:
+     - Dilengkapi *breadcrumbs* navigasi (`← Kembali ke Tabel Temuan`, `LHP > T-001 > ST-001`).
+     - Menampilkan 4 unsur pokok temuan (`Kondisi`, `Kriteria`, `Sebab`, `Akibat`) dalam grid Apple minimalis.
+     - Kotak Rekomendasi & *Financial Strip* target/realisasi/sisa kas negara.
+     - Formulir *inline* Rencana Aksi dan Target Jadwal Pelaksanaan.
+     - Komponen Bukti Tindak Lanjut (*upload* dokumen, NTPN 16 karakter, nominal setoran, dan verifikasi auditor).
+3. **Modal Form Temuan & Sub Temuan yang Adaptif**:
+   - Dilengkapi *banner* info temuan induk saat menambah Sub Temuan (`m-parent-banner`).
+   - Bidang input kode temuan/sub temuan dilengkapi tombol `Auto` (`autoGenerateKodeInput()`) yang dapat menghasilkan kode otomatis namun tetap dapat disunting manual oleh auditor.
+   - Bidang PIC dan Nilai Finansial dapat diatur secara mandiri untuk tiap sub temuan.
+4. **Perbaikan Layout Tabel: Mencegah Teks LHA & Angka Progres Bertabrakan** ([public/js/core.js](public/js/core.js), [public/js/ruang-isian.js](public/js/ruang-isian.js), [public/js/dashboard.js](public/js/dashboard.js)):
+   - **Badge LHA Compact & Tata Letak Dokumen Dashboard**: Mengubah `dokumenBadge()` agar hanya menampilkan badge compact `LHA` (sama seperti badge `LHP`). Pada tabel prioritas dashboard, menghapus `whitespace-nowrap` dan menempatkan nomor resmi `LHA-INS-001` di baris tersendiri di bawah badge dokumen dengan class `truncate`, terpisah dari sumber dan jenis audit (`Inspektorat · Audit Kinerja`). Ini mencegah teks melebar secara horizontal dan menabrak kolom `Temuan Utama`.
+   - **Pencegahan Tumbukan Angka Progres**:
+     - Memperlebar porsi kolom Progres dari `8%` menjadi `15%` pada tabel Daftar Temuan (dan `6%` menjadi `13%` pada dashboard).
+     - Menetapkan `w-24 shrink-0 min-w-[96px]` (dan `w-20 shrink-0 min-w-[80px]` di dashboard) serta menambahkan `shrink-0` dan `gap-2` pada kontainer teks pecahan (`agg.selesai/agg.total`) dan persentase (`agg.pct%`), sehingga angka `0/1` dan `0%` duduk rapi di kedua sisi ujung bar tanpa saling menimpa (*no overlap*).
+
+
 
 
