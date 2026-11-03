@@ -274,7 +274,7 @@ function bkRenderFinAndDeadline() {
       DeadlineDate: _bk.deadlineDate,
       TLStatus: _bk.tl
     });
-    dlEl.innerHTML = `Batas Waktu 60 Hari: <strong style="color:#0f172a;">${esc(dl.deadlineFormatted)}</strong> <span style="font-weight:700;color:${dl.isOverdue ? '#be123c' : '#047857'};">(${esc(dl.statusBadgeText)})</span>`;
+    dlEl.innerHTML = `Batas Waktu 60 Hari: <strong style="color:#0f172a;">${esc(dl.deadlineFormatted)}</strong> ${dlLive(dl, { start: _bk.tanggalInput })}`;
   }
 
   const isFin = (_bk.nilaiTemuan || 0) > 0;

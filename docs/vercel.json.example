@@ -1,0 +1,12 @@
+{
+  "_catatan": "CONTOH — sesuaikan dengan vercel.json Anda yang sudah berjalan (versi runtime PHP, dsb). Belum diuji di Vercel. Hapus kunci _catatan sebelum dipakai.",
+  "version": 2,
+  "functions": { "api/index.php": { "runtime": "vercel-php@0.7.3" } },
+  "routes": [
+    { "src": "/sw.js", "headers": { "Cache-Control": "no-cache", "Service-Worker-Allowed": "/" }, "dest": "/public/sw.js" },
+    { "src": "/manifest.webmanifest", "headers": { "Content-Type": "application/manifest+json" }, "dest": "/public/manifest.webmanifest" },
+    { "src": "/(favicon\\.ico|offline\\.html|robots\\.txt)", "dest": "/public/$1" },
+    { "src": "/(css|js|vendor|images|icons|build)/(.*)", "dest": "/public/$1/$2" },
+    { "src": "/(.*)", "dest": "/api/index.php" }
+  ]
+}

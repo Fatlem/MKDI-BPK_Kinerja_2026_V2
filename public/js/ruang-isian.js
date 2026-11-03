@@ -141,17 +141,7 @@ function riResetFilters(prefix, handlerFn) {
   riSetStatusTab('all', prefix, handlerFn);
 }
 
-// ═══ BERSAMA: kartu rincian (Kriteria, Sebab, Rekomendasi, Rencana Aksi, Output, Jadwal) ═══
-
-// ══════════════════ TAMPILAN RINCIAN ═══════════════════
-const RI_CARDS = [
-  { key: 'Kondisi',     title: 'Kondisi',      icon: 'search',         cls: 'blue'   },
-  { key: 'Kriteria',    title: 'Kriteria',     icon: 'target',         cls: 'blue'   },
-  { key: 'Sebab',       title: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
-  { key: 'Akibat',      title: 'Akibat',       icon: 'alert-triangle', cls: 'orange' },
-  { key: 'Rekomendasi', title: 'Rekomendasi',  icon: 'clipboard-list', cls: 'purple' },
-  { key: 'RencanaAksi', title: 'Rencana Aksi', icon: 'file-text',      cls: 'orange' }
-];
+// ═══ BERSAMA: parsing teks rincian (kartu kategori ada di categories.js) ═══
 
 function parseList(text) {
   const t = String(text == null ? '' : text).replace(/\r/g, '').trim();
@@ -204,27 +194,6 @@ function riListHtml(p, mode) {
   </ol>`;
 }
 
-function riCard(cls, icon, title, bodyHtml) {
-  return `
-    <div class="ri-card ri-${cls}">
-      <div class="ri-card-head"><i data-lucide="${icon}" class="icon-plain"></i><span>${title}</span></div>
-      <div class="ri-card-body">${bodyHtml || '<div class="ri-empty">Belum diisi</div>'}</div>
-    </div>`;
-}
-
-function riOutputCard(secs) {
-  let body = '';
-  secs.forEach(sec => {
-    const cap = sec.head ? `<div class="ri-caption">${sec.letter ? esc(sec.letter) + '. ' : ''}${esc(sec.head)}</div>` : '';
-    body += `<div class="ri-out-block">${cap}${riListHtml(sec.list, 'cols')}</div>`;
-  });
-  return `<div class="ri-wide">${riCard('sky', 'calendar-check', 'Output', body)}</div>`;
-}
-
-function riJadwalCard(text) {
-  return `<div class="ri-wide">${riCard('purple', 'calendar-days', 'Jadwal', riListHtml(parseList(text), ''))}</div>`;
-}
-
 function riSubHtml(sub, idx, canAdmin, total, opts) {
   opts = opts || {};
   const st = statusOf(sub);
@@ -239,11 +208,7 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
   const delBtn = (opts.readOnly || !isAdminUser()) ? '' : `
     <button type="button" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-md transition-colors" onclick="openDelete(${sub._row}, ${sub.isSubRow ? 'false' : 'true'}, ${Math.max((total || 1) - 1, 0)})">Hapus</button>`;
 
-  const statusBadge = st.lbl === 'Selesai'
-    ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>Selesai</span>`
-    : st.lbl === 'Proses'
-      ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#1D1D1F]"><span class="w-1.5 h-1.5 rounded-full bg-[#86868B]"></span>Proses</span>`
-      : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F5F5F7] text-[#86868B]"><span class="w-1.5 h-1.5 rounded-full bg-[#D2D2D7]"></span>Belum</span>`;
+  const statusBadge = statusPillHtml(st.lbl);
 
   return `
     <div class="bg-white rounded-2xl border border-black/[0.06] overflow-hidden mb-3 last:mb-0">
@@ -268,57 +233,20 @@ function riSubBodyHtml(sub, opts) {
   const secs = parseOutputSections(sub.Output);
   const pics = groupPicShort([sub]).join(', ') || '-';
   const picsFull = groupPicNames([sub]).join(', ') || '-';
-  const hasRenaksi = !!String(sub.RencanaAksi || '').trim();
   const finStrip = financialStripHtml(sub.NilaiTemuan, sub.NilaiRealisasi, sub.Selisih);
 
-  const unsurGrid = `
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-      <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-        <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kondisi</span>
-        <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kondisi || sub.Temuan), '') || '<span class="text-[#86868B]">—</span>'}</div>
-      </div>
-      <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-        <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kriteria</span>
-        <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kriteria), '') || '<span class="text-[#86868B]">—</span>'}</div>
-      </div>
-      <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-        <span class="text-[11px] font-medium text-[#86868B] block mb-1">Sebab</span>
-        <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Sebab), '') || '<span class="text-[#86868B]">—</span>'}</div>
-      </div>
-      <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-        <span class="text-[11px] font-medium text-[#86868B] block mb-1">Akibat</span>
-        <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Akibat), '') || '<span class="text-[#86868B]">—</span>'}</div>
-      </div>
-    </div>`;
-
-  const rekomSection = `
-    <div class="bg-[#F5F5F7] rounded-xl p-4 mb-3 space-y-3">
-      <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-        <div>
-          <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Rekomendasi</span>
-          <div class="text-xs font-medium text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Rekomendasi), '') || '<span class="text-[#86868B]">—</span>'}</div>
-        </div>
-        <span class="text-[11px] text-[#6E6E73] shrink-0" title="${esc(picsFull)}">${esc(pics)}</span>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-black/[0.06]">
-        <div class="sm:col-span-2">
-          <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Rencana Aksi</span>
-          <div class="text-xs ${hasRenaksi ? 'text-[#1D1D1F]' : 'text-[#86868B]'} leading-relaxed whitespace-pre-line">${hasRenaksi ? esc(sub.RencanaAksi) : 'Belum diisi'}</div>
-        </div>
-        <div>
-          <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Target Waktu</span>
-          <p class="text-xs font-medium text-[#1D1D1F]">${esc(sub.JadwalPelaksanaan || '—')}</p>
-        </div>
-      </div>
-
-      ${finStrip}
-    </div>`;
-
   return `
-    ${unsurGrid}
-    ${rekomSection}
-    ${secs.length ? riOutputCard(secs) : ''}`;
+    <div class="cat-grid">
+      ${catCard('Kondisi', catText(sub.Kondisi || sub.Temuan))}
+      ${catCard('Kriteria', catText(sub.Kriteria))}
+      ${catCard('Sebab', catText(sub.Sebab))}
+      ${catCard('Akibat', catText(sub.Akibat))}
+    </div>
+    <div class="cat-stack">
+      ${catCard('Rekomendasi', catText(sub.Rekomendasi), { aside: `<span title="${esc(picsFull)}">${esc(pics)}</span>`, foot: finStrip })}
+      ${catCard('RencanaAksi', catRenaksiBody(sub))}
+      ${secs.length ? catCard('Output', catOutputBody(secs)) : ''}
+    </div>`;
 }
 
 // ═══ BERSAMA: tabel temuan & chip PIC (Archive.zip 7-Column Institutional Layout) ═══
@@ -391,14 +319,8 @@ function riTableHtml(groups, cfg) {
     const isBpk = (parent.Sumber || 'bpk') === 'bpk';
     const sumberLbl = isBpk ? 'BPK RI' : 'Inspektorat';
 
-    let deadlineHtml = '';
-    if (agg.key === 'selesai') {
-      deadlineHtml = `<div class="text-xs text-[#1D1D1F]">${esc(dl.deadlineFormatted)}</div><span class="text-[11px] text-[#86868B]">Selesai</span>`;
-    } else if (dl.isOverdue) {
-      deadlineHtml = `<div class="text-xs font-medium text-[#D70015]">${esc(dl.deadlineFormatted)}</div><span class="text-[11px] text-[#D70015]">${esc(dl.statusBadgeText)}</span>`;
-    } else {
-      deadlineHtml = `<div class="text-xs text-[#1D1D1F]">${esc(dl.deadlineFormatted)}</div><span class="text-[11px] text-[#86868B]">${esc(dl.statusBadgeText)}</span>`;
-    }
+    const deadlineHtml = `<div class="text-xs ${dl.isOverdue && agg.key !== 'selesai' ? 'font-medium text-[#D70015]' : 'text-[#1D1D1F]'}">${esc(dl.deadlineFormatted)}</div>`
+      + `<div class="mt-1">${dlLive(dl, { start: parent.TanggalInput, done: agg.key === 'selesai' })}</div>`;
 
     const rowClick = isMainRI ? `showLhaDetail('${esc(jsq(noKey))}')` : `togTblRow(this)`;
 
@@ -462,15 +384,15 @@ function riTableHtml(groups, cfg) {
   return `
     <div class="bg-white rounded-b-2xl border border-t-0 border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[840px] table-fixed">
+        <table class="rt-cards rt-list w-full text-left border-collapse min-w-[960px] table-fixed">
           <thead>
             <tr class="border-b border-black/[0.06] text-[11px] text-[#86868B] font-medium">
-              <th class="py-3 px-5 font-medium w-[16%]">Dokumen</th>
-              <th class="py-3 px-4 font-medium w-[32%]">Temuan</th>
-              <th class="py-3 px-4 font-medium w-[11%]">Audit</th>
+              <th class="py-3 px-5 font-medium w-[15%]">Dokumen</th>
+              <th class="py-3 px-4 font-medium w-[27%]">Temuan</th>
+              <th class="py-3 px-4 font-medium w-[10%]">Audit</th>
               <th class="py-3 px-4 font-medium w-[14%]">Unit Kerja</th>
-              <th class="py-3 px-4 font-medium w-[12%]">Batas Waktu</th>
-              <th class="py-3 px-5 text-right font-medium w-[15%]">Progres</th>
+              <th class="py-3 px-4 font-medium w-[17%]">Batas Waktu</th>
+              <th class="py-3 px-5 text-right font-medium w-[17%]">Progres</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-black/[0.05] text-sm">${body}</tbody>
@@ -521,7 +443,7 @@ function loadRuangIsian(picFilter) {
         else S.activeLhaNo = null;
       }
     })
-    .catch(() => showToast('Gagal memuat data dari server', 'err'));
+    .catch(err => { console.error('[e-TLHP] gagal memuat/merender data:', err); showToast('Gagal memuat data dari server', 'err'); });
 }
 
 function renderRuangIsian() {
@@ -558,7 +480,7 @@ function renderRuangIsian() {
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 pt-2.5 border-t border-black/[0.05]">
+        <div class="ri-filters flex flex-wrap items-center gap-2 pt-2.5 border-t border-black/[0.05]">
           ${riFilterChips('ri', 'filterRuangIsian', picOpts)}
           <span class="text-xs text-[#86868B] ml-1" id="ri-count"></span>
           <button type="button" onclick="riResetFilters('ri','filterRuangIsian')" class="h-8 px-2.5 text-xs text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] rounded-[8px] transition-colors ml-auto">
@@ -697,7 +619,7 @@ function showLhaDetail(noKey) {
           <span>·</span>
           <span>${esc(parent.Tahun || new Date().getFullYear())}</span>
           <span>·</span>
-          <span class="${dl.isOverdue && agg.key !== 'selesai' ? 'text-[#D70015] font-semibold' : 'text-[#6E6E73]'}">Batas waktu ${esc(dl.deadlineFormatted)} (${esc(dl.statusBadgeText)})</span>
+          <span class="text-[#6E6E73]">Batas waktu ${esc(dl.deadlineFormatted)}</span>
         </div>
         <h2 class="text-base font-semibold text-[#1D1D1F] leading-snug">${esc(parent.Temuan || '-')}</h2>
 
@@ -732,6 +654,8 @@ function showLhaDetail(noKey) {
 
         <div id="lha-top-batl-banner" class="mt-3"></div>
       </div>
+
+      ${dlPanel(dl, { start: parent.TanggalInput, done: agg.key === 'selesai' })}
 
       <!-- Hierarchical Table Section -->
       ${hierarchicalTableHtml}
@@ -1029,46 +953,26 @@ function openItemWorkspace(rowId) {
 
     <!-- Workspace Detail Sections -->
     <div class="space-y-4">
+      ${dlPanel(getDeadlineInfo(sub), { start: sub.TanggalInput, done: isTuntas })}
       <!-- 1. Pokok Temuan (4 Unsur) & Rekomendasi -->
-      <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6 space-y-4">
-        <h3 class="text-xs font-semibold text-[#1D1D1F] uppercase tracking-wider text-[#86868B]">Pokok Temuan &amp; Rekomendasi</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="bg-[#F5F5F7] p-4 rounded-xl">
-            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kondisi</span>
-            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kondisi || sub.Temuan), '') || '<span class="text-[#86868B]">—</span>'}</div>
-          </div>
-          <div class="bg-[#F5F5F7] p-4 rounded-xl">
-            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Kriteria</span>
-            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Kriteria), '') || '<span class="text-[#86868B]">—</span>'}</div>
-          </div>
-          <div class="bg-[#F5F5F7] p-4 rounded-xl">
-            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Sebab</span>
-            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Sebab), '') || '<span class="text-[#86868B]">—</span>'}</div>
-          </div>
-          <div class="bg-[#F5F5F7] p-4 rounded-xl">
-            <span class="text-[11px] font-medium text-[#86868B] block mb-1">Akibat</span>
-            <div class="text-xs text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Akibat), '') || '<span class="text-[#86868B]">—</span>'}</div>
-          </div>
-        </div>
-
-        <div class="bg-[#F5F5F7] rounded-xl p-4">
-          <span class="text-[11px] font-medium text-[#86868B] block mb-1">Rekomendasi</span>
-          <div class="text-xs font-medium text-[#1D1D1F] leading-relaxed whitespace-pre-line">${riListHtml(parseList(sub.Rekomendasi), '') || '<span class="text-[#86868B]">—</span>'}</div>
-          ${financialStripHtml(sub.NilaiTemuan, sub.NilaiRealisasi, sub.Selisih)}
-        </div>
+      <div class="cat-grid">
+        ${catCard('Kondisi', catText(sub.Kondisi || sub.Temuan))}
+        ${catCard('Kriteria', catText(sub.Kriteria))}
+        ${catCard('Sebab', catText(sub.Sebab))}
+        ${catCard('Akibat', catText(sub.Akibat))}
       </div>
+      ${catCard('Rekomendasi', catText(sub.Rekomendasi), { foot: financialStripHtml(sub.NilaiTemuan, sub.NilaiRealisasi, sub.Selisih) })}
 
       <!-- 2. Rencana Aksi (Inline) -->
-      <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-xs font-semibold text-[#1D1D1F] uppercase tracking-wider text-[#86868B]">Rencana Aksi Unit Kerja</h3>
-          ${(canEditRenaksi && hasRenaksi) ? `
-          <button type="button" onclick="toggleInlineRenaksi(${sub._row})" class="text-xs font-medium text-[#0071E3] hover:underline cursor-pointer">
-            Ubah
-          </button>` : ''}
-        </div>
+      <section class="cat-card cat-rencana">
+        <header class="cat-head">
+          <i data-lucide="list-checks"></i>
+          <h4>Rencana Aksi Unit Kerja</h4>
+          ${(canEditRenaksi && hasRenaksi) ? `<span class="cat-aside"><button type="button" onclick="toggleInlineRenaksi(${sub._row})" class="cat-link">Ubah</button></span>` : ''}
+        </header>
+        <div class="cat-body">
 
-        <div id="inl-renaksi-view-${sub._row}" class="${showRenaksiFormInitial ? 'hidden' : ''} grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[#F5F5F7] rounded-xl p-4">
+        <div id="inl-renaksi-view-${sub._row}" class="${showRenaksiFormInitial ? 'hidden' : ''} grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="sm:col-span-2">
             <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Uraian</span>
             <p class="text-xs ${hasRenaksi ? 'text-[#1D1D1F]' : 'text-[#86868B]'} leading-relaxed whitespace-pre-line">${hasRenaksi ? esc(sub.RencanaAksi) : 'Belum diisi'}</p>
@@ -1102,7 +1006,10 @@ function openItemWorkspace(rowId) {
             </div>
           </div>
         </form>` : ''}
-      </div>
+        </div>
+      </section>
+
+      ${(() => { const o = parseOutputSections(sub.Output); return o.length ? catCard('Output', catOutputBody(o)) : ''; })()}
 
       <!-- 3. Bukti Tindak Lanjut & Evaluasi -->
       <div class="bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-6">
@@ -1676,8 +1583,8 @@ function applyModalRole(r) {
       if (noElCtx) noElCtx.textContent = r.No || '-';
       if (metaEl)  metaEl.textContent  = [sumberLabel(r), jenisAuditLabel(r), 'PIC: ' + (groupPicShort([r]).join(', ') || '-')].filter(Boolean).join(' · ');
       if (dlEl) {
-        dlEl.textContent = 'Jatuh Tempo: ' + dl.deadlineFormatted + ' (' + dl.statusBadgeText + ')';
-        dlEl.style.color = dl.isOverdue ? '#be123c' : '#047857';
+        dlEl.style.color = '';
+        dlEl.innerHTML = 'Jatuh Tempo: ' + esc(dl.deadlineFormatted) + ' ' + dlLive(dl, { start: r.TanggalInput });
       }
       if (temEl) temEl.textContent = r.Kondisi || r.SubTemuan || r.Temuan || '-';
       if (rekEl) rekEl.textContent = r.Rekomendasi || 'Belum ada rincian rekomendasi spesifik dari auditor.';

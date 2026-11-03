@@ -2,9 +2,6 @@
 <html lang="id">
 <head>
   @include('partials.head')
-
-  <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}?v=1">
-  <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}?v=1">
 </head>
 <body>
 

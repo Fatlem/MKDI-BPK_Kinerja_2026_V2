@@ -937,39 +937,6 @@ a { text-decoration: none; color: inherit; }
 .ri-btn-del i.icon-plain { color: currentColor !important; }
 
 .ri-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
-.ri-wide { margin-bottom: 14px; }
-.ri-wide:last-child { margin-bottom: 0; }
-
-.ri-card { border: 1.5px solid var(--border-color); border-radius: var(--r-lg); overflow: hidden; background: #fff; min-width: 0; }
-.ri-card-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 13px; font-weight: 800; color: var(--text-main); }
-.ri-card-head svg, .ri-card-head i { width: 18px; height: 18px; flex-shrink: 0; }
-.ri-card-body { padding: 12px 14px 14px; }
-
-.ri-blue   { border-color: #dbeafe; }
-.ri-blue   .ri-card-head { background: linear-gradient(90deg, #eff6ff, #fff); }
-.ri-blue   .ri-card-head svg { color: #2563eb; }
-.ri-blue   .ri-num { background: #dbeafe; color: #2563eb; }
-
-.ri-green  { border-color: #dcfce7; }
-.ri-green  .ri-card-head { background: linear-gradient(90deg, #f0fdf4, #fff); }
-.ri-green  .ri-card-head svg { color: #16a34a; }
-.ri-green  .ri-num { background: #dcfce7; color: #15803d; }
-
-.ri-purple { border-color: #ede9fe; }
-.ri-purple .ri-card-head { background: linear-gradient(90deg, #f5f3ff, #fff); }
-.ri-purple .ri-card-head svg { color: #7c3aed; }
-.ri-purple .ri-num { background: #ede9fe; color: #6d28d9; }
-
-.ri-orange { border-color: #fef3c7; }
-.ri-orange .ri-card-head { background: linear-gradient(90deg, #fffbeb, #fff); }
-.ri-orange .ri-card-head svg { color: #d97706; }
-.ri-orange .ri-num { background: #fef3c7; color: #b45309; }
-
-.ri-sky    { border-color: #bae6fd; }
-.ri-sky    .ri-card-head { background: linear-gradient(90deg, #f0f9ff, #fff); }
-.ri-sky    .ri-card-head svg { color: #0284c7; }
-.ri-sky    .ri-num { background: #e0f2fe; color: #0369a1; }
-
 .ri-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 .ri-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.55; color: #334155; }
 .ri-num { width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
@@ -994,8 +961,6 @@ a { text-decoration: none; color: inherit; }
   .sub-item-block { padding: 10px; }
   .ri-sub { padding: 12px; border-radius: 16px; }
   .ri-sub-actions { width: 100%; flex-wrap: wrap; }
-  .ri-card-head { padding: 9px 12px; }
-  .ri-card-body { padding: 10px 12px 12px; }
 }
 
 /* RUANG ISIAN: OUTPUT MULTI-BAGIAN & KARTU JADWAL */
@@ -1022,12 +987,6 @@ a { text-decoration: none; color: inherit; }
 
 /* HALAMAN DETAIL */
 .det-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.ri-card-add {
-  margin-left: auto; width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
-  background: #fff; border: 1.5px solid var(--border-color); color: var(--text-muted);
-  display: flex; align-items: center; justify-content: center;
-}
-.ri-card-add:hover { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
 @media (max-width: 1280px) {
   .det-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .det-grid > :nth-child(3):last-child { grid-column: 1 / -1; }
@@ -1338,11 +1297,6 @@ svg.icon-plain,
    .icon-plain memakai !important sehingga warna ikon kartu & pill status
    hilang. Di sini warnanya dikembalikan di semua halaman yang memakai kartu rincian.
    ════════════════════════════════════════════════════════════════ */
-.ri-blue   .ri-card-head svg.icon-plain { color: #2563eb !important; }
-.ri-green  .ri-card-head svg.icon-plain { color: #16a34a !important; }
-.ri-purple .ri-card-head svg.icon-plain { color: #7c3aed !important; }
-.ri-orange .ri-card-head svg.icon-plain { color: #d97706 !important; }
-.ri-sky    .ri-card-head svg.icon-plain { color: #0284c7 !important; }
 .status-pill svg.icon-plain { color: currentColor !important; }
 .ri-sub-meta svg.icon-plain { color: #3b82f6 !important; }
 

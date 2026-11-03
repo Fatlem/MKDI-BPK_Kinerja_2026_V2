@@ -97,7 +97,7 @@ function dbFilterBarHtml(summaryText) {
   const selCls    = 'h-8 px-2.5 text-xs bg-[#F5F5F7] border border-transparent rounded-[8px] focus:bg-white focus:border-[#0071E3] focus:outline-none text-[#1D1D1F] font-medium transition-colors';
   return `
     <div class="mb-4 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="ri-filters flex flex-wrap items-center gap-2">
         <select id="db-flt-sumber" onchange="dbApplyFilter()" class="${selCls}">
           <option value="">Semua Sumber</option>${optSumber}
         </select>
@@ -168,7 +168,7 @@ function loadDashboard() {
       S.allR = rows || [];
       calculateAndRenderDashboard(rows || []);
     })
-    .catch(() => showToast('Gagal memuat data dari server', 'err'));
+    .catch(err => { console.error('[e-TLHP] gagal memuat/merender data:', err); showToast('Gagal memuat data dari server', 'err'); });
 }
 
 function calculateAndRenderDashboard(rows) {
@@ -486,12 +486,7 @@ function renderDashboard(d) {
     ? priorityDocs.map(doc => {
         const p = doc.parent;
         const pics = groupPicShort(doc.items).join(', ') || '—';
-        const daysRem = doc.dl.daysRemaining != null ? doc.dl.daysRemaining : (doc.dl.diffDays != null ? doc.dl.diffDays : 0);
-        const dlText = doc.isDone
-          ? `<span class="text-xs font-medium text-[#0071E3]">Selesai</span>`
-          : doc.dl.isOverdue
-            ? `<span class="text-xs font-medium text-[#D70015]">Lewat ${Math.abs(daysRem)} hari</span>`
-            : `<span class="text-xs font-medium ${daysRem <= 14 ? 'text-[#1D1D1F]' : 'text-[#6E6E73]'}">Sisa ${daysRem} hari</span>`;
+        const dlText = dlLive(doc.dl, { start: p.TanggalInput, done: doc.isDone });
 
         const stagePill = doc.stageTone === 'blue'
           ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0071E3]/10 text-[#0071E3]"><span class="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>${doc.stageLabel}</span>`
@@ -546,6 +541,10 @@ function renderDashboard(d) {
 
   // SLA Card helper
   const slaHasOverdue = d.sla.overdue > 0;
+  const slaNearest = dlNearest((d.docSummaries || []).map(doc => ({ info: doc.dl, start: doc.parent.TanggalInput, done: doc.isDone, label: doc.noKey })));
+  const slaNearestHtml = slaNearest
+    ? `<div class="mt-3 flex items-center justify-between gap-2 text-[11px]"><span class="truncate text-[#6E6E73]" title="${esc(slaNearest.label)}">Terdekat · ${esc(slaNearest.label)}</span>${dlLive(slaNearest.info, { start: slaNearest.start, done: false })}</div>`
+    : '';
   const slaSubText = fin.target > 0
     ? `Kas: Rp ${formatIDR(fin.realisasi)} / Rp ${formatIDR(fin.target)}`
     : (d.sla.avgDaysLeft !== null ? `Rata-rata sisa ${d.sla.avgDaysLeft} hari kerja` : 'Seluruh dokumen tuntas');
@@ -558,7 +557,7 @@ function renderDashboard(d) {
       <!-- BAN 1: Dokumen Audit -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-[#6E6E73]">Dokumen Audit</span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-[#6E6E73]"><i data-lucide="file-text" class="size-3.5 shrink-0"></i>Dokumen Audit</span>
           <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F5F5F7] text-[#1D1D1F]">${lhpCount} LHP · ${d.totalLha || 0} LHA</span>
         </div>
         <div class="mt-3">
@@ -576,7 +575,7 @@ function renderDashboard(d) {
       <!-- BAN 2: Kesiapan Rencana Aksi (Renaksi) -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-[#6E6E73]">Kesiapan Renaksi</span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-[#6E6E73]"><i data-lucide="list-checks" class="size-3.5 shrink-0"></i>Kesiapan Renaksi</span>
           <span class="text-xs font-semibold text-[#1D1D1F]">${d.totalRenaksi}/${d.totalTindakLanjut || 0}</span>
         </div>
         <div class="mt-3">
@@ -597,7 +596,7 @@ function renderDashboard(d) {
       <!-- BAN 3: Penyelesaian & Verifikasi Bukti -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-[#6E6E73]">Penyelesaian</span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-[#6E6E73]"><i data-lucide="shield-check" class="size-3.5 shrink-0"></i>Penyelesaian</span>
           <span class="text-xs font-semibold text-[#0071E3]">${selesai}/${d.totalTindakLanjut || 0}</span>
         </div>
         <div class="mt-3">
@@ -618,7 +617,7 @@ function renderDashboard(d) {
       <!-- BAN 4: Kepatuhan Batas Waktu 60 Hari (SLA) & Kas -->
       <div class="bg-white rounded-2xl p-5 border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-[#6E6E73]">Batas Waktu (60 Hari)</span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-[#6E6E73]"><i data-lucide="timer" class="size-3.5 shrink-0"></i>Batas Waktu (60 Hari)</span>
           <span class="text-[11px] font-medium px-2 py-0.5 rounded-full ${slaHasOverdue ? 'bg-[#FFF2F2] text-[#D70015]' : 'bg-[#F5F5F7] text-[#6E6E73]'}">${slaHasOverdue ? `${d.sla.overdue} Terlambat` : 'Sesuai SLA'}</span>
         </div>
         <div class="mt-3">
@@ -626,6 +625,7 @@ function renderDashboard(d) {
             <span class="text-3xl font-semibold ${slaHasOverdue ? 'text-[#D70015]' : 'text-[#1D1D1F]'} tracking-tight">${d.sla.onTrack}/${d.totalTemuan || 0}</span>
             <span class="text-xs text-[#86868B]">dalam tenggang</span>
           </div>
+          ${slaNearestHtml}
           <div class="mt-3 pt-2.5 border-t border-black/[0.05] text-[11px] text-[#6E6E73] truncate">
             ${esc(slaSubText)}
           </div>
@@ -707,15 +707,15 @@ function renderDashboard(d) {
         </button>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[860px] table-fixed">
+        <table class="rt-cards rt-dash w-full text-left border-collapse min-w-[960px] table-fixed">
           <thead>
             <tr class="border-b border-black/[0.05] text-[11px] text-[#86868B]">
-              <th class="py-2.5 px-4 font-medium w-[17%]">Dokumen</th>
-              <th class="py-2.5 px-4 font-medium w-[34%]">Temuan Utama</th>
-              <th class="py-2.5 px-4 font-medium w-[16%]">Unit Kerja</th>
-              <th class="py-2.5 px-4 font-medium w-[11%]">Tahap Saat Ini</th>
-              <th class="py-2.5 px-4 font-medium w-[9%]">Tenggat 60 Hari</th>
-              <th class="py-2.5 px-4 text-right font-medium w-[13%]">Progres</th>
+              <th class="py-2.5 px-4 font-medium w-[14%]">Dokumen</th>
+              <th class="py-2.5 px-4 font-medium w-[27%]">Temuan Utama</th>
+              <th class="py-2.5 px-4 font-medium w-[15%]">Unit Kerja</th>
+              <th class="py-2.5 px-4 font-medium w-[12%]">Tahap Saat Ini</th>
+              <th class="py-2.5 px-4 font-medium w-[18%]">Tenggat 60 Hari</th>
+              <th class="py-2.5 px-4 text-right font-medium w-[14%]">Progres</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-black/[0.04]">${priorityRowsHtml}</tbody>

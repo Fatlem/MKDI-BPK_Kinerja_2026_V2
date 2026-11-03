@@ -1,66 +1,34 @@
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>e-TLHP — Inspektorat Kementerian Koordinator Bidang Pangan RI</title>
 <meta name="theme-color" content="#ffffff">
+<meta name="description" content="Pemantauan tindak lanjut hasil pemeriksaan BPK RI dan pengawasan internal — Inspektorat Kemenko Pangan.">
+
+<!-- PWA -->
+<link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+<link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icons/favicon-32.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="e-TLHP">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- Chart.js, ExcelJS, & Lucide Icons -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Pustaka (versi di-pin & di-host sendiri; ExcelJS dimuat lazy saat ekspor) -->
+<script src="{{ asset('vendor/chart-4.4.0.umd.js') }}"></script>
+<script src="{{ asset('vendor/lucide-0.468.0.min.js') }}"></script>
 
 <!-- Custom Master Stylesheet -->
 <link rel="stylesheet" href="{{ asset('css/mkdi.css') }}?v={{ @filemtime(public_path('css/mkdi.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/bukti.css') }}?v={{ @filemtime(public_path('css/bukti.css')) }}">
 
-<!-- Tailwind CSS (preflight dimatikan supaya halaman lain yang pakai mkdi.css tidak berubah) -->
-<script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script>
-  tailwind.config = {
-    corePlugins: { preflight: false },
-    theme: {
-      extend: {
-        fontFamily: {
-          sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', '"Plus Jakarta Sans"', 'sans-serif'],
-          mono: ['"SF Mono"', '"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        },
-        colors: {
-          apple: {
-            bg: '#F5F5F7',
-            card: '#FFFFFF',
-            text: '#1D1D1F',
-            sub: '#6E6E73',
-            muted: '#86868B',
-            border: '#E5E5EA',
-            blue: '#0071E3',
-            blueHover: '#0077ED',
-          },
-          pangan: {
-            50: '#F0F7FF',
-            100: '#E0EFFE',
-            500: '#007AFF',
-            600: '#0071E3',
-            700: '#0071E3',
-            800: '#005BB5',
-            900: '#004488',
-          }
-        }
-      }
-    },
-    plugins: [
-      function ({ addVariant }) {
-        // mini:  -> sidebar mode ciut (desktop saja)
-        addVariant('mini', '@media (min-width: 769px) { .sb-collapsed & }');
-        // act:   -> elemen yang diberi class .active oleh router.js
-        addVariant('act', '&.active');
-        // opened: -> elemen yang diberi class .open oleh router.js
-        addVariant('opened', '&.open');
-      }
-    ]
-  };
-</script>
+<!-- Tailwind CSS: hasil build statis (preflight dimatikan). Sumber & cara build: tools/tailwind/README.md -->
+<link rel="stylesheet" href="{{ asset('css/tailwind.css') }}?v={{ @filemtime(public_path('css/tailwind.css')) }}">
+<!-- Lapisan UI baru (kategori, countdown, responsif, PWA) — HARUS terakhir -->
+<link rel="stylesheet" href="{{ asset('css/app-ui.css') }}?v={{ @filemtime(public_path('css/app-ui.css')) }}">

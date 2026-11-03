@@ -26,11 +26,11 @@
           <span id="m-ctx-deadline" class="text-xs font-medium"></span>
         </div>
         <div>
-          <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Kondisi</span>
+          <span class="cat-label cat-kondisi mb-0.5 text-[11px]"><i data-lucide="search"></i>Kondisi</span>
           <div id="m-ctx-temuan" class="text-xs text-[#1D1D1F] leading-relaxed"></div>
         </div>
         <div class="bg-white rounded-lg p-3 border border-black/[0.05]">
-          <span class="text-[11px] font-medium text-[#86868B] block mb-0.5">Rekomendasi</span>
+          <span class="cat-label cat-rekomendasi mb-0.5 text-[11px]"><i data-lucide="clipboard-check"></i>Rekomendasi</span>
           <div id="m-ctx-rekomendasi" class="text-xs font-medium text-[#1D1D1F] leading-relaxed whitespace-pre-line"></div>
           <div id="m-ctx-nilai" style="display:none;" class="mt-2 pt-2 border-t border-black/[0.06] text-xs text-[#0071E3] font-medium"></div>
         </div>
@@ -91,32 +91,32 @@
         {{-- 4 Unsur Pokok Temuan --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-            <label class="block text-xs font-semibold text-[#1D1D1F] mb-1.5">Kondisi</label>
+            <label class="cat-label cat-kondisi mb-1.5 text-xs"><i data-lucide="search"></i>Kondisi</label>
             <textarea id="m-kondisi" rows="3" placeholder="Fakta atau kondisi riil yang ditemukan..."
               class="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]"></textarea>
           </div>
 
           <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-            <label class="block text-xs font-semibold text-[#1D1D1F] mb-1.5">Kriteria</label>
+            <label class="cat-label cat-kriteria mb-1.5 text-xs"><i data-lucide="scale"></i>Kriteria</label>
             <textarea id="m-kriteria" rows="3" placeholder="Regulasi, ketentuan, atau standar acuan..."
               class="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]"></textarea>
           </div>
 
           <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-            <label class="block text-xs font-semibold text-[#1D1D1F] mb-1.5">Sebab</label>
+            <label class="cat-label cat-sebab mb-1.5 text-xs"><i data-lucide="lightbulb"></i>Sebab</label>
             <textarea id="m-sebab" rows="3" placeholder="Akar penyebab terjadinya kondisi..."
               class="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]"></textarea>
           </div>
 
           <div class="bg-[#F5F5F7] p-3.5 rounded-xl">
-            <label class="block text-xs font-semibold text-[#1D1D1F] mb-1.5">Akibat</label>
+            <label class="cat-label cat-akibat mb-1.5 text-xs"><i data-lucide="triangle-alert"></i>Akibat</label>
             <textarea id="m-akibat" rows="3" placeholder="Dampak atau risiko yang ditimbulkan..."
               class="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-lg focus:outline-none focus:border-[#0071E3] text-[#1D1D1F]"></textarea>
           </div>
         </div>
 
         <div class="form-field" style="margin-bottom:0;">
-          <label class="block text-xs font-medium text-[#1D1D1F] mb-1">Rekomendasi</label>
+          <label class="cat-label cat-rekomendasi mb-1.5 text-xs"><i data-lucide="clipboard-check"></i>Rekomendasi</label>
           <textarea id="m-rekomendasi" rows="3" placeholder="Arahan tindakan korektif atau pemulihan..."
             class="w-full px-3 py-2 text-xs bg-[#F5F5F7] focus:bg-white border border-transparent rounded-xl focus:outline-none focus:border-[#0071E3] text-[#1D1D1F] transition-colors"></textarea>
         </div>
@@ -147,7 +147,7 @@
       {{-- Rencana Aksi & Jadwal Pelaksanaan (Satker / PIC) --}}
       <div id="m-pic-fields" class="space-y-4">
         <div class="form-field" style="margin-bottom:0;">
-          <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">Rencana Aksi <span class="text-[#D70015]">*</span></label>
+          <label class="cat-label cat-rencana mb-1.5 text-xs"><i data-lucide="list-checks"></i>Rencana Aksi <span class="text-[#D70015]">*</span></label>
           <textarea id="m-rencanaaksi" rows="3" placeholder="Langkah tindak lanjut unit kerja..."
             class="w-full px-3 py-2 text-xs bg-[#F5F5F7] focus:bg-white border border-transparent rounded-xl focus:outline-none focus:border-[#0071E3] text-[#1D1D1F] transition-colors"></textarea>
         </div>
@@ -159,7 +159,7 @@
         </div>
 
         <div class="form-field" style="margin-bottom:0;">
-          <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">Output / Capaian (Opsional)</label>
+          <label class="cat-label cat-output mb-1.5 text-xs"><i data-lucide="package-check"></i>Output / Capaian <span class="font-normal text-[#6E6E73]">(opsional)</span></label>
           <textarea id="m-output" rows="2" placeholder="Ringkasan capaian tindak lanjut..."
             class="w-full px-3 py-2 text-xs bg-[#F5F5F7] focus:bg-white border border-transparent rounded-xl focus:outline-none focus:border-[#0071E3] text-[#1D1D1F] transition-colors"></textarea>
         </div>

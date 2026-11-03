@@ -14,7 +14,7 @@ function loadRekap() {
       S.allR = scopeRows(rows);
       renderRekap(S.allR);
     })
-    .catch(() => showToast('Gagal memuat data dari server', 'err'));
+    .catch(err => { console.error('[e-TLHP] gagal memuat/merender data:', err); showToast('Gagal memuat data dari server', 'err'); });
 }
 
 // Hitung progres dari sekumpulan baris: Selesai / Proses / Belum

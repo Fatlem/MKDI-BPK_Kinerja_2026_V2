@@ -1,7 +1,3 @@
-/* =========================================================
-   SIDEBAR TERANG (modern) — dimuat SETELAH mkdi.css
-   Hanya menimpa tampilan sidebar; halaman lain tidak berubah.
-   ========================================================= */
 .app-layout { --sidebar-w: 260px; }
 
 .sidebar {

@@ -67,6 +67,13 @@
       </div>
     </div>
 
+    {{-- Instal aplikasi (PWA): muncul hanya bila browser mengizinkan (lihat public/js/pwa.js) --}}
+    <button type="button" id="pwa-install" onclick="installPwa()" title="Pasang aplikasi"
+      class="hidden w-full cursor-pointer items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-left text-[13px] font-medium text-[#0071E3] transition-colors hover:bg-[#0071E3]/[0.08] mini:justify-center mini:px-0 [&:not(.hidden)]:flex">
+      <i data-lucide="download" class="size-[16px] shrink-0"></i>
+      <span class="mini:hidden">Pasang Aplikasi</span>
+    </button>
+
     <div onclick="doLogout()" title="Keluar"
       class="nav-logout flex cursor-pointer items-center gap-3 whitespace-nowrap rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#6E6E73] transition-colors hover:bg-black/[0.04] hover:text-[#D70015] mini:justify-center mini:px-0 mini:py-2">
       <i data-lucide="log-out" class="size-[16px] shrink-0"></i>

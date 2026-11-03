@@ -4,13 +4,7 @@
 // ═══ DETAIL: LIHAT ═════════════════════════════════════════════════════
 
 // ══════════════════ HALAMAN DETAIL ═══════════════════════════════
-const DET_FIELDS = [
-  { key: 'Kondisi',     label: 'Kondisi',     icon: 'search',         cls: 'blue'   },
-  { key: 'Kriteria',    label: 'Kriteria',    icon: 'target',         cls: 'blue'   },
-  { key: 'Sebab',       label: 'Sebab',        icon: 'lightbulb',      cls: 'green'  },
-  { key: 'Akibat',      label: 'Akibat',      icon: 'alert-triangle', cls: 'orange' },
-  { key: 'Rekomendasi', label: 'Rekomendasi', icon: 'clipboard-list', cls: 'purple' }
-];
+const DET_FIELDS = ['Kondisi', 'Kriteria', 'Sebab', 'Akibat', 'Rekomendasi'].map(key => ({ key, label: CATS[key].label }));
 
 function loadDetail(picFilter) {
   document.getElementById('hdr-title').textContent = 'Detail';
@@ -24,7 +18,7 @@ function loadDetail(picFilter) {
       S.riFilter = picFilter || '';
       renderDetail();
     })
-    .catch(() => showToast('Gagal memuat data dari server', 'err'));
+    .catch(err => { console.error('[e-TLHP] gagal memuat/merender data:', err); showToast('Gagal memuat data dari server', 'err'); });
 }
 
 function renderDetail() {
@@ -85,15 +79,10 @@ function filterDetail() {
 }
 
 function detCard(f, r, canAdmin) {
-  const body = riListHtml(parseList(r[f.key]), '') || '<div class="ri-empty">Belum diisi</div>';
   const add = canAdmin
-    ? `<button class="ri-card-add" title="Tambah ${f.label}" onclick="openDetAdd('', '${esc(r._row)}', '${f.key}')"><i data-lucide="plus" style="width:14px;height:14px;" class="icon-plain"></i></button>`
+    ? `<button type="button" class="cat-add" title="Tambah ${f.label}" aria-label="Tambah ${f.label}" onclick="openDetAdd('', '${esc(r._row)}', '${f.key}')"><i data-lucide="plus"></i></button>`
     : '';
-  return `
-    <div class="ri-card ri-${f.cls}">
-      <div class="ri-card-head"><i data-lucide="${f.icon}" class="icon-plain"></i><span>${f.label}</span>${add}</div>
-      <div class="ri-card-body">${body}</div>
-    </div>`;
+  return catCard(f.key, catText(r[f.key]), { aside: add });
 }
 
 function detRowHtml(r, idx, canAdmin, total) {
@@ -105,7 +94,7 @@ function detRowHtml(r, idx, canAdmin, total) {
             <strong>${subLabel(total || 1, idx)}${r.SubTemuan ? ' - ' + esc(r.SubTemuan) : ''}</strong>
             <div class="ri-sub-meta" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
               <span title="${esc(groupPicNames([r]).join(', ') || '-')}"><i data-lucide="users" class="icon-plain"></i> ${esc(groupPicShort([r]).join(', ') || '-')}</span>
-              ${deadlineBadgeHtml(r)}
+              ${dlLive(getDeadlineInfo(r), { start: r.TanggalInput })}
             </div>
           </div>
         </div>

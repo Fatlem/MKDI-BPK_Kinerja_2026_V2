@@ -394,15 +394,14 @@ function getDeadlineInfo(r) {
   };
 }
 
-function deadlineBadgeHtml(r) {
-  const dl = getDeadlineInfo(r);
-  if (dl.isTuntas) {
-    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[11px] font-medium text-[#6E6E73]">${esc(dl.deadlineFormatted)} · Selesai</span>`;
-  }
-  if (dl.isOverdue) {
-    return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#FFF2F2] px-2 py-0.5 text-[11px] font-medium text-[#D70015]">${esc(dl.deadlineFormatted)} · ${esc(dl.statusBadgeText)}</span>`;
-  }
-  return `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-[#F5F5F7] px-2 py-0.5 text-[11px] font-medium text-[#6E6E73]">${esc(dl.deadlineFormatted)} · ${esc(dl.statusBadgeText)}</span>`;
+/** Pill status tindak lanjut (Selesai / Proses / Belum) — satu sumber untuk semua tabel. */
+function statusPillHtml(lbl) {
+  const tone = lbl === 'Selesai'
+    ? ['bg-[#0071E3]/10 text-[#0071E3]', 'bg-[#0071E3]']
+    : lbl === 'Proses'
+      ? ['bg-[#F5F5F7] text-[#1D1D1F]', 'bg-[#86868B]']
+      : ['bg-[#F5F5F7] text-[#6E6E73]', 'bg-[#D2D2D7]'];
+  return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${tone[0]}"><span class="w-1.5 h-1.5 rounded-full ${tone[1]}"></span>${esc(lbl)}</span>`;
 }
 
 function financialStripHtml(nilaiTemuan, nilaiRealisasi, selisih) {

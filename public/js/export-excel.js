@@ -2,6 +2,22 @@
 // Format disamakan dengan file BPK_KINERJA.xlsx (Kak Bashar):
 // Calibri, judul 16 bold, header 14 bold, freeze di A6, merge kolom No & Temuan,
 // kolom K = status (tanpa border).
+// ExcelJS (~950 KB) dimuat hanya saat ekspor dipakai, bukan di setiap halaman.
+let _exceljsPromise = null;
+function loadExcelJs() {
+  if (window.ExcelJS) return Promise.resolve();
+  if (!_exceljsPromise) {
+    _exceljsPromise = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = '/vendor/exceljs-4.4.0.min.js';
+      el.onload = resolve;
+      el.onerror = () => { _exceljsPromise = null; reject(new Error('Gagal memuat pustaka Excel')); };
+      document.head.appendChild(el);
+    });
+  }
+  return _exceljsPromise;
+}
+
 async function exportExcel() {
   // Ekspor mengikuti tahun yang dipilih (tahun lama maupun tahun baru); kosong = semua tahun
   const tahun = rkSelectedTahun();
@@ -24,6 +40,7 @@ async function exportExcel() {
     const border = { top: thin, left: thin, bottom: thin, right: thin };
     const FONT = 'Calibri';
 
+    await loadExcelJs();
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('BPK Kinerja');
     

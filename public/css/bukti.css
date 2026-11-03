@@ -1,7 +1,3 @@
-/* bukti.css - Formulir Unggah Bukti Tindak Lanjut.
-   Semua class diawali "bk-" supaya tidak bentrok dengan mkdi.css.
-   Memakai variabel :root yang sudah ada (--border-color, --text-main, --text-muted, --r-*). */
-
 .bk-window { max-width: 780px; }
 
 /* Header modal */

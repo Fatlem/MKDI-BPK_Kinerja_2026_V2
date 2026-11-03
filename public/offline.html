@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Offline — e-TLHP</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: #F5F5F7; color: #1D1D1F;
+         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", sans-serif; }
+  main { width: 100%; max-width: 420px; background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 16px; padding: 32px 28px; text-align: center; }
+  img { width: 56px; height: 56px; object-fit: contain; }
+  h1 { margin: 16px 0 8px; font-size: 20px; letter-spacing: -0.02em; }
+  p { margin: 0 0 20px; font-size: 14px; line-height: 1.55; color: #6E6E73; }
+  button { height: 42px; padding: 0 20px; border: 0; border-radius: 10px; background: #0071E3; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  button:hover { background: #0077ED; }
+  button:focus-visible { outline: 2px solid #0071E3; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <img src="/images/logo.png" alt="">
+  <h1>Anda sedang offline</h1>
+  <p>e-TLHP membutuhkan koneksi internet untuk memuat data tindak lanjut. Periksa jaringan Anda, lalu coba lagi.</p>
+  <button type="button" onclick="location.reload()">Coba lagi</button>
+</main>
+<script>addEventListener('online', function () { location.reload(); });</script>
+</body>
+</html>
