@@ -21,8 +21,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <!-- Pustaka (versi di-pin & di-host sendiri; ExcelJS dimuat lazy saat ekspor) -->
-<script src="{{ asset('vendor/chart-4.4.0.umd.js') }}"></script>
-<script src="{{ asset('vendor/lucide-0.468.0.min.js') }}"></script>
+<script src="{{ asset('libs/chart-4.4.0.umd.js') }}"></script>
+<script src="{{ asset('libs/lucide-0.468.0.min.js') }}"></script>
 
 <!-- Custom Master Stylesheet -->
 <link rel="stylesheet" href="{{ asset('css/mkdi.css') }}?v={{ @filemtime(public_path('css/mkdi.css')) }}">

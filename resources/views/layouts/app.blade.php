@@ -20,6 +20,8 @@
 
         @include('partials.footer')
       </div>
+
+      @include('partials.bottom-nav')
     </div>
   </div>
 

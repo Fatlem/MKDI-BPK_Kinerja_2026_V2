@@ -9,7 +9,7 @@ function loadExcelJs() {
   if (!_exceljsPromise) {
     _exceljsPromise = new Promise((resolve, reject) => {
       const el = document.createElement('script');
-      el.src = '/vendor/exceljs-4.4.0.min.js';
+      el.src = '/libs/exceljs-4.4.0.min.js';
       el.onload = resolve;
       el.onerror = () => { _exceljsPromise = null; reject(new Error('Gagal memuat pustaka Excel')); };
       document.head.appendChild(el);

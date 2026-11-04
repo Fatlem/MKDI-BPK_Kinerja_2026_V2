@@ -7,11 +7,11 @@
    • Google Fonts      → stale-while-revalidate
    Naikkan VERSION bila daftar PRECACHE berubah.
    ═══════════════════════════════════════════════════════════════ */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC_CACHE = `etlhp-static-${VERSION}`;
 const FONT_CACHE = `etlhp-fonts-${VERSION}`;
 const PRECACHE = ['/offline.html', '/manifest.webmanifest', '/icons/icon-192.png', '/images/logo.png', '/images/logoheader.png'];
-const STATIC_RE = /^\/(css|js|vendor|images|icons|build)\//;
+const STATIC_RE = /^\/(css|js|libs|images|icons|build)\//;
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(PRECACHE)));

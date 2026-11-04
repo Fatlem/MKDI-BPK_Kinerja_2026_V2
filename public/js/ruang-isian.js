@@ -203,10 +203,10 @@ function riSubHtml(sub, idx, canAdmin, total, opts) {
     ? (String(sub.RencanaAksi || '').trim() ? 'Ubah' : 'Isi Renaksi')
     : 'Edit';
   const buttons = opts.readOnly ? '' : `
-    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-md transition-colors" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})">${editLbl}</button>`;
+    <button type="button" class="act-btn act-btn--edit" onclick="openModal('${esc(jsq(sub.PIC))}',${sub._row})"><i data-lucide="pencil"></i><span>${editLbl}</span></button>`;
 
   const delBtn = (opts.readOnly || !isAdminUser()) ? '' : `
-    <button type="button" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-md transition-colors" onclick="openDelete(${sub._row}, ${sub.isSubRow ? 'false' : 'true'}, ${Math.max((total || 1) - 1, 0)})">Hapus</button>`;
+    <button type="button" class="act-btn act-btn--danger" onclick="openDelete(${sub._row}, ${sub.isSubRow ? 'false' : 'true'}, ${Math.max((total || 1) - 1, 0)})"><i data-lucide="trash-2"></i><span>Hapus</span></button>`;
 
   const statusBadge = statusPillHtml(st.lbl);
 
@@ -740,18 +740,14 @@ function renderHierarchicalTable(items, canAdmin) {
           </td>
           <td class="py-2.5 px-3 whitespace-nowrap text-right">
             <div class="inline-flex items-center justify-end gap-1.5">
-              <button type="button" onclick="openItemWorkspace(${sub._row})" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-[#0071E3] text-white hover:bg-[#0077ED] transition-colors shadow-xs cursor-pointer">
+              <button type="button" onclick="openItemWorkspace(${sub._row})" class="act-btn act-btn--primary">
                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                 <span>Lihat Detail</span>
               </button>
               ${canAdmin ? `
-              <button type="button" onclick="openModal('${esc(jsq(sub.PIC))}', ${sub._row})" class="px-2 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-lg transition-colors cursor-pointer">
-                Edit
-              </button>` : ''}
+              <button type="button" title="Edit" aria-label="Edit" onclick="openModal('${esc(jsq(sub.PIC))}', ${sub._row})" class="ic-btn ic-btn--edit"><i data-lucide="pencil"></i></button>` : ''}
               ${isAdminUser() ? `
-              <button type="button" onclick="openDelete(${sub._row}, false, 0)" class="px-2 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-lg transition-colors cursor-pointer">
-                Hapus
-              </button>` : ''}
+              <button type="button" title="Hapus" aria-label="Hapus" onclick="openDelete(${sub._row}, false, 0)" class="ic-btn ic-btn--danger"><i data-lucide="trash-2"></i></button>` : ''}
             </div>
           </td>
         </tr>`;
@@ -783,21 +779,15 @@ function renderHierarchicalTable(items, canAdmin) {
         </td>
         <td class="py-3.5 px-4 whitespace-nowrap text-right">
           <div class="inline-flex items-center justify-end gap-1.5">
-            <button type="button" onclick="openItemWorkspace(${tItem._row})" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg bg-[#0071E3] text-white hover:bg-[#0077ED] transition-colors shadow-xs cursor-pointer">
+            <button type="button" onclick="openItemWorkspace(${tItem._row})" class="act-btn act-btn--primary">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               <span>Lihat Detail</span>
             </button>
             ${canAdmin ? `
-            <button type="button" title="Tambah Sub Temuan" onclick="openAddSubModal(${tItem._row})" class="px-2 py-1 text-xs font-medium text-[#1D1D1F] hover:bg-[#F5F5F7] border border-black/[0.08] rounded-lg transition-colors cursor-pointer">
-              + Sub
-            </button>
-            <button type="button" onclick="openModal('${esc(jsq(tItem.PIC))}', ${tItem._row})" class="px-2 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-lg transition-colors cursor-pointer">
-              Edit
-            </button>` : ''}
+            <button type="button" title="Tambah Sub Temuan" aria-label="Tambah Sub Temuan" onclick="openAddSubModal(${tItem._row})" class="ic-btn"><i data-lucide="list-plus"></i></button>
+            <button type="button" title="Edit" aria-label="Edit" onclick="openModal('${esc(jsq(tItem.PIC))}', ${tItem._row})" class="ic-btn ic-btn--edit"><i data-lucide="pencil"></i></button>` : ''}
             ${isAdminUser() ? `
-            <button type="button" onclick="openDelete(${tItem._row}, false, ${childSubs.length})" class="px-2 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-lg transition-colors cursor-pointer">
-              Hapus
-            </button>` : ''}
+            <button type="button" title="Hapus" aria-label="Hapus" onclick="openDelete(${tItem._row}, false, ${childSubs.length})" class="ic-btn ic-btn--danger"><i data-lucide="trash-2"></i></button>` : ''}
           </div>
         </td>
       </tr>
@@ -819,16 +809,16 @@ function renderHierarchicalTable(items, canAdmin) {
               </button>` : ''}
             </div>
             <div class="overflow-x-auto bg-white rounded-xl border border-black/[0.06] shadow-xs">
-              <table class="w-full text-left border-collapse text-xs">
+              <table class="rt-cards rt-hsub w-full text-left border-collapse text-xs">
                 <thead>
                   <tr class="border-b border-black/[0.06] bg-[#F5F5F7] text-[11px] text-[#86868B] font-medium">
-                    <th class="py-2.5 px-3 w-[11%]">Kode Sub</th>
-                    <th class="py-2.5 px-3 w-[33%]">Uraian Sub Temuan</th>
-                    <th class="py-2.5 px-3 w-[14%]">Audit</th>
-                    <th class="py-2.5 px-3 w-[14%]">Unit Kerja</th>
-                    <th class="py-2.5 px-3 w-[12%]">Nilai Finansial</th>
+                    <th class="py-2.5 px-3 w-[9%]">Kode Sub</th>
+                    <th class="py-2.5 px-3 w-[27%]">Uraian Sub Temuan</th>
+                    <th class="py-2.5 px-3 w-[11%]">Audit</th>
+                    <th class="py-2.5 px-3 w-[13%]">Unit Kerja</th>
+                    <th class="py-2.5 px-3 w-[11%]">Nilai Finansial</th>
                     <th class="py-2.5 px-3 w-[8%]">Status</th>
-                    <th class="py-2.5 px-3 text-right w-[12%]">Aksi</th>
+                    <th class="py-2.5 px-3 text-right w-[21%]">Aksi</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-black/[0.04]">
@@ -851,17 +841,17 @@ function renderHierarchicalTable(items, canAdmin) {
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs table-fixed min-w-[940px]">
+        <table class="rt-cards rt-hier w-full text-left border-collapse text-xs table-fixed min-w-[1000px]">
           <thead>
             <tr class="border-b border-black/[0.06] bg-[#F5F5F7]/80 text-[11px] text-[#86868B] font-medium">
-              <th class="py-3 px-4 w-[11%]">Kode</th>
-              <th class="py-3 px-4 w-[28%]">Temuan / Pokok Masalah</th>
-              <th class="py-3 px-3 w-[14%]">Sub Temuan</th>
-              <th class="py-3 px-3 w-[12%]">Audit</th>
-              <th class="py-3 px-3 w-[13%]">Unit Kerja</th>
+              <th class="py-3 px-4 w-[8%]">Kode</th>
+              <th class="py-3 px-4 w-[19%]">Temuan / Pokok Masalah</th>
+              <th class="py-3 px-3 w-[13%]">Sub Temuan</th>
+              <th class="py-3 px-3 w-[9%]">Audit</th>
+              <th class="py-3 px-3 w-[11%]">Unit Kerja</th>
               <th class="py-3 px-3 w-[10%]">Nilai Finansial</th>
               <th class="py-3 px-3 w-[7%]">Status</th>
-              <th class="py-3 px-4 text-right w-[11%]">Aksi</th>
+              <th class="py-3 px-4 text-right w-[23%]">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-black/[0.05]">
@@ -931,13 +921,9 @@ function openItemWorkspace(rowId) {
         </div>
         <div class="flex items-center gap-2">
           ${canAdmin ? `
-          <button type="button" onclick="openModal('${esc(jsq(sub.PIC))}', ${sub._row})" class="px-3 py-1 text-xs font-medium text-[#0071E3] hover:bg-[#0071E3]/10 rounded-lg transition-colors cursor-pointer">
-            Edit
-          </button>` : ''}
+          <button type="button" title="Edit" aria-label="Edit" onclick="openModal('${esc(jsq(sub.PIC))}', ${sub._row})" class="ic-btn ic-btn--edit"><i data-lucide="pencil"></i></button>` : ''}
           ${isAdminUser() ? `
-          <button type="button" onclick="openDelete(${sub._row}, false, 0)" class="px-2.5 py-1 text-xs font-medium text-[#D70015] hover:bg-[#FFF2F2] rounded-lg transition-colors cursor-pointer">
-            Hapus
-          </button>` : ''}
+          <button type="button" title="Hapus" aria-label="Hapus" onclick="openDelete(${sub._row}, false, 0)" class="ic-btn ic-btn--danger"><i data-lucide="trash-2"></i></button>` : ''}
         </div>
       </div>
 

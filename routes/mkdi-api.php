@@ -1,5 +1,14 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| API e-TLHP  (dimuat dari routes/web.php dengan prefix `api`)
+|--------------------------------------------------------------------------
+| Sengaja TIDAK dipindah ke routes/api.php: grup `api` bawaan Laravel tidak
+| memakai session, sedangkan login aplikasi ini berbasis session
+| (`session('mkdi_user')`). File ini tetap berjalan di grup middleware `web`.
+*/
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TemuanController;

@@ -29,3 +29,15 @@
 
 ## Perbaikan lanjutan
 - `.catch()` pemuatan data kini mencatat error asli ke console (`[e-TLHP] gagal memuat/merender data`), tidak lagi hanya menampilkan toast generik. Tabel kosong + toast "Gagal memuat data dari server" biasanya berarti ada exception saat merender (mis. skrip `deadline.js`/`categories.js` tidak termuat) — lihat Console.
+
+## Catatan hosting (Hostinger / Apache / LiteSpeed)
+- Pustaka JS (Lucide, Chart.js, ExcelJS) ada di `public/libs/` — SENGAJA bukan `public/vendor/`, karena folder bernama `vendor` sering diblokir server atau ikut diabaikan (`.gitignore`/unggahan). Jika ikon tidak muncul: buka F12 → Network, cari `libs/lucide-0.468.0.min.js` (harus 200) atau Console `lucide is not defined`.
+- Pastikan SELURUH isi `public/` ikut terunggah (terutama `libs/`, `icons/`, `css/tailwind.css`, `sw.js`, `manifest.webmanifest`).
+- Hosting Linux membedakan huruf besar/kecil: nama file harus persis sama.
+- Setelah deploy: `php artisan view:clear`, lalu Ctrl+Shift+R (dan Unregister service worker lama bila ada).
+- Atur `APP_URL` ke `https://domain-anda` agar `asset()` tidak menghasilkan `http://` (diblokir sebagai mixed content).
+
+## Mobile (ronde lanjutan)
+- Bilah navigasi bawah (Dashboard · Temuan · Rekap) menggantikan hamburger/drawer; akun, Pasang Aplikasi, dan Keluar ada di menu avatar header.
+- Dashboard ringkas: filter dilipat (tombol "Filter" + lencana jumlah filter aktif; status buka/tutup diingat), kartu KPI 2×2 tanpa baris keterangan sekunder (countdown "Terdekat" tetap tampil).
+- Tabel hirarki & sub temuan → kartu di ≤640px; kolom Aksi menempel di kanan pada tabel lebar; tombol Edit/Hapus/Tambah Sub berupa ikon.

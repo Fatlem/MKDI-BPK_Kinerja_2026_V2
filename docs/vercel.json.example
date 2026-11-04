@@ -6,7 +6,7 @@
     { "src": "/sw.js", "headers": { "Cache-Control": "no-cache", "Service-Worker-Allowed": "/" }, "dest": "/public/sw.js" },
     { "src": "/manifest.webmanifest", "headers": { "Content-Type": "application/manifest+json" }, "dest": "/public/manifest.webmanifest" },
     { "src": "/(favicon\\.ico|offline\\.html|robots\\.txt)", "dest": "/public/$1" },
-    { "src": "/(css|js|vendor|images|icons|build)/(.*)", "dest": "/public/$1/$2" },
+    { "src": "/(css|js|libs|images|icons|build)/(.*)", "dest": "/public/$1/$2" },
     { "src": "/(.*)", "dest": "/api/index.php" }
   ]
 }
